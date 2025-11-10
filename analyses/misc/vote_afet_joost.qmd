@@ -1,0 +1,197 @@
+---
+title: "Joost Doc"
+author:
+  - Marco SCIPIONI
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+
+source(file = here::here("scripts_r", "join_functions.R") )
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+# vote colours ----------------------------------------------------------------#
+vote_colours <- c(`for` = '#00AEEF',
+                  against = '#BE3455',
+                  abstain = "#969696",
+                  no_vote = '#5D5CA4',
+                  absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+
+
+# Hard-code parameters --------------------------------------------------------#
+renew_polgroup_id <- 7035L
+
+
+votes_dt <- data.table::fread(input = here::here(
+  "data_out", "votes", "votes_dt_10.csv") )
+votes_labels <- data.table::fread(input = here::here(
+  "data_out", "votes", "votes_labels_10.csv") )
+rcv_dt <- data.table::fread(input = here::here(
+  "data_out", "rcv", "rcv_dt_10.csv") )
+meps_rcv_mandate <- data.table::fread(input = here::here(
+  "data_out", "meps_rcv_mandate_10.csv") )
+
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result,
+                                        levels = -3:1,
+                                        labels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+```
+
+
+## Vote Overview by Group
+```{r}
+#| fig-width: 9
+#| fig-height: 13
+
+
+rcvids_selected = c(173690L, 174273L, 173688L)
+
+meps_rcv_mandate[
+  rcv_id %in% rcvids_selected,
+  list(tally = .N),
+  by = list(polgroup_id, rcv_id, result_fct)
+] |> 
+  left_join(
+    y = votes_dt[, list(rcv_id,inverse_consists_of)],
+    by = "rcv_id"
+  ) |> 
+  mutate(inverse_consists_of = gsub("eli/dl/event/", "", inverse_consists_of)) |> 
+  left_join(
+    y = votes_labels[,list(activity_id, vote_label_fr)],
+    by = c("inverse_consists_of" = "activity_id") ) |> 
+  join_polit_labs() |> 
+  ggplot(aes(x = political_group, y = tally, fill = result_fct)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = tally), position = position_dodge(0.9), vjust=-.2) +
+  facet_wrap(~vote_label_fr, ncol=1,
+             labeller = labeller(vote_label_fr = label_wrap_gen(130))) +
+  scale_fill_manual(values = vote_colours) +
+  labs(fill="Vote") +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+```
+
+
+## Vote Overview by Age Group
+```{r}
+#| fig-width: 9
+#| fig-height: 9
+
+rcv_today <- meps_rcv_mandate |> 
+  left_join(
+    y =meps_mandate,
+    by = "pers_id"
+  ) |> 
+  data.table::as.data.table()
+
+rcv_today[mep_age<35, age_group := "<=34"]
+rcv_today[mep_age >= 35 & mep_age < 50, age_group := "35-49"]
+rcv_today[mep_age >= 50 & mep_age < 65, age_group := "50-64"]
+rcv_today[mep_age >= 65, age_group := "65+"]
+rcv_today[is.na(mep_age), age_group := "Unknown"]
+
+
+rcv_today[
+  rcv_id %in% rcvids_selected,
+  list(tally = .N),
+  by = list(age_group, rcv_id, result_fct)
+] |> 
+  left_join(
+    y = votes_dt[, list(rcv_id,inverse_consists_of)],
+    by = "rcv_id"
+  ) |> 
+  mutate(inverse_consists_of = gsub("eli/dl/event/", "", inverse_consists_of)) |> 
+  left_join(
+    y = votes_labels[,list(activity_id, vote_label_fr)],
+    by = c("inverse_consists_of" = "activity_id") ) |> 
+  join_polit_labs() |> 
+  ggplot(aes(x = age_group, y = tally, fill = result_fct)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = tally), position = position_dodge(0.9), vjust=-.2) +
+  facet_wrap(~vote_label_fr, ncol=1,
+             labeller = labeller(vote_label_fr = label_wrap_gen(130))) +  scale_fill_manual(values = vote_colours) +
+  labs(fill="Vote") +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+
+```
+
+
+## Cohesion Rates by Country
+Here we calculate the average cohesion rate by Political Groups for today's session (right-hand side of the plot).
+To better appreciate the results, we contrast today's results with the legislature (left-hand side of the plot). 
+```{r}
+#| fig-width: 8
+#| fig-height: 16
+
+cohesion_bycountry = rcv_today[
+  result >= -1L
+  & rcv_id %in% rcvids_selected, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct)),
+  keyby = list(rcv_id, country_id) ] |>
+  join_meps_countries() |> 
+  left_join(
+    y = votes_dt[, list(rcv_id,inverse_consists_of)],
+    by = "rcv_id"
+  ) |> 
+  mutate(inverse_consists_of = gsub("eli/dl/event/", "", inverse_consists_of)) |> 
+  left_join(
+    y = votes_labels[,list(activity_id, vote_label_fr)],
+    by = c("inverse_consists_of" = "activity_id") ) 
+
+# Plot ------------------------------------------------------------------------#
+cohesion_bycountry |>
+  mutate(
+    vote_label_fr = as.factor(vote_label_fr),
+    country_iso3c = tidytext::reorder_within(
+      country_iso3c, cohesion, vote_label_fr)) |> 
+  ggplot(aes(x = country_iso3c,
+             y = cohesion) ) +
+  geom_col(colour = "black", fill="grey80", linewidth = 0.1, show.legend = FALSE) +
+  facet_wrap(~vote_label_fr, ncol=1, scales = "free_y",
+             labeller = labeller(vote_label_fr = label_wrap_gen(130))) +
+  coord_flip() +
+  tidytext::scale_x_reordered() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by EP Political Groups - Today and Full Mandate",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+```
+

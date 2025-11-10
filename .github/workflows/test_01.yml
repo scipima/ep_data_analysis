@@ -1,0 +1,67 @@
+# Name of the workflow
+name: votelist_automation
+
+# Event - What starts this workflow?
+on: [workflow_dispatch]
+# on: [push, workflow_dispatch]
+
+
+# Jobs - What the Action should do? 
+jobs:
+  get-bearer:
+    # Use Ubuntu   
+    runs-on: ubuntu-latest 
+    steps:
+      # enable Action to see structure and content of GitHub repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Install R
+      - name: Load R
+        uses: r-lib/actions/setup-r@v2
+      # print message
+      - name: R subset Plenary dates   
+        # Code to execute R script
+        run: Rscript scripts_r/plenary_subset.R
+      # Commit files otherwise it would run without saving anything
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+            commit_message: Update Plenary dates and folders
+
+      # Get bearer token
+      - name: get bearer
+        run: curl -X POST "https://api.box.com/oauth2/token" -H "Content-Type:application/x-www-form-urlencoded" -d "client_id=${{ secrets.CLIENT_ID }}" -d "client_secret=${{ secrets.CLIENT_SECRET }}" -d "grant_type=client_credentials" -d "box_subject_type=enterprise" -d "box_subject_id=${{ secrets.BOX_SUBJECT_ID }}" | jq > data_in/bearer_token.json
+      # Set BEARER as environment variable  
+      - name: Set environment variable
+        run: echo "bearer=$(cat data_in/bearer_token.json | jq '."access_token"' | tr -d '"')" >> $GITHUB_ENV
+      # Check whether creating/updating environment variable has gone through
+      - name: Test bearer token as env var
+        run: echo $bearer  
+
+      # get list of items from target folder
+      - name: List folder items
+        run: curl -X GET "https://api.box.com/2.0/folders/247019810125/items" -H "authorization:Bearer $bearer" | jq > data_out/folder_items.json
+      # Commit files otherwise it would run without saving anything
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+            commit_message: save folder items into json
+      # Store list of file ids into txt file      
+      - name: Store list of file ids 
+        run: cat data_out/folder_items.json | jq '."entries"' | jq '.[]."id"' | tr -d '"' > data_out/folder_file_ids.txt
+      # Commit files otherwise it would run without saving anything
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+            commit_message: update txt with file ids
+
+      # Download all files in a loop
+      - name: Download files
+        run: for i_file in $(cat data_out/folder_file_ids.txt); do curl -L -X GET "https://api.box.com/2.0/files/$i_file/content" -H "authorization:Bearer $bearer" > data_in/vl_docx/$i_file.docx; done 
+      # Commit files otherwise it would run without saving anything
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+            commit_message: download .docx files
+
+
+      - name: R test install package   
+        # Code to execute R script
+        run: Rscript scripts_r/test.R

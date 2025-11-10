@@ -1,0 +1,212 @@
+---
+title: "Communicating about voting data at national level"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r misc}
+#| include: false
+
+###--------------------------------------------------------------------------###
+# rm(list = ls())
+start_report <- Sys.time()
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(XML)
+library(xml2)
+library(rvest)
+library(lubridate)
+library(here)
+library(httr)
+library(future.apply)
+library(janitor)
+library(DT)
+library(googledrive)
+
+# googledrive::drive_auth(email = "marco.scipioni05@gmail.com")
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+# theme_set(theme_minimal(base_size = 10, 
+#                         base_family = "roboto"))
+
+# associate colours to EP political groups ----------------------------------###
+polgroups <- c("Renew", "EPP", "S&D", "Greens/EFA", "ID", "ECR", "The Left", "NI")
+polgroups_colours <- data.frame(
+  polgroups_fullname = c(
+    "Renew Europe Group", 
+    "Group of the European People's Party (Christian Democrats)", 
+    "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament",
+    "Group of the Greens/European Free Alliance",
+    "Identity and Democracy Group",
+    "European Conservatives and Reformists Group",
+    "The Left group in the European Parliament - GUE/NGL",
+    "Non-attached Members"), 
+  polgroups = polgroups,
+  polgroups_labs = c("renew", "epp", "s_d", "greens_efa", "id", "ecr", "the_left", "ni"),
+  polgroups_labs_EP = c("Renew", "EPP", "S&D", "Greens/EFA", "ID", "ECR", "The Left", "NI"),
+  ep_cols = c("#fed976", "#045a8d", "#f03b20", "#238b45", "#9ecae1", "#4292c6", "#7f2704", "#bdbdbd")) 
+polgroups_colours_vct <- setNames(object = polgroups_colours$ep_cols,
+                                  nm = polgroups_colours$polgroups_labs_EP)
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+renew_polgroup_id <- 5704L
+```
+
+
+## Data and Methods
+We include in our analysis all voting data relative to RCVs during the period 2019-`r data.table::year(Sys.Date())`.
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+rcv_attendance <- data.table::fread(
+  file = here::here("data_out", "rcv_attendance.csv"), 
+  encoding = "UTF-8", na.strings = c(NA_character_, ""), verbose = TRUE, 
+  key = c("activity_date", "rcv_id", "pers_id") )
+# str(rcv_attendance)
+# Fix change of name of `The Left`
+rcv_attendance[polgroup_id == 5151L, polgroup_id := 6259L]
+
+# RCV metadata
+rcv_metadata <- data.table::fread(
+  file = here::here("data_out", "rcv", "rcv_metadata.csv"),
+  encoding = "UTF-8", na.strings = c(NA_character_, ""), verbose = TRUE, 
+  key = c("rcv_id"), select = c("rcv_id", "doc_id", "rcv_descriptiontext") )
+# str(rcv_metadata)
+
+# join long RCV with metadata
+rcv_attendance <- rcv_attendance[rcv_metadata, on = list(rcv_id)]
+# str(rcv_attendance)
+
+
+###--------------------------------------------------------------------------###
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("source_scripts_r", "join_functions.R") )
+# get vector of independents
+independents_ids <- national_parties$identifier[
+  grepl(pattern = "^-$|^Ind.$|^Indépendant$|^Independent$|^Independiente$", 
+        x = national_parties$label)
+  | grepl(pattern = "^-$|^Ind.$|^Indépendant$|^Independent$|^Independiente$", 
+          x = national_parties$pref_label_en)]
+independents <- c("-", "Ind.", "Indépendant", "Independent", "Independiente")
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("source_scripts_r", "get_majority.R") )
+
+
+###--------------------------------------------------------------------------###
+# delete NAs and other values
+dim(rcv_attendance)
+# get rid of attendance grid
+rcv_attendance <- rcv_attendance[ !is.na(result)]
+# there cannot be NAs in the RCV identifier
+rcv_attendance <- rcv_attendance[! is.na(rcv_id)]
+rcv_attendance <- rcv_attendance[rcv_id != ""]
+dim(rcv_attendance)
+```
+
+
+## Cohesion
+```{r cohesion-function}
+source(file = here::here("source_scripts_r", "cohesionrate_function.R") )
+```
+
+We can also investigate whether national parties are internally cohesive. 
+In other words, if they tend to vote together or not. 
+The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
+
+$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
+
+Because of how cohesion rates is calculated, it does not make sense to calculate it for parties with just 1 MEP. 
+
+As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
+However, experts have highlighted other forms of vote are actually at the MEPs' disposal, e.g. being present in the House but not showing up for specific votes. 
+We do not count those in this note, but can be included if needs be. 
+```{r}
+cohesion_bypolgroup <- rcv_attendance[, 
+  list(
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max(tabulate(result_fct)),
+    tot_votes = sum(tabulate(result_fct)) ), 
+  keyby = list(polgroup_id, activity_date, rcv_id, doc_id, is_final)
+  ][# filter out all NA in cohesion rate
+    !is.na(cohesion)
+  ]
+cohesion_bypolgroup[, `:=`(is_split = as.integer(cohesion < 50) )]
+```
+
+### Splits in EPP
+```{r}
+plenary_docs <- data.table::fread(here::here("data_out", "docs", "plenary_docs.csv")) |> 
+  select(document_identifier2, document_title)
+
+cohesion_bypolgroup |> 
+  join_polit_labs() |> 
+  filter(political_group == "EPP" 
+         & is_final == 1L
+         & is_split == 1L) |> 
+  left_join(y = plenary_docs, 
+            by = c("doc_id" = "document_identifier2")) |> 
+  dplyr::select(doc_id, rcv_id, cohesion, mode = max_mode, tot_votes, document_title) |> 
+  knitr::kable()
+```
+
+### Splits in S&D.
+```{r}
+cohesion_bypolgroup |> 
+  join_polit_labs() |> 
+  filter(political_group == "S&D" 
+         & is_final == 1L
+         & is_split == 1L) |> 
+  left_join(y = plenary_docs, 
+            by = c("doc_id" = "document_identifier2")) |> 
+  dplyr::select(doc_id, rcv_id, cohesion, mode = max_mode, tot_votes, document_title) |> 
+  knitr::kable()
+```
+
+
+## Reproducibility information
+```{r}
+# reproducibility info
+sessionInfo()
+# rendering time
+end_report <- Sys.time()
+end_report - start_report
+```

@@ -1,0 +1,671 @@
+---
+title: "Who should you talk to within EPP?"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "tidyr", "tidyselect", "tidytext") )
+
+
+#------------------------------------------------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2019-07-01")
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )  
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# Set global theme for ggplot2 ------------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10,
+                        base_family = "roboto"))
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+```
+
+The objectives of this short note is to:
+
+* calculate **affinity** (also called **similarity**) between Renew and EPP's MEPs.
+* assess the EPP's internal **cohesion** across Committees.
+* check the extent to which both parties and MEPs within EPP tend to **diverge** from the Group's majority.
+
+The starting point is that, in the current EP configuration, the EPP could theoretically pick and choose its allies on a issue by issue basis, namely towards the centre and the left, or towards the right and far-right. 
+In such a context, it becomes important to understand what national delegations and individual MEPs we could leverage upon to exert some pressure, or could be less likely to turn to the extreme right.
+Thus, besides the aggregate picture emerging by calculating the *affinity* based on the entire legislative output of the 9th mandate, we also provide data relative to affinity in the  case of LIBE. 
+The idea is that, because of the nature of the dossiers being dealt with in that Committee, differences between more moderate EPP MEPs and more right-leaning ones are likely to emerge in a starker manner.
+In Section 3, this document lists *the top 20 EPP MEPs by their affinity with Renew*, both in aggregate and within LIBE.
+
+To dig deeper into EPP voting dynamics, we also calculate the internal cohesion rate by Committee.
+While the *overall cohesion is high*, there are clearly areas where divisions tend to happen, such as *FEMM*, *DEVE*, *AFCO*, and others.
+
+The subsequent question then becomes what's driving lower cohesion in some areas.
+We tackle that by looking at alignment (or lack thereof) between EPP, on the one hand, and its national parties and MEPs, on the other. 
+In the cases of the three Committees highlighted above - that is, *FEMM*, *DEVE*, *AFCO* - we observe substantial divergence in the cases of the national delegations from Poland, Romania, and Spain (AFCO).
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Data and Methods
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_all.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id") )
+meps_rcv_mandate <- meps_rcv_mandate[mandate == 9L, ]  
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_all.csv"), 
+  select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+             "number_of_votes_abstention", "number_of_votes_against",
+             "number_of_votes_favor") )
+votes_dt <- votes_dt[mandate == 9L, ]              
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(votes_dt)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+epp_group_ids <- c(5153, 7018) # EPP
+renew_group_ids <- c(5704L, 7035L) # Renew
+
+# EPP Parties for 9th mandate
+epp09_party_ids <- unique(meps_rcv_mandate$natparty_id[
+  meps_rcv_mandate$polgroup_id %in% epp_group_ids] )
+
+## Get EPP MEPs for 10th mandate 
+epp_10 <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_all.csv"),
+  key = c("pers_id") ) |> 
+  dplyr::filter(mandate == 10L
+                & polgroup_id %in% epp_group_ids) |> 
+  dplyr::select(pers_id, polgroup_id, natparty_id, country_id) |> 
+  dplyr::distinct()
+```
+
+We include in our analysis all voting data relative to roll-call votes (RCVs) during the period 2019-`r data.table::year(Sys.Date())`.
+As we do not currently have a meaningful sample for the 10th mandate, we are forced to use the 9th to fuel our calculations, and then filter the results just on those 9th-mandate MEPs who are still in House during the 10th mandate.
+
+To provide some context, we currently have `r length(unique(meps_rcv_mandate$rcv_id))` RCVs in our database for the 9th mandate.
+It is important to appreciate that what we have is only a subset of the all legislation being adopted. 
+Indeed, the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - but RCVs are the only ones where we able to trace votes to individual MEPs - that is, they are so-called *nominal* votes. 
+As a rough approximation, if we take out the likely duplicate rows from the voting archives, RCVs were approximately `r round(n_rcv/n_votes*100, digits=1)`% of the total votes during the 9th mandate.
+
+
+## Affinity between Renew and EPP MEPs
+### Overall affinity
+In this section we calculate the affinity of all MEPs currently outside Renew with Renew's majority.
+Affinity is defined as the rate with which *MEPS* vote in the same way as a specified benchmark, in our case Renew's majority.
+We calculate this metric by first including all RCVs during the 9th mandate, and then by focusing on the LIBE Committee.
+To measure affinity, we only consider EP official votes, that is *for*, *against*, *abstain*. 
+In practice, we are first calculating the majority vote for each Group, and then check whether these votes are matched with those of the individual MEPs.
+
+To illustrate how the metric works with a toy example, imagine we have four EPP MEPs, and we want to check their affinity with Renew's majority in the context of three RCVs. 
+```{r}
+toy_example <- tibble::tibble(
+  `RCV No` = rep(x = 1:3, times=4),
+  `Renew Majority` = rep(x = c("For", "Against", "Abstain"), times=4),
+  `EPP MEP` = rep(x = c("Mario", "Luigi", "Peach", "Bowser"), each = 3),
+  `EPP MEP's vote` = c("For", "Against", "Abstain",
+                       "For", "Against", "Against",
+                       "Against", "Against", "Against",
+                       "Against", "For", "Against") ) |> 
+  dplyr::mutate(`Match?` = ifelse(
+    test = `Renew Majority` == `EPP MEP's vote`, yes = 1L, no = 0L) )
+
+knitr::kable(toy_example)
+```
+
+Given this table, the resulting metrics for these EPP MEPs would be as follows
+```{r}
+toy_example |> 
+  dplyr::group_by(`EPP MEP`) |> 
+  dplyr::summarise(Affinity = round( mean(`Match?`) * 100, digits = 1) ) |> 
+  dplyr::ungroup() |> 
+  dplyr::arrange(desc(Affinity) ) |> 
+  knitr::kable()
+```
+
+As mentioned above, in this note we take in all votes during the 9th mandate.
+However, this can be refined to just the Renew votes in one or more Committees, in specific periods or dossiers, or for a subset of Renew MEPs (e.g. those who stayed also during the 10th mandate).
+```{r}
+#------------------------------------------------------------------------------#
+# Get the Groups' majority by rcv_id - only official results
+who_won_bypolgroup <- get_polgroup_majority(data_in = meps_rcv_mandate[
+  result >= -1L])
+
+#------------------------------------------------------------------------------#
+# Get all MEPs except Renew
+meps_norenew <- unique(meps_rcv_mandate$pers_id[
+  ! meps_rcv_mandate$polgroup_id %in% renew_group_ids
+  & meps_rcv_mandate$mandate == 9L])
+# Get all EPP MEPs
+meps_epp <- unique(meps_rcv_mandate$pers_id[
+  meps_rcv_mandate$polgroup_id %in% epp_group_ids
+  & meps_rcv_mandate$mandate == 9L])
+
+who_won_results <- merge(
+  x = who_won_bypolgroup[polgroup_id %in% renew_group_ids,
+                         list(rcv_id, result, who_won)],
+  y = meps_rcv_mandate[pers_id %in% meps_norenew,
+                       list(rcv_id, result, pers_id, polgroup_id, natparty_id) ],
+  by = "rcv_id", all = FALSE)
+who_won_results[, is_same := as.integer( result.x == result.y ) ]
+```
+
+<!-- An alternative metric would be to consider votes not just nominally, but also as distances. -->
+<!-- Concretely, one MEP voting 'abstain' would be closer to another MEP whose vote is 'for' than a third MEP voting 'against'. -->
+<!-- In technical terms, we interpret vote as an '*ordinal*' measure, no longer a '*categorical*'. -->
+```{r}
+#| eval: false
+
+# create matrix for distance --------------------------------------------------#
+vote_subset <- dplyr::bind_rows(
+  who_won_bypolgroup[polgroup_id %in% renew_group_ids,
+                     list(rcv_id, result)] |> 
+    dplyr::mutate(pers_id = 1L),
+  meps_rcv_mandate[polgroup_id %in% epp_group_ids,
+                   list(rcv_id, result, pers_id) ] )
+
+# reshape and convert to matrix
+vote_mtx <- as.matrix(
+  data.table::dcast(
+    data = vote_subset, 
+    formula = pers_id ~ rcv_id, value.var = "result") )
+
+# calculate distance and process
+dist_df <- as.data.frame(
+  as.matrix(
+    stats::dist(x = vote_mtx[, -1], method = "euclidean") ) )
+
+renew_dist <- dist_df |> 
+  head(n = 1) |> 
+  tidyr::pivot_longer(
+    cols = dplyr::everything()) |> 
+  dplyr::bind_cols(pers_id = vote_mtx[, 1]) |> 
+  dplyr::select(-name) |> 
+  dplyr::filter(pers_id != 1L) |> 
+  dplyr::mutate(
+    value_norm = value / max(value),
+    value_norm_inv = 1 - value_norm
+  )
+```
+
+Because there are way too many EPP MEPs to display, we just select the top 20 from EPP according to their affinity with Renew's majority.
+As mentioned above, we also just display MEPs who are still in the EP now, in the 10th mandate. 
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+who_won_results[
+  pers_id %in% meps_epp,
+  list(affinity = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id) ] |> 
+  join_meps_names() |> 
+  dplyr::filter( pers_id %in% unique(epp_10$pers_id) ) |> 
+  dplyr::distinct() |> 
+  dplyr::mutate(mep_name = forcats::fct_reorder(mep_name, affinity) ) |> 
+  dplyr::arrange(desc(affinity)) |> 
+  # dplyr::left_join(
+  #   y = renew_dist, by = "pers_id"
+  # ) |> 
+  head(20) |> 
+  ggplot(aes(x=mep_name, y = affinity)) +
+  geom_col(colour = "black", fill = "grey80", linewidth = 0.1) +
+  geom_text(aes(label = round(affinity*100, digits = 1) ), nudge_y = 0.03) +
+  coord_flip() +
+  labs(x="", y="", fill="") +  
+  scale_y_continuous(labels = scales::percent) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        strip.text.y.right = element_text(angle = 0, face = "bold"))
+```
+
+
+### Affinity by Committee: LIBE
+As an example of a more focused analysis, we can select only the votes having to do with LIBE.
+The underlying idea is that these dossiers may reveal where the EPP could be internally split between an alliance with far-right parties versus Renew and SD, being more focused on migration, and judicial & individual freedoms.
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+#------------------------------------------------------------------------------#
+## Committee Data --------------------------------------------------------------
+# List of RCV IDs and Doc IDs -------------------------------------------------#
+rcvid_docid_all <- data.table::fread( here::here(
+  "data_out", "rcv", "rcvid_docid_all.csv") ) 
+
+# Committees ------------------------------------------------------------------#
+plenary_docs_committee <- data.table::fread( here::here(
+  "data_out", "docs_pl", "plenary_docs_committee.csv") ) 
+
+
+###--------------------------------------------------------------------------###
+# Extract the LIBE docs
+libe_docids <- plenary_docs_committee$doc_id[
+  plenary_docs_committee$committee_lab == "LIBE"
+]
+# Extract the LIBE rcv_ids
+libe_rcvids <- rcvid_docid_all$rcv_id[
+  rcvid_docid_all$doc_id %in% libe_docids
+]
+
+###--------------------------------------------------------------------------###
+# Calculate average affinity and plot -----------------------------------------#
+who_won_results[
+  rcv_id %in% libe_rcvids
+  & pers_id %in% meps_epp,
+  list(affinity = mean(is_same, na.rm = TRUE)),
+  by = list(pers_id) ] |>
+  join_meps_names() |>
+  dplyr::filter( pers_id %in% unique(epp_10$pers_id) ) |> 
+  dplyr::distinct() |> 
+  dplyr::mutate(mep_name = forcats::fct_reorder(mep_name, affinity)) |> 
+  dplyr::arrange(desc(affinity)) |>
+  head(20) |> 
+  ggplot(aes(x = mep_name, y = affinity)) +
+  geom_col(colour = "black", fill = "grey80", linewidth = 0.1) +
+  geom_text(aes(label = round(affinity*100, digits = 1) ), nudge_y = 0.03) +
+  coord_flip() +
+  labs(x="", y="", fill="") +  
+  scale_y_continuous(labels = scales::percent) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        strip.text.y.right = element_text(angle = 0, face = "bold"))
+```
+
+
+## Cohesion Rates
+The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
+
+$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
+
+To develop an intuition for how this metric works, please consider the 6 simplified scenarios in the table below
+```{r}
+kableExtra::kable(
+  tibble::tibble(
+    `Number of MEPs` = c(2, 2, 3, 3, 4, 4),
+    `Vote: For` = c(2, 1, 2, 1, 2, 3),
+    `Vote: Against` = c("-", 1, 1, 1, 1, 1),
+    `Vote: Abstain` = c("-", "-", "-", 1, 1, "-"), 
+    Cohesion = c(100, 25, 50, 0, 25, 62.5),
+    # `Is split?` = c("No", "Yes", "No", "Yes", "Yes", "No")
+    ), 
+  align = "c")
+```
+
+As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
+However, experts have highlighted other forms of vote are actually at the MEPs' disposal, i.e. being present in the House but not showing up for specific votes (`no_vote`), or being absent on the voting day (`absent`).
+Further, and to be clear, here we do not make use of data coming from the Attendance Registers, but these can be included if needs be.
+```{r}
+#| fig-width: 8
+#| fig-height: 3
+
+###--------------------------------------------------------------------------###
+# Read in function
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+#------------------------------------------------------------------------------#
+# Recode
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+# left join
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result_fct,
+                                        levels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Calculate Cohesion
+cohesion_dt <- data.table::rbindlist( 
+  l = list(
+    official = meps_rcv_mandate[
+      polgroup_id %in% epp_group_ids 
+      & result >= -1L, # only official votes
+      list( cohesion = cohesion_hn(result_fct) ), 
+      keyby = list(rcv_id, polgroup_id) ],
+    extendend = meps_rcv_mandate[
+      polgroup_id %in% epp_group_ids
+      & result >= -2L, # official votes + no_votes, drop absent
+      list( cohesion = cohesion_hn(result_fct) ), 
+      keyby = list(rcv_id, polgroup_id) ]
+  ), use.names = TRUE, fill = TRUE, idcol = "cohesion_type") |> 
+  join_polit_labs()
+```
+
+
+### Cohesion rates by Committee
+In the plot below we display the EPP's cohesion rates by Committee.
+The blue dots represent the cohesion rates based on the official EP votes (`official`), whereas the red ones captures also the `no_votes` (`extended`).
+
+While the overall cohesion is high, there are clearly areas where divisions tend to happen, such as FEMM, DEVE, AFCO, and others.
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+
+#------------------------------------------------------------------------------#
+cohesion_bycommittee <- cohesion_dt |> 
+  # RCVs and DOC IDs ----------------------------------------------------------#
+  dplyr::left_join(
+    y = rcvid_docid_all,
+    by = "rcv_id") |> 
+  # DOC IDs and Committees ----------------------------------------------------#
+  dplyr::left_join(
+    y = plenary_docs_committee[, list(committee_lab, doc_id) ],
+    by = "doc_id") 
+
+cohesion_bycommittee_avg <- cohesion_bycommittee[
+  !is.na(committee_lab),
+  list(avg_cohesion = mean(cohesion) ),
+  by = list(cohesion_type, committee_lab)][order(avg_cohesion)]
+
+# Plot rank
+plot_rank <- cohesion_bycommittee_avg$committee_lab[
+  cohesion_bycommittee_avg$cohesion_type == "official"]
+
+# Plot
+cohesion_bycommittee_avg |> 
+  ggplot(aes(x = factor(committee_lab, levels = plot_rank), 
+             y = avg_cohesion, fill = cohesion_type) ) +
+  geom_point(shape = 21, colour = "black", stroke = 0.1, size = 4) +
+  ylim(50, 100) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="Type of Vote",
+       title = "EPP's Cohesion Rates by Committee, 9th mandate",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        axis.text.y = element_text(face = "bold"))
+# ggsave(filename = here::here("figures", "cohesion_bycommittee.pdf"),
+#        device = "pdf", dpi = 300, height = 8, width = 12)
+```
+
+
+## Alignment of EPP's parties with the respective Group line
+```{r}
+#| include: false
+
+source(file = here::here("scripts_r", "get_majority.R") )
+
+###--------------------------------------------------------------------------###
+## Get Party majority within each Group ----------------------------------------
+who_won_bynatparty <- get_natparty_majority(
+  data_in = meps_rcv_mandate[polgroup_id %in% epp_group_ids])
+
+## Calculate similarity --------------------------------------------------------
+# merge group line with party vote --------------------------------------------#
+
+#' This is an inner join, because both political groups and national parties may have ties.
+
+who_won_group_party <- merge(
+  x = who_won_bypolgroup[polgroup_id %in% epp_group_ids],
+  y = who_won_bynatparty, 
+  by = c("rcv_id"), 
+  all.x = FALSE, all.y = FALSE)
+
+# Are Group and party majorities the same? ----------------------------------###
+who_won_group_party[, is_same := as.integer(result.x == result.y)]
+
+# get the mean similarity by party ------------------------------------------###
+who_won_group_party_mean <- who_won_group_party[, list(
+  avg = mean(is_same, na.rm = TRUE)),
+  by = list(natparty_id)] |> 
+  join_polit_labs() 
+```
+
+We measure internal alignment by calculating the majority vote within EPP for each RCV, and then check how frequently national parties within EPP voted in the same way.
+We toss out all cases where parties and/or Groups were tied - that is, no majority emerged.
+As a second step, we further dig into the trends above to check who, within each national party, does not tend to vote alongside the respective Group ***and*** party.
+Indeed, the extent to which the majorities within each national parties vote together with their respective Political Group is grounded into how the MEPs vote.
+So, parties can be fairly aligned within themselves, but at the same time diverge from the Group line. 
+Or, it can be the case that not only parties are not aligned with the Group line, but also their MEPs are voting inconsistently.
+
+
+### Overall
+In the plot below, 
+
+* we first calculate the percentage of times in which **parties** do not align with their Groups (*magenta triangle*).
+* Then we calculate the same proportion but this time focusing on the **MEPs** (*blue dots*). 
+
+What we're looking for in the plot are instances of dots being further to the left of the magenta triangles. 
+These are the occurrences wherein individual MEPs are not only diverging from the Group majority, but also from their parties.
+In the cases in which blue dots are further to the right compared to the magenta triangle, that would mean that MEPs are following more closely the Group line compared to their party. 
+```{r}
+#| fig-width: 8
+#| fig-height: 7
+
+###--------------------------------------------------------------------------###
+data.table::setnames(who_won_group_party, 
+                     old = c("result.x", "result.y", "is_same"),
+                     new = c("group_mjrt", "party_mjrt", "is_prt_grp_align"))
+
+# !! REMEMBER: left-join, we only want to match parties to the extent that they still have MEPs in 10 mandate!! 
+dt_tmp = merge(
+  x = who_won_group_party,
+  y = meps_rcv_mandate[
+    polgroup_id %in% epp_group_ids
+    & pers_id %in% unique(epp_10$pers_id),
+    c("rcv_id", "polgroup_id", "natparty_id", "pers_id", "result")],
+  by = c("rcv_id", "polgroup_id", "natparty_id"), all.x = FALSE, all.y = TRUE)
+
+
+###--------------------------------------------------------------------------###
+## calculate similarity --------------------------------------------------------
+# Are Group and party majorities the same? ----------------------------------###
+dt_tmp[, `:=`(is_prt_mep_align = as.integer(party_mjrt == result),
+              is_grp_mep_align = as.integer(group_mjrt  == result))]
+
+# get means by Party-Group
+avg_prt_grp <- dt_tmp[,
+                      list(avg  = mean(is_prt_grp_align , na.rm = TRUE)),
+                      keyby = list(natparty_id)
+][, entity := "Party"]
+
+# get means by MEP-Group
+avg_mep_grp <- dt_tmp[,
+                      list(avg  = mean(is_grp_mep_align , na.rm = TRUE)),
+                      keyby = list(natparty_id, pers_id)
+][, entity := "MEP"]
+
+# append the two aggregations
+dt_plot <- data.table::rbindlist(
+  l = list(avg_prt_grp, avg_mep_grp),
+  use.names = TRUE, fill = TRUE) |> 
+  join_polit_labs() |> 
+  left_join(
+    y = unique(
+      meps_rcv_mandate[, list(natparty_id, country_id)]),
+    by = c("natparty_id" = "natparty_id") ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(country_natparty = paste(country, national_party, sep = " - ")) |> 
+  dplyr::arrange(avg) 
+
+
+plot_rank <- unique(na.omit(dt_plot$country_natparty[dt_plot$entity == "Party"]))
+
+# Plot
+dt_plot |> 
+  ggplot(aes(x = factor(country_natparty, levels = plot_rank), y = avg,
+             colour = entity, size = entity, shape = entity)) +
+  geom_jitter(width = 0.1, height = 0, alpha = 0.5) +
+  labs(x = "", y = "Share of alignment with Group (%)", colour = "",
+       title = "Alignment of parties and MEPs (%) with the Group line",
+       subtitle = stringr::str_wrap("The further to the right a party is, the more its majority has voted along with Group's majority. Parties are in magenta, whereas MEPs are in blue.", width = 125),
+       caption = "Note: data refers only to RCVs, other types of EP votes are not included.") +
+  scale_y_continuous(labels = scales::percent ,limits = c(0,1)) +
+  scale_colour_manual(values = c("#173481", "#E7298A")) +
+  scale_size_manual(values = c(2, 3)) +
+  theme_minimal() +
+  coord_flip() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"),
+        legend.position = "none")
+# ggsave(filename = here::here(
+#   "figures", paste0(country_iso3, "_meps_party_group_align.jpeg")), 
+#   device = "jpeg", bg = "white", width = 12, height = 7)
+```
+
+
+### By Committee
+The next step would be to single out individual MEPs within specific Committees, in a specific policy area (e.g. climate change, or consumers' protection), for closer inspection.
+An initial exploration is plotted below, where we extract all RCVs connected with two Committees we identified above as more problematic for EPP - namely, DEVE, AFCO - and check the distribution of MEPs and parties.
+```{r}
+#| eval: false
+#| fig-width: 8
+#| fig-height: 12
+
+###--------------------------------------------------------------------------###
+# Committees -------------------------------------------------------------------
+dt_tmp_comms <- dt_tmp |> 
+  # RCVs and DOC IDs ----------------------------------------------------------#
+  dplyr::left_join(
+    y = rcvid_docid_all,
+    by = "rcv_id") |> 
+  # DOC IDs and Committees ----------------------------------------------------#
+  dplyr::left_join(
+    y = plenary_docs_committee[, list(committee_lab, doc_id) ],
+    by = "doc_id") 
+
+# get means by Committee and Party
+avg_prt_grp <- dt_tmp_comms[,
+                            list(avg  = mean(is_prt_grp_align , na.rm = TRUE)),
+                            keyby = list(natparty_id, committee_lab)
+][, entity := "Party"]
+
+# get means by Committee and MEP
+avg_mep_grp <- dt_tmp_comms[,
+                            list(avg  = mean(is_grp_mep_align , na.rm = TRUE)),
+                            keyby = list(natparty_id, pers_id, committee_lab)
+][, entity := "MEP"]
+
+# append the two aggregations
+dt_plot <- data.table::rbindlist(l = list(avg_prt_grp, avg_mep_grp),
+                                 use.names = TRUE, fill = TRUE) |> 
+  join_polit_labs() |> 
+  dplyr::filter(!is.na(committee_lab)) |> 
+  left_join(
+    y = unique(
+      meps_rcv_mandate[, list(natparty_id, country_id)]),
+    by = c("natparty_id" = "natparty_id") ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(country_natparty = paste(country, national_party, sep = " - ")) |> 
+  dplyr::arrange(avg) 
+
+
+plot_rank <- unique(na.omit(dt_plot$country_natparty[
+  dt_plot$entity == "Party"
+  & dt_plot$committee_lab == "AFCO"]))
+
+# plot -------------------------------------------------------------------------
+# dt_plot |> 
+#   dplyr::filter(committee_lab %in% c("FEMM", "DEVE", "AFCO")) |> 
+#   ggplot(aes(x = factor(country_natparty, levels = plot_rank), y = avg,
+#              colour = entity, size = entity, shape = entity)) +
+#   geom_jitter(width = 0.1, height = 0) +
+#   facet_wrap(~committee_lab, nrow = 1) +
+#   labs(x = "", y = "Share of alignment with Group (%)", colour = "",
+#        title = "Alignment of parties and MEPs (%) with the Group line",
+#        subtitle = "The further to the right a party is, the more its majority has voted along with Group's majority. National parties are in magenta, whereas MEPs are in blue", 
+#        caption = "Note: data refers only to RCVs, other types of EP votes are not included.") +
+#   scale_y_continuous(labels = scales::percent ,limits = c(0,1)) +
+#   scale_colour_manual(values = c("#173481", "#E7298A")) +
+#   scale_size_manual(values = c(2, 3)) +
+#   theme_minimal() +
+#   coord_flip() +
+#   theme(plot.title.position = "plot",
+#         plot.title = element_text(face = "bold"),
+#         legend.text = element_text(face="bold"),
+#         panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+#         panel.grid.minor.y = element_line(colour = "grey70"),
+#         axis.text = element_text(face="bold"),
+#         legend.position = "none")
+
+# plot -------------------------------------------------------------------------
+dt_plot |> 
+  dplyr::filter(committee_lab %in% c("DEVE", "AFCO")
+                & entity == "Party") |> 
+  mutate(country_natparty = reorder_within(country_natparty, avg, committee_lab)) |> 
+  ggplot(aes(x = country_natparty, y = avg)) +
+  geom_point(shape = 17, colour = "#E7298A", alpha = 0.5) +
+  geom_jitter(
+    data = dt_plot |> 
+      dplyr::filter(committee_lab %in% c("DEVE", "AFCO")
+                    & entity == "MEP") |> 
+      dplyr::mutate(country_natparty = reorder_within(
+        country_natparty, avg, committee_lab) ), 
+    mapping = aes(x = country_natparty, y = avg),
+    width = 0.1, height = 0, alpha = 0.5, colour = "#173481") +
+  facet_wrap(~committee_lab, scales = "free_y", ncol = 1) +
+  labs(x = "", y = "Share of alignment with Group (%)", colour = "",
+       title = "Alignment of parties and MEPs (%) with the Group line",
+       subtitle = stringr::str_wrap("The further to the right a party is, the more its majority has voted along with Group's majority. Parties are in magenta, whereas MEPs are in blue.", width = 125),
+       caption = "Note: data refers only to RCVs, other types of EP votes are not included.") +
+  scale_y_continuous(labels = scales::percent ,limits = c(0,1)) +
+  scale_size_manual(values = c(2, 3)) +
+  scale_x_reordered() +
+  theme_minimal() +
+  coord_flip() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"),
+        legend.position = "none")
+```

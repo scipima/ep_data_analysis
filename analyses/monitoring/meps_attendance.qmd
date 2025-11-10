@@ -1,0 +1,304 @@
+---
+title: "MEPs' Attendance"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "tidyr", "tidyselect", "tidytext") )
+
+
+#------------------------------------------------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )  
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# Set global theme for ggplot2 ------------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10))
+
+# vote colours  -------------------------------------------------------------###
+vote_palette <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# Political Groups ------------------------------------------------------------#
+polgroup_palette <- c(
+  ECR = "#0D88C3",
+  ESN = "#000000",
+  Greens = "#19A24A",
+  NI = "#979797",
+  PfE = "#1A3153",
+  PPE = "#3C5979",
+  Renew = "#FFCC70",
+  `S&D` = "#EE3652",
+  `The Left` = "#733542")
+```
+
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+
+### Votes ----------------------------------------------------------------------
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_10.csv"), 
+  select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+             "number_of_votes_abstention", "number_of_votes_against",
+             "number_of_votes_favor"), 
+  na.strings = c(NA_character_, "") )
+
+### Attendance -----------------------------------------------------------------
+attendance_dt <- data.table::fread(
+  file = here::here("data_out", "attendance", "attendance_dt_10.csv"),
+  verbose = TRUE, key = c("activity_date", "pers_id"),
+  na.strings = c(NA_character_, "") )
+
+### MEP last Plenary day -------------------------------------------------------
+meps_current <- data.table::fread( file = here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+### RCV ID and Committees ------------------------------------------------------
+rcvid_cmts_10 <- data.table::fread(input = here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(votes_dt)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+```
+
+The objectives of this short note is to identify **divisions** and **splits** within EP Political Groups.
+To achieve that, we first calculate the average distance between the Groups' majorities and all of their current national parties.
+Second, we re-calculate these distances broken down by Committees, to check whether differences tend to accumulate in specific policy areas. 
+As a caveat, at the time of writing we have an extremely low sample sizes in certain Committees.
+Results for these subsections will become more insightful as the data accumulate.
+For presentational purposes, every Group has a dedicated section. 
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Attendance Rates
+```{r}
+meps_rcv_mandate[, `:=`(
+  has_voted = data.table::fifelse(
+    test = result >= -1L, 
+    yes = 1L, no = 0L) ) ]
+voted_dt <- meps_rcv_mandate[, .N, keyby = list(pers_id, has_voted)]    
+voted_dt[, tot := sum(N, na.rm = TRUE), by = pers_id]
+voted_dt[, attendance_rate := round(N / tot, digits = 3)]
+
+
+# plot -------------------------------------------------------------------------
+voted_dt |> 
+  dplyr::filter(has_voted == 1) |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_min(order_by = attendance_rate, n = 10) |> 
+  dplyr::mutate(mep_name = forcats::fct_reorder(.f = mep_name, 
+                                                .x = attendance_rate) ) |> 
+  # dplyr::filter(political_group == "PPE") |>
+  ggplot(aes(x = mep_name, 
+             y = attendance_rate,
+             fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = polgroup_palette) +
+  labs(
+    x="", y="Attendance Rate (%)", 
+    title = "Most Absent MEPs",
+    subtitle = stringr::str_wrap(
+      "The lower the value, the lower the MEP's attendance rate. Only the bottom 10 MEPs are shown.", width = 100),
+    caption = "Notes: Attendance rate is calculated based on whether a MEP voted on an RCV. To be clear, it is not calculated based on the Attendance Lists, but on RCVs.") +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"),
+        legend.position = "right")
+ggsave(here::here("figures", "meps_attendance_rates.jpeg"),
+       dpi=300, device="jpeg", height=3, width=8)
+```
+
+```{r}
+#| eval: false
+
+p = meps_rcv_mandate |> 
+  left_join(
+    y = votes_dt[, list(rcv_id, activity_date = as.Date(activity_date))],
+    by = "rcv_id"
+  ) |> 
+  full_join(
+    y = attendance_dt[, list(pers_id, is_present, activity_date = as.Date(activity_date))],
+    by = c("activity_date", "pers_id")
+  ) |> 
+  distinct(activity_date, pers_id, has_voted, is_present)
+
+voted_dt |> 
+  dplyr::filter(has_voted == 1) |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  join_meps_countries() |> 
+  dplyr::arrange(attendance_rate) |> 
+  dplyr::filter(country_iso3c == "AUT")
+
+attendance_dt_10 <- fread("data_out/attendance/attendance_dt_10.csv")
+attendance_dt_10 |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  join_meps_countries() |> 
+  dplyr::filter(country_iso3c == "AUT") |> 
+  summarise(
+    n = n(), .by = pers_id
+  ) |> 
+  mutate(tot = max(n))
+```
+
+
+
+## Attendance Rates by Groups
+```{r}
+# plot -------------------------------------------------------------------------
+voted_dt |> 
+  dplyr::filter(has_voted == 1) |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_min(order_by = attendance_rate, n = 10, by = political_group) |> 
+  dplyr::mutate(mep_name = tidytext::reorder_within(
+    x = mep_name, by = attendance_rate, within = political_group) ) |> 
+  # dplyr::filter(political_group == "PPE") |>
+  ggplot(aes(x = mep_name, 
+             y = attendance_rate) ) +
+  geom_col(fill="grey", colour="black", linewidth=0.1) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  facet_wrap(~political_group, ncol = 2, scales = "free_y") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_reordered() + 
+  labs(
+    x="", y="Normalised euclidean distance", 
+    title = "Distance between Renew's majority and other MEPs",
+    subtitle = stringr::str_wrap(
+      "The lower the value, the greater the affinity with Renew's majority. Only the top 10 MEPs by Group are shown.", width = 100) ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"),
+        legend.position = "right")
+# ggsave(here::here("figures", "affinity_renew_meps.jpeg"),
+#        dpi=300, device="jpeg", height=3, width=8)
+```
+
+## Average Attendance Rates by Groups
+```{r}
+voted_polgroup <- meps_rcv_mandate[, .N, keyby = list(polgroup_id, has_voted)]    
+voted_polgroup[, tot := sum(N, na.rm = TRUE), by = polgroup_id]
+voted_polgroup[, attendance_rate := round(N / tot, digits = 3)]
+
+
+# plot -------------------------------------------------------------------------
+voted_polgroup |> 
+  dplyr::filter(has_voted == 1) |> 
+  join_polit_labs() |> 
+  dplyr::mutate(political_group = forcats::fct_reorder(.f = political_group, 
+                                                .x = attendance_rate) ) |> 
+  ggplot(aes(x = political_group, 
+             y = attendance_rate,
+             fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = polgroup_palette) +
+  guides(fill = guide_legend(nrow=1, byrow=TRUE)) +
+  labs(
+    x="", y="Average Attendance Rate (%)", fill="",
+    title = "Attendance Rates by Political Groups",
+    subtitle = stringr::str_wrap(
+      "The lower the value, the lower the Political Group's attendance rate.", width = 100),
+    caption = stringr::str_wrap(
+      "Notes: Attendance rate is calculated based on whether a MEP voted on an RCV. To be clear, it is not calculated based on the Attendance Lists, but on RCVs.", width = 120)
+    ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text.x = element_text(face="bold"),
+        axis.text.y = element_blank())
+ggsave(here::here("figures", "polgroup_attendance_rates.jpeg"),
+       dpi=300, device="jpeg", height=4, width=8)
+```
+

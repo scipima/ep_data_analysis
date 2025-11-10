@@ -1,0 +1,42 @@
+---
+title: "MEPs' Affinity with Renew"
+date: "`r Sys.Date()`"
+format: 
+  pdf:
+    geometry:
+      - top=10mm
+      - left=10mm
+      - bottom=20mm
+      - right=10mm
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- Here are the the 50 MEPs according to the difference in affinity between Renew and their own Group.  -->
+<!-- More precisely, we first calculate the distance between all MEPs and Renew's majority, as well as between all MEPs and their own Groups. -->
+<!-- We then take the difference between these two distances (`dist_diff`), with positive values indicating closer affinity to Renew than their own Group.  -->
+<!-- We also provide the total number of MEPs per party (`party meps`), with the assumption that MEPs from smaller parties can be more easily persuaded that MEPs belonging to large delegations. -->
+
+```{r}
+#| warning: false
+#| echo: false
+
+
+meps_eucldist = data.table::fread(file = here::here(
+  "data_out", "meps", "meps_eucldist.csv"))
+
+meps_eucldist |>
+  dplyr::filter( !pers_id %in% c(197842, 257256) ) |> 
+  dplyr::arrange(desc(dist_diff)) |> 
+  dplyr::mutate(dist_diff = round(dist_diff, digits = 4)) |> 
+  dplyr::select(MEP = mep_name, 
+                Country = country_iso3c, 
+                PG = political_group, 
+                Party = national_party, 
+                `party meps` = n_meps,
+                `Distance difference` = dist_diff) |> 
+  dplyr::slice_head(n = 50) |> 
+  knitr::kable(align = "c")
+
+```

@@ -1,0 +1,249 @@
+---
+title: "Renew MEPs' Attendance"
+format:
+    pdf:
+        toc: true
+        toc-depth: 3
+        toc-title: Contents
+        number-sections: true
+        colorlinks: true
+        pdf-engine: xelatex
+        mainfont: "Noto Sans"
+        geometry: 
+            margin=1cm
+editor_options:
+    chunk_output_type: console
+execute:
+    echo: false
+    warning: false
+---
+
+## Introduction
+```{r setup}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c(
+    "data.table", "dplyr", "ggplot2", "here", "lubridate",
+    "janitor", "stringi", "tidyr", "tidyselect") )
+
+
+#------------------------------------------------------------------------------#
+## Plenary Data ----------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+    file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+    verbose = TRUE, key = c("rcv_id", "pers_id"),
+    na.strings = c(NA_character_, "") )
+# Create a flag for whether MEP was in the House
+meps_rcv_mandate[, `:=`(
+    has_voted = data.table::fifelse(
+        test = result >= -2L,
+        yes = 1L, no = 0L) ) ]
+
+### Votes ----------------------------------------------------------------------
+pl_votes <- data.table::fread(
+    file = here::here("data_out", "votes", "pl_votes_10.csv"),
+    select = c("activity_date", "rcv_id", "mandate", "number_of_attendees",
+               "number_of_votes_abstention", "number_of_votes_against",
+               "number_of_votes_favor"),
+    na.strings = c(NA_character_, "") )
+
+### Attendance -----------------------------------------------------------------
+pl_attendance <- data.table::fread(
+    file = here::here("data_out", "attendance", "pl_attendance_10.csv"),
+    verbose = TRUE, key = c("activity_date", "pers_id"),
+    na.strings = c(NA_character_, "") )
+
+### Current MEPs ---------------------------------------------------------------
+meps_current <- data.table::fread(here::here(
+    "data_out", "meps", "meps_current.csv") )
+
+political_groups <- data.table::fread(here::here(
+    "data_out", "bodies", "political_groups_all.csv") )
+
+
+#------------------------------------------------------------------------------#
+## Parameters ------------------------------------------------------------------
+# Hard code the start of the mandate ------------------------------------------#
+if ( !exists("mandate_starts") ) {
+    mandate_starts <- as.Date("2024-07-14") }
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+    political_groups$label == "Renew"]
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+```
+
+This document presents data regarding Renew MEPs' attendance during Plenary.
+To do so, it relies on MEPs' votes during Plenary.
+To be clear, we do not consider attendance as derived from the Attendance Sheets. 
+As a consequence, we do not include information regarding whether a Member was officially *excused*.
+However, that can be included if needs be.
+
+
+## Renew MEPs' Daily Attendance
+```{r meps-daily-attendance}
+#| fig-width: 8
+#| fig-height: 9.5
+#| fig-align: center
+
+#------------------------------------------------------------------------------#
+# MEPs' votes by day  ----------------------------------------------------------
+renew_current_meps = meps_current$pers_id[
+    meps_current$polgroup_id %in% renew_group_ids
+]
+has_voted_byday = meps_rcv_mandate |>
+    # Get activity date from VOTES
+    dplyr::left_join(
+        y = pl_votes[, list(rcv_id, activity_date = as.Date(activity_date))],
+        by = "rcv_id"
+    ) |>
+    dplyr::mutate(
+        # Create a flag for EP official votes
+        is_truevote = ifelse(test = result >= -1L, yes = 1L, no = 0L)
+    ) |>
+    # Get total TRUE votes by MEPs by day
+    dplyr::mutate(sum_rcv_byday = sum(is_truevote, na.rm = TRUE),
+                  .by = c(pers_id, activity_date) ) |>
+    dplyr::mutate(
+        # Get total number of RCVs within the date
+        tot_rcv_byday = n_distinct(rcv_id),
+        .by = activity_date
+    ) |>
+    dplyr::mutate(vote_rate_byday = sum_rcv_byday / tot_rcv_byday) |>
+    # Get unique combination of these vars
+    dplyr::distinct(activity_date, pers_id, has_voted, sum_rcv_byday, tot_rcv_byday,
+                    vote_rate_byday) |>
+    join_meps_names()
+
+has_voted_byday_plot = has_voted_byday |>
+    dplyr::filter(
+        # Since September 2025
+        activity_date >= as.Date("2025-09-01")
+        # Just get the CURRENT RENEW MEPs
+        & pers_id %in% renew_current_meps
+        ) |> 
+    dplyr::left_join(
+        y = data.table::fread(here::here(
+            "data_out", "meps", "meps_mandate_10.csv"), 
+            select = c("pers_id", "family_name")),
+        by = "pers_id"
+    ) |> 
+    dplyr::arrange(desc(family_name)) |>
+    ## Convert names to ASCII-safe format 
+    # Transliterate Eastern European characters to ASCII equivalents
+    dplyr::mutate(
+        mep_name = stringi::stri_trans_general(mep_name, "Latin-ASCII"),
+        family_name = stringi::stri_trans_general(family_name, "Latin-ASCII")
+        )
+
+
+# Plot rank
+plot_rank = unique(has_voted_byday_plot$mep_name)
+
+# Plot
+has_voted_byday_plot |>     
+    ggplot(aes(x = factor(activity_date), y = factor(mep_name, levels = plot_rank),
+               fill = vote_rate_byday)) +
+    geom_tile() +
+    scale_fill_distiller(direction = 1, type = "div", palette = 7) +
+    labs(x="Plenary Dates", y="", fill = "Vote Rate by Date") +
+    theme_minimal() +
+    theme(
+        legend.position = "top",
+        legend.location	= "plot",
+        legend.title = element_text(size = 9, vjust = .8),
+        legend.text = element_text(size = 9),
+        axis.text.y = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 9),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+    )
+```
+
+```{r meps-daily-attendance-saveplot}
+#| eval: false
+has_voted_byday_plot = has_voted_byday |>
+    dplyr::filter(
+        # Just get the CURRENT RENEW MEPs
+        pers_id %in% renew_current_meps
+        ) |> 
+    dplyr::left_join(
+        y = data.table::fread(here::here(
+            "data_out", "meps", "meps_mandate_10.csv"), 
+            select = c("pers_id", "family_name")),
+        by = "pers_id"
+    ) |> 
+    dplyr::arrange(desc(family_name))
+# Plot rank
+plot_rank = unique(has_voted_byday_plot$mep_name)
+
+has_voted_byday_plot |>
+    ggplot(aes(x = factor(activity_date), y = factor(mep_name, levels = plot_rank),
+               fill = vote_rate_byday)) +
+    geom_tile() +
+    scale_fill_distiller(direction = 1, type = "div", palette = 7) +
+    labs(x="Plenary Dates", y="", fill = "Vote Rate by Date") +
+    theme_minimal() +
+    theme(
+        legend.position = "top",
+        legend.title = element_text(size = 7),
+        legend.text = element_text(size = 6),
+        axis.text.y = element_text(size = 5),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 5),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+    )
+ggsave(filename = here::here("figures", "meps_votes_byday.pdf"), 
+       plot = has_voted_byday_plot, dpi = 300, height = 19, width = 26.7, 
+       device = "pdf", units = "cm")
+```
+
+{{< pagebreak >}}
+
+## Renew MEPs Aggregate Attendance
+```{r aggregate-daily-attendance}
+#------------------------------------------------------------------------------#
+# MEPs' votes by day  ----------------------------------------------------------
+renew_voting_meps_share = has_voted_byday |>
+    filter(
+        # Just get the CURRENT RENEW MEPs
+        pers_id %in% renew_current_meps
+        ) |>
+    dplyr::mutate(
+        renew_total_meps = dplyr::n_distinct(pers_id), 
+        .by = activity_date
+    ) |>
+    filter(
+        # Since September 2025
+        activity_date >= as.Date("2025-09-01")
+        # Just Presence
+        & has_voted == 1L
+    ) |>
+    dplyr::summarise(
+        renew_voting_meps = dplyr::n_distinct(pers_id),
+        renew_total_meps = mean(renew_total_meps),
+        .by = activity_date
+    ) |>
+    dplyr::mutate(
+        renew_voting_meps_share = round(renew_voting_meps / renew_total_meps * 100, 
+                                        digits = 1)
+    ) |>
+    dplyr::arrange(activity_date)
+
+renew_voting_meps_share |>
+    knitr::kable(
+        col.names = c("Plenary Date", "Renew MEPs Voting", "Total Renew MEPs", 
+                      "Share of Renew MEPs Voting (%)"),
+        align = "c")
+
+```
+

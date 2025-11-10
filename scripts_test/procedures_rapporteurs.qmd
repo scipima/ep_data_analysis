@@ -1,0 +1,140 @@
+---
+title: "Legislative Trends in the EP's 9th Mandate"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+```
+
+Having collected all procedures from the EP API, we seek to identify all the completed procedures.
+To do that, we proceed as follows:
+
+* we identify all procedures that are flagged as `def/ep-activities/SIGNATURE` or `def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL`.
+These are taken as proxies for when a procedure is completed. 
+* we drop from the data all completed procedures. 
+
+```{r}
+procedures_consists_of <- data.table::fread(here::here(
+  "data_out", "procedures", "procedures_consists_of.csv"))
+# length(unique(procedures_consists_of$id))
+
+procedures_consists_of[
+  grepl(pattern = "SIGNATURE|PUBLICATION", x = consists_of_had_activity_type),
+  is_completed := 1L
+]
+
+# extract vector of procedures to drop (as they are assumed to be completed)
+processes_completed <- procedures_consists_of[, .(avg = mean(is_completed, na.rm= TRUE)),
+                                              by = id][avg > 0]$id
+```
+
+
+```{r}
+procedures_created_a_realization_of <- data.table::fread( here::here(
+  "data_out", "procedures", "procedures_created_a_realization_of.csv") )
+
+procedures_open <- procedures_df |> 
+  dplyr::filter( !id %in% unique(processes_completed) ) |> 
+  dplyr::left_join(
+    y = procedures_created_a_realization_of
+  ) 
+# length(unique(procedures_open$id))
+
+procedures_open <- procedures_open |> 
+  dplyr::mutate(is_adopted = ifelse(
+    test = grepl(
+      pattern = "eli/dl/doc/TA-|eli/dl/doc/B-|eli/dl/doc/RC-", 
+      x = created_a_realization_of),
+    yes = 1L, no = 0L) ) |> 
+  dplyr::group_by(id) |> 
+  dplyr::mutate(procedure_completed = mean(is_adopted, na.rm = TRUE)) |> 
+  dplyr::ungroup() |> 
+  dplyr::filter(procedure_completed == 0) |> 
+  dplyr::select(-c(is_adopted, procedure_completed) )
+```
+
+
+
+
+
+
+```{r}
+
+# adopted_texts <- read_csv("data_out/docs/adopted_texts.csv") |>
+#   dplyr::mutate(adopts = gsub(pattern = "eli/dl/doc/",
+#                               replacement = "", x = adopts)) |>
+#   dplyr::select(adopted_doc_id = document_identifier,
+#                 adopted_doc_date = document_date,
+#                 adopts) |>
+#   dplyr::distinct()
+adopted_texts_fromcsv <- read_csv("data_out/docs/adopted_texts_fromcsv.csv") |>
+  dplyr::select(adopted_doc_id = document_identifier, 
+                adopted_doc_date = document_date,
+                document_adopts) |> 
+  tidyr::separate_longer_delim(cols = document_adopts, delim = ";") |> 
+  dplyr::mutate(document_adopts = trimws(document_adopts)) |> 
+  dplyr::filter(grepl(pattern = "A-", x = document_adopts))
+
+
+
+doc_workHadParticipation_person <- read_csv("data_out/docs/doc_workHadParticipation_person.csv")
+length(unique(doc_workHadParticipation_person$doc_id))
+doc_creator <- read_csv("data_out/docs/doc_creator.csv")
+length(unique(doc_creator$identifier))
+# unique(doc_creator$identifier)[
+#   !unique(doc_creator$identifier) %in% unique(doc_workHadParticipation_person$doc_id)]
+
+plenary_docs <- doc_creator |> 
+  dplyr::filter(entity == "mep") |> 
+  dplyr::mutate(creator = as.integer(creator)) |> 
+  dplyr::full_join(
+    y = doc_workHadParticipation_person,
+    by = c("identifier" = "doc_id",
+           "creator" = "had_participant_person") ) |> 
+  dplyr::select(-id) |> 
+  dplyr::mutate(
+    participation_in_name_of = gsub(
+      pattern = "org/|http://publications.europa.eu/resource/authority/corporate-body/EP_",
+      replacement = "", x = participation_in_name_of),
+    participation_role = gsub(
+      pattern = "def/ep-roles/",
+      replacement = "", x = participation_role) ) 
+
+procedures_created_a_realization_of <- read_csv("data_out/procedures/procedures_created_a_realization_of.csv") |>
+  dplyr::mutate(created_a_realization_of = gsub(pattern = "eli/dl/doc/",
+                              replacement = "", x = created_a_realization_of))
+
+plenary_docs |> 
+  dplyr::left_join(
+    y = procedures_created_a_realization_of,
+    by = c("identifier" = "created_a_realization_of") )
+
+
+# |>
+#   dplyr::full_join(
+#     y = adopted_texts_fromcsv ,
+#     by = c("identifier" = "document_adopts") ) |> 
+#   dplyr::filter(grepl(pattern = "A-", identifier)
+#                 & is.na(adopted_doc_id))
+
+adopted_texts$adopts[ 
+  adopted_texts$adopts %in% doc_creator$identifier]
+```
+
+

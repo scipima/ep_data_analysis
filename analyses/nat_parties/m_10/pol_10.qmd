@@ -1,0 +1,212 @@
+---
+title: "Vote Analysis - Poland"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "tidyr", "tidyselect", "tidytext") )
+
+
+#------------------------------------------------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )  
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# Set global theme for ggplot2 ------------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10))
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+```
+
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+
+
+### Votes ----------------------------------------------------------------------
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_10.csv"), 
+  select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+             "number_of_votes_abstention", "number_of_votes_against",
+             "number_of_votes_favor"), 
+  na.strings = c(NA_character_, "") )
+
+### MEP last Plenary day -------------------------------------------------------
+meps_current <- data.table::fread( file = here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(votes_dt)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+```
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## How often EPP votes together with ECR, and how much do they win?
+```{r}
+# Get the Groups' majority by rcv_id ------------------------------------------#
+mjrt_groups <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    country_id == 22
+    & result >= -2 
+    & !is.na(result)] # exclude NAs, absent
+)
+
+# Get the target majority
+epp_mjrt <- mjrt_groups[
+  polgroup_id %in% 7018L # EPP
+  ][, c("polgroup_id", "who_won") := NULL]
+data.table::setnames(epp_mjrt, old = "result", new = "mjrt_epp")
+
+# Inner-join
+mjrt_epp_ecr <- epp_mjrt[
+  mjrt_groups[
+    polgroup_id %in% 7037L # ECR
+    & result >= -2 & !is.na(result)], # exclude NAs, absent
+  on = "rcv_id", nomatch = NULL]
+
+# Calculate Euclidean distance
+mjrt_epp_ecr[, `:=`(
+  is_same = as.integer(mjrt_epp == result)
+)]
+
+# take the average for plotting
+mjrt_epp_ecr_avg <- mjrt_epp_ecr[, list(
+  is_same_avg = round(mean(is_same, na.rm = TRUE) * 100, digits = 1 )
+) ]
+```
+
+The majorities within EPP and ECR were aligned in `r mjrt_epp_ecr_avg`% of the total number of RCVs during this mandate (that is, `r n_rcv`).
+
+```{r}
+mjrt_house = get_house_majority()
+
+epp_ecr_win = mjrt_house |> 
+  left_join(
+    y = mjrt_epp_ecr,
+    by = "rcv_id"
+  ) |> 
+  mutate(
+    epp_win = as.integer(result.x == mjrt_epp),
+    epp_ecr_win = as.integer((result.x == mjrt_epp & result.x == result.y))
+  )
+
+epp_ecr_win_avg = epp_ecr_win |> 
+  summarise(
+    epp_win_avg = round(mean(epp_win, na.rm = TRUE) * 100, digits = 1),
+    epp_ecr_win_avg = round(mean(epp_ecr_win, na.rm = TRUE) * 100, digits = 1)
+  )
+```
+
+The majority of Polish EPP MEPs were aligned with the vote outcome in the EP `r epp_ecr_win_avg$epp_win_avg`%, whereas when the majorities within both EPP and ECR voted together they were in line with the vote outcome in the House only `r epp_ecr_win_avg$epp_ecr_win_avg`%.
+
+
+## How often EPP votes together with Renew, and how much do they win?
+```{r}
+# Inner-join
+mjrt_epp_renew <- epp_mjrt[
+  mjrt_groups[
+    polgroup_id %in% 7035L # RENEW
+    & result >= -2 & !is.na(result)], # exclude NAs, absent
+  on = "rcv_id", nomatch = NULL]
+
+# Calculate Euclidean distance
+mjrt_epp_renew[, `:=`(
+  is_same = as.integer(mjrt_epp == result)
+)]
+
+# take the average for plotting
+mjrt_epp_renew_avg <- mjrt_epp_renew[, list(
+  is_same_avg = round(mean(is_same, na.rm = TRUE) * 100, digits = 1 )
+) ]
+```
+
+The majorities within EPP and Renew were aligned in `r mjrt_epp_renew_avg`% of the total number of RCVs during this mandate (that is, again, `r n_rcv`).
+
+```{r}
+epp_renew_win = mjrt_house |> 
+  left_join(
+    y = mjrt_epp_renew,
+    by = "rcv_id"
+  ) |> 
+  mutate(
+    epp_win = as.integer(result.x == mjrt_epp),
+    epp_renew_win = as.integer((result.x == mjrt_epp & result.x == result.y))
+  )
+
+epp_renew_win_avg = epp_renew_win |> 
+  summarise(
+    epp_win_avg = round(mean(epp_win, na.rm = TRUE) * 100, digits = 1),
+    epp_renew_win_avg = round(mean(epp_renew_win, na.rm = TRUE) * 100, digits = 1)
+  )
+```
+
+As stated above, the majority of Polish EPP MEPs were aligned with the vote outcome in the EP `r epp_renew_win_avg$epp_win_avg`%, and when the majorities within both EPP and Renew voted together they were in line with the vote outcome in the House `r epp_renew_win_avg$epp_renew_win_avg`%.
+
+
+## Data and Methods
+We include in our analysis all voting data relative to roll-call votes (RCVs) during the current mandate.
+To provide some context, we currently have `r length(unique(meps_rcv_mandate$rcv_id))` RCVs in our database for the current mandate.
+It is important to appreciate that what we have is only a subset of the all legislation being adopted. 
+Indeed, the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - but RCVs are the only ones where we able to trace votes to individual MEPs - that is, they are so-called *nominal* votes. 
+As a rough approximation, if we take out the likely duplicate rows from the voting archives, RCVs were approximately `r round(n_rcv/n_votes*100, digits=1)`% of the total votes during this mandate.

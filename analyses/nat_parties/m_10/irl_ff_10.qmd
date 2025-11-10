@@ -1,0 +1,1041 @@
+---
+title: "Communicating about voting data at national level"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+```{r qmdparams}
+#------------------------------------------------------------------------------#
+qmd_grid <- data.table::fread(here::here("data_reference", "qmd_grid.csv"))
+params <- qmd_grid[qmd_grid$natparty_id == 6741L]
+
+## Parameters ------------------------------------------------------------------
+# Country
+country_id = params$country_id
+country_iso3c <- params$country_iso3c
+country_name_en <- params$country_name_en
+
+# Political Groups
+renew_polgroup_id <- 7035L
+
+# National Parties
+renew_country_party_id <- params$natparty_id
+renew_country_party <- params$national_party
+renew_country_party_long <- params$national_party_long
+
+renew_country_party_noshow_id <- qmd_grid$natparty_id[
+  qmd_grid$country_id == params$country_id 
+  & qmd_grid$natparty_id != renew_country_party_id
+  & qmd_grid$polgroup_id == renew_polgroup_id]
+
+independents <- c("-", "Ind.", "Indépendant", "Independent", "Independiente")
+```
+
+
+## Intro
+```{r misc}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "ggplot2", "here", "lubridate",
+                        "janitor", "stringi", "tidyr", "tidyselect", "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Cohesion rate ---------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+# Join functions --------------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# Vote Colours  ---------------------------------------------------------------#
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+
+# set theme globally for ggplots ----------------------------------------------#
+# REF: https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10))
+```
+
+The objective of this short note is to provide regular updates to ***`r renew_country_party_long`*** (from now on, `r renew_country_party`) on Plenary voting dynamics.
+At the time of writing, the sample size is extremely low, so the current figures may be somewhat misleading. 
+Please consider this document just as a template that will become more reliable and insightful as data accumulates. 
+
+In its standard version, this documents features three sections: 
+
+* **Attendance**. 
+This includes *presence at votes* and *number of abstentions*.
+* **Opposition MEPs** who are both diverging from their Groups and close to `r renew_country_party_long`** looks at MEPs from national opposition parties who broke ranks with their respective Political Groups AND voted in the same way as `r renew_country_party_long`.
+
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Data and Methods
+We include in our analysis all voting data relative to RCVs since the start of the 10th mandate.
+This means that we also get several MEPs who switched party and/or Group.
+All these changes may translate into MEPs and parties featuring in different EP Political Groups.
+For the sake of simplicity, in this analysis we discard MEPs' vote intentions, and *just display calculations relative to national MEPs and parties*.
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+# RCVs ------------------------------------------------------------------------#
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+
+# Votes -----------------------------------------------------------------------#
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"), 
+  na.strings = c(NA_character_, "") )  
+
+# Attendance Sheets
+pl_attendance <- data.table::fread(
+  file = here::here("data_out", "attendance", "pl_attendance_10.csv"))
+pl_attendance
+
+# Vote dictionary -------------------------------------------------------------#
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+
+
+### MEP last Plenary day -------------------------------------------------------
+meps_current <- data.table::fread( file = here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+
+### MEPs mandate ---------------------------------------------------------------
+meps_mandate <- data.table::fread(
+  here::here("data_out", "meps", "meps_mandate_10.csv"))
+
+
+#------------------------------------------------------------------------------#
+# get country nat_party id
+country_parties_current <- sort( unique( meps_current$natparty_id[
+  meps_current$country_id == params$country_id] ) ) 
+
+# full list of Renew MEPs
+renew_meps_full <- unique(meps_rcv_mandate$pers_id[
+  meps_rcv_mandate$polgroup_id %in% renew_polgroup_id])
+renew_meps_country <- unique(meps_current$pers_id[
+  meps_current$polgroup_id %in% renew_polgroup_id
+  & meps_current$country_id == params$country_id])
+renew_meps_country_party <- unique(meps_current$pers_id[
+  meps_current$polgroup_id %in% renew_polgroup_id
+  & meps_current$country_id == params$country_id
+  & meps_current$natparty_id == params$natparty_id])
+renew_meps_country_party_noshow = renew_meps_country[
+  !renew_meps_country %in% renew_meps_country_party]
+
+# Constituencies ---------------------------------------------------------------
+dublin = c(`Lynn BOYLAN` = 124984L, 
+           `Regina DOHERTY` = 257237L, 
+           `Aodhán Ó RÍORDÁIN` = 257238L, 
+           `Barry ANDREWS` = 204332L) 
+irl_south = c(`Seán KELLY` = 96668L, 
+              `Kathleen FUNCHION` = 257299L, 
+              `Cynthia NÍ MHURCHÚ` = 257301L,
+              `Billy KELLEHER` = 197818L)
+irl_mnw = c(`Luke Ming FLANAGAN` = 124985L, 
+            `Nina CARBERRY` = 257296L, 
+            `Maria WALSH` = 197863L, 
+            `Barry COWEN` = 257297L)
+
+irl_constituencies = data.frame(
+  pers_id = c(dublin, irl_south, irl_mnw),
+  Constituency = c(
+    rep("dublin", length(dublin) ),
+    rep("irl_south", length(irl_south) ),
+    rep("irl_mnw", length(irl_mnw) ) )
+)
+```
+
+
+## Attendance 
+### Attendance Rates
+```{r}
+#| page-layout: full
+
+#------------------------------------------------------------------------------#
+meps_rcv_mandate[, `:=`(
+  has_voted = data.table::fifelse(test = result >= -1L, yes = 1L, no = 0L) 
+) ]
+participation_dt <- meps_rcv_mandate[
+  country_id == params$country_id
+  & !pers_id %in% renew_meps_country_party_noshow,
+  # & polgroup_id != renew_polgroup_id,
+  .N, 
+  keyby = list(pers_id, has_voted)]    
+participation_dt[, tot := sum(N, na.rm = TRUE), by = pers_id]
+participation_dt[, attendance_rate := N / tot]
+
+
+# plot -------------------------------------------------------------------------
+participation_dt_plot = participation_dt |> 
+  dplyr::filter(has_voted == 1) |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::mutate(mep_name = forcats::fct_reorder(.f = mep_name, 
+                                                .x = attendance_rate) ) |> 
+  dplyr::full_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) 
+
+# Check for bugs in the data --------------------------------------------------#
+if ( any( is.na(participation_dt_plot$polgroup_id) ) ) {
+  stop("\n=====\nYou cannot have NAs here. Revise the data.\n=====\n")
+}
+
+# Plot by constituency
+participation_dt_plot |> 
+  ggplot(aes(x = attendance_rate, 
+             y = mep_name,
+             fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1) +
+  geom_vline(xintercept = 0, linewidth=0.5) +
+  facet_grid(rows = vars(Constituency), space="free", scales = "free") +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_fill_manual(values = polgroup_cols) +
+  labs(
+    x="", y="Attendance Rate (%)", fill="",
+    title = "MEPs' Attendance Rates",
+    caption =  stringr::str_wrap("Notes: The lower the value, the lower the MEP's attendance rate. Attendance rate is calculated based on whether a MEP voted on an RCV. To be clear, it is not calculated based on the Attendance Lists, but on RCVs.", width = 100) ) +
+  theme_bw() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y.right = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+```
+
+
+### Number of abstentions
+In the table below, we display the breakdown of the votes by MEP, augmented by the inclusion of a calculated field, namely `Did not vote`.
+These are the cases where a MEP decided not to vote albeit being present in the House. 
+We add that figure to the abstentions to calculate an `Abstention rate`, which is defined as `(Abstain + Did not vote) /Total`.
+```{r}
+#| page-layout: full
+
+#------------------------------------------------------------------------------#
+# left join
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result_fct,
+                                        levels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Aggregate
+meps_rcv_mandate[
+  country_id == params$country_id
+  & !pers_id %in% renew_meps_country_party_noshow,
+  # & polgroup_id != renew_polgroup_id,
+  .N, 
+  keyby = list(pers_id, result_fct, result)] |> 
+  join_meps_names() |> 
+  dplyr::mutate(Total = sum(N), .by = pers_id) |> 
+  tidyr::pivot_wider(id_cols = c(pers_id, mep_name, Total),
+                     names_from = result_fct, values_from = N) |> 
+  dplyr::mutate(
+    `Abstention rate (%)` = round( (abstain + no_vote) / Total * 100, digits = 2)
+  ) |> 
+  dplyr::full_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) |> 
+  dplyr::select(Constituency, MEP = mep_name, For = `for`, Abstain = abstain, 
+                Against = against, `Did not vote` = no_vote, Total, 
+                `Abstention rate (%)`) |> 
+  dplyr::arrange(Constituency, desc(`Abstention rate (%)`)) |> 
+  knitr::kable(align = "c")
+
+meps_rcv_mandate[, has_voted := NULL]
+```
+
+We treat separately MEPs' absences. 
+There are two ways to look at absences.
+A MEP can be absent from the House, but *justified*, and thus recorded in the *Attendance Registers*.
+We augment the data again to include those cases where a MEP was empirically absent, as he/she did not participate in a single vote on a Plenary day. 
+The table below sums up the *days* in which these instances were recorded. 
+To reiterate the point, while all the calculations so far used votes as unit of analysis, the table below switches to *days*. 
+```{r}
+attendance_sheets = meps_rcv_mandate[
+  country_id == params$country_id
+  & !pers_id %in% renew_meps_country_party_noshow
+  # & polgroup_id != renew_polgroup_id
+  & result == -3
+] |> 
+  dplyr::left_join(
+    y = pl_votes[, list(rcv_id, activity_date = as.Date(activity_date) ) ],
+    by = "rcv_id"
+  ) |> 
+  dplyr::left_join(
+    y = pl_attendance[, list(pers_id, is_present, 
+                             activity_date = as.Date(activity_date) ) ],
+    by = c("pers_id", "activity_date") ) |> 
+  data.table::as.data.table()
+
+# Recode
+attendance_sheets[is_present == 1L, status := "Present"]
+attendance_sheets[is_present == 0L, status := "Excused"]
+attendance_sheets[is.na(is_present), status := "Not in the list"]
+
+attendance_sheets |> 
+  dplyr::distinct(pers_id, activity_date, status) |> 
+  dplyr::summarise( n = n(), .by = c(pers_id, status)) |> 
+  tidyr::pivot_wider(names_from = status, values_from = n, values_fill = 0L) |> 
+  join_meps_names() |> 
+  dplyr::full_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) |> 
+  dplyr::arrange(Constituency, desc(Present)) |> 
+  dplyr::select(Constituency, MEP = mep_name, Present, Excused, `Not in the list`) |> 
+  knitr::kable(align = "c")
+```
+
+
+## Opposition
+### Opposition MEPs who are diverging from their Groups
+```{r}
+#| page-layout: full
+
+# Get the Groups' majority by rcv_id ------------------------------------------#
+mjrt_group <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    result >= -2]) # exclude absent
+
+# Get Party majority ----------------------------------------------------------#
+mjrt_party <- get_natparty_majority(
+  data_in = meps_rcv_mandate[
+    country_id == params$country_id
+    & result >= -2]) # exclude absent
+
+## Calculate similarity --------------------------------------------------------
+# Merge Group line with MEPs vote 
+mjrt_group_mep <- mjrt_group[
+  meps_rcv_mandate[
+    country_id == params$country_id
+    & result >= -2  # exclude absent
+  ], 
+  on = c("rcv_id", "polgroup_id"), nomatch = NULL
+]
+
+# Are Groups' majorities and MEP the same? ------------------------------------#
+mjrt_group_mep[, is_same := as.integer(result == i.result)]
+
+mjrt_group_mep[
+  !pers_id %in% renew_meps_country_party_noshow,
+  # !pers_id %in% renew_meps_country,
+  list(
+    n = .N - sum(is_same, na.rm=TRUE),
+    avg = mean(is_same, na.rm=TRUE)
+  ),
+  by = pers_id
+][order(avg)] |> 
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::full_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) |> 
+  dplyr::mutate(mep_name = forcats::fct_reorder(.f = mep_name, 
+                                                .x = avg) ) |> 
+  # dplyr::filter(political_group == "PPE") |>
+  ggplot(aes(x = avg, 
+             y = mep_name,
+             fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1) +
+  geom_text(aes(x = 1, label = n), hjust = -0.1) +
+  geom_vline(xintercept = c(0, 1), linewidth=0.5) +
+  facet_grid(rows = vars(Constituency), scales="free", space="free") +
+  scale_x_continuous(labels = scales::percent, 
+                     breaks = c(0, 0.25, 0.5, 0.75, 1),
+                     limits = c(0, 1)) +
+  scale_fill_manual(values = polgroup_cols) +
+  labs(
+    x="Alignment with own Group (%)", y="", fill="",
+    title = "MEPs' Alignment with their own Groups",
+    subtitle = "The number of deviations from the Group's majority are displayed besides the bars") +
+  coord_cartesian(clip = "off", xlim = c(0, 1.1)) +
+  theme_bw() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y.right = element_text(angle = 0, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        # panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        # panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+```
+
+
+### Opposition MEPs who are both diverging from their Groups and are close to `r renew_country_party_long`
+#### During last Plenary
+What MEPs (not from Renew) voted in line with `r renew_country_party` when they deviated from their own group line?
+Here we consider all types of votes, including the `no_vote` (i.e. a MEP present in the House but not voting), essentially getting rid only of those who are absent.
+The vote dictionary is as follows:
+```{r}
+vote_dict |> 
+  dplyr::filter(result >= -2) |> 
+  knitr::kable(align = "c")
+```
+
+To answer that question, we first have to check whether non-Renew MEPs deviates from their Group.
+```{r}
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+# First condition: non-Renew parties deviates from their Group ----------------#
+
+# Create YEAR WEEK identifiers
+pl_votes[, `:=`(
+  year = data.table::year(activity_date),
+  week = data.table::isoweek(activity_date)
+)][,
+   week := data.table::fifelse(test = nchar(week) == 1L, 
+                               yes = paste0("0", week), no = as.character(week))
+][,
+  year_week := as.integer(paste0(
+    year, week) ) 
+][, c("year", "week") := NULL]
+# Check 
+# pl_votes[decision_method == "VOTE_ELECTRONIC_ROLLCALL",
+#              length(unique(rcv_id)),
+#              by = activity_date]
+
+# Extract vector of RCV IDs from last Plenary
+rcvids_lastplenary <- unique(pl_votes$rcv_id[
+  pl_votes$decision_method == "VOTE_ELECTRONIC_ROLLCALL" # RCV only
+  & pl_votes$year_week == max(pl_votes$year_week) # last Plenary only
+] )
+
+# Filter on just MEPs' deviations from Groups ---------------------------------#
+group_meps_deviations <- mjrt_group_mep[
+  country_id %in% params$country_id
+  & !polgroup_id %in% renew_polgroup_id # no Renew
+  & is_same == 0L] |>  # mismatches only
+  join_polit_labs() |>
+  join_meps_names()
+
+# Aggregate & plot ------------------------------------------------------------#
+group_meps_deviations_plotdf <- group_meps_deviations[
+  country_id %in% params$country_id
+  & rcv_id %in% rcvids_lastplenary, # subset to last Plenary
+  list(Count = .N), 
+  keyby = list(political_group) ] |>
+  dplyr::mutate(
+    political_group = forcats::fct_reorder(political_group, Count) ) 
+
+if ( nrow(group_meps_deviations_plotdf) == 0L ) {
+  cat("During the last Plenary, there were __no occurrences__ of such deviations.\n",
+      sep = "")
+} else {
+  cat("The bar chart below displays how many times MEPs have deviated from the Groups' majorities during the last Plenary.\n",
+      sep = "")
+}
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 2
+
+#------------------------------------------------------------------------------#
+# Conditional plot ------------------------------------------------------------#
+if ( nrow(group_meps_deviations_plotdf) > 0L ) {
+  group_meps_deviations_plotdf |>
+    ggplot(aes(x = Count, y = political_group)) +
+    geom_col(linewidth = 0.1, colour = "black", fill = "grey80") +
+    # geom_text(aes(label = Count), nudge_y = 0.5, size = 3) +
+    scale_x_continuous(breaks = scales::breaks_pretty()) +
+    labs(x = "Count", y = "", fill = "",
+         title = "Count of MEPs' deviations from Group's majority - Last Plenary",
+         caption = paste0("Note: data refers only to RCVs, other types of EP votes are not included. We only display data relative to ", country_iso3c) ) +
+    theme_minimal() +
+    theme(plot.title.position = "plot",
+          plot.title = element_text(face = "bold"),
+          legend.text = element_text(face="bold"),
+          panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+          panel.grid.minor.y = element_line(colour = "grey70"),
+          axis.text = element_text(face="bold"),
+          legend.position = "none") 
+}
+```
+
+```{r}
+#| results: 'asis'
+
+if ( nrow(group_meps_deviations_plotdf) > 0L ) {
+  cat("Having isolated the MEPs who deviated from the the Groups' majorities, we then proceed to single out whether any of those voted alongside ",
+      renew_country_party,
+      ". The table below lists the MEPs from ",
+      country_name_en,
+      " who voted more frequently in the same way as ",
+      renew_country_party,
+      " __and__ who did not follow their own Groups' majorities.\n",
+      sep = "")
+}
+```
+
+```{r}
+if ( nrow(group_meps_deviations_plotdf) > 0L ) {
+  
+  #  Create DIR if not existing
+  dir.create(path = here::here("data_out", "tmp", "natparty_tmp", "irl_ff"))
+  
+  
+  # Merge Renew Party's majority with deviant MEPS ----------------------------#
+  renewparty_deviantmeps <- merge(
+    x = mjrt_party[
+      rcv_id %in% rcvids_lastplenary # subset to last Plenary
+      & natparty_id %in% renew_country_party_id, # Just target Party
+      list(rcv_id, result)],
+    y = group_meps_deviations[
+      country_id == params$country_id
+      & rcv_id %in% rcvids_lastplenary, # subset to last Plenary
+      list(rcv_id, i.result, country_id, polgroup_id, political_group, natparty_id,
+           national_party, pers_id, mep_name) ],
+    by = "rcv_id", all = FALSE)
+  
+  # Are Groups' majorities and MEP the same? ----------------------------------#
+  renewparty_deviantmeps[, is_same := as.integer(result == i.result)]
+  
+  
+  # Save results in tmp folder ------------------------------------------------#
+  renewparty_deviantmeps |> 
+    dplyr::filter(is_same == 1L) |> 
+    dplyr::left_join(
+      y = pl_votes[, list(activity_date, rcv_id, doc_id, headingLabel_en,
+                          referenceText_en, activity_label_en)],
+      by = "rcv_id") |> 
+    dplyr::select(rcv_id, renew_mjrt = result, mep_vote = i.result,
+                  political_group, national_party, mep_name, activity_date,
+                  doc_id, headingLabel_en, referenceText_en, activity_label_en) |> 
+    data.table::fwrite(file = here::here(
+      "data_out", "tmp", "natparty_tmp", "irl_ff", "renew_divergent_meps.csv") )
+  
+  # Aggregate and print table -------------------------------------------------#
+  renewparty_deviantmeps[, list(
+    Count = sum(is_same, na.rm = TRUE)), 
+    keyby = list(country_id, political_group, national_party, mep_name) ] |>
+    dplyr::filter(Count > 0L) |> 
+    join_meps_countries() |> 
+    dplyr::select(political_group, national_party, mep_name, Count) |>
+    dplyr::arrange(desc(Count)) |> 
+    head(20) |> 
+    knitr::kable(align = "c")
+}
+```
+
+
+### Since the start of the parliamentary term
+In this Section, we basically repeat the same calculations as above, only this time without any filtering to just the last Plenary. 
+
+Having isolated the MEPs who deviated from the the Groups' majorities, we then proceed to single out whether any of those voted alongside `r renew_country_party`.
+The table below lists the MEPs who voted more frequently in the same way as `r renew_country_party` and who did not follow their own Groups' majorities.
+```{r}
+# Merge Renew Party's majority with deviant MEPS ------------------------------#
+renewparty_deviantmeps <- merge(
+  x = mjrt_party[
+    natparty_id %in% renew_country_party_id, # Just target Party
+    list(rcv_id, result)],
+  y = group_meps_deviations[
+    country_id == params$country_id,
+    list(rcv_id, i.result, country_id, polgroup_id, political_group, natparty_id,
+         national_party, pers_id, mep_name) ],
+  by = "rcv_id", all = FALSE)
+
+# Are Groups' majorities and MEP the same? ------------------------------------#
+renewparty_deviantmeps[, is_same := as.integer(result == i.result)]
+
+# Aggregate and print table ---------------------------------------------------#
+renewparty_deviantmeps[, list(
+  Count = sum(is_same, na.rm = TRUE)), 
+  keyby = list(country_id, political_group, national_party, pers_id, mep_name) ] |>
+  dplyr::left_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) |> 
+  dplyr::select(Constituency, political_group, national_party, mep_name, Count) |> 
+  dplyr::arrange(Constituency, desc(Count)) |> 
+  head(20) |> 
+  knitr::kable(align = "c")
+```
+
+
+### Since the start of the parliamentary term, by Committee
+```{r}
+# List of RCV IDs & Committees -------------------------------------------------
+rcvid_cmts_10 <- data.table::fread(input = here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+
+# Merge Plenary Docs, RCV, Committees with deviant MEPs -----------------------#
+dt_plot <- renewparty_deviantmeps[
+  country_id == params$country_id 
+  & is_same == 1L # filter to just same votes
+][
+  rcvid_cmts_10,
+  on = "rcv_id", 
+  nomatch = NULL] # inner join
+
+# Aggregate and plot ----------------------------------------------------------#
+dt_plot = dt_plot[, list(
+  Count = sum(is_same, na.rm = TRUE) ), 
+  keyby = list(country_id, political_group, national_party, mep_name,
+               committee_lab) ] |>
+  join_meps_countries() # |> 
+# filter to just selected Committees ----------------------------------------#
+# dplyr::filter(committee_lab %in% target_committees)
+
+plot_height = as.integer(ceiling(nrow(dt_plot)/6.5))
+```
+
+In this sub-Section, we present the same results as before, only this time grouped by Committee.
+```{r}
+#| fig-width: 8
+#| fig-height: !expr plot_height
+
+#------------------------------------------------------------------------------#
+dt_plot |> 
+  dplyr::mutate(mep_name = tidytext::reorder_within(
+    x = mep_name, by = Count, within = committee_lab) ) |> 
+  ggplot(aes(x = Count, y = mep_name, fill = political_group)) +
+  geom_col(linewidth = 0.1, colour = "black") +
+  # geom_text(aes(label = Count), nudge_y = 3, size = 3) +
+  facet_grid(rows = vars(committee_lab), scales = "free_y", space="free") +
+  labs(x = "Count", y = "", fill = "",
+       title = "Count of MEPs' deviations from Group's majority - Full mandate",
+       caption = "Note: data refers only to RCVs in Plenary.") +
+  guides(fill = guide_legend(nrow = 1)) +
+  tidytext::scale_y_reordered() +
+  scale_x_continuous() +
+  scale_fill_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        legend.position = "top",
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold", size = 10),
+        strip.text.y.right = element_text(angle = 0))
+```
+
+## Cohesion
+```{r}
+#| fig-width: 8
+#| fig-height: 2
+
+###--------------------------------------------------------------------------###
+# Read in function
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result_fct,
+                                        levels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Calculate Cohesion
+cohesion_dt <- meps_rcv_mandate[
+  !is.na(polgroup_id)
+  & !pers_id %in% renew_meps_country_party_noshow
+  # & polgroup_id != renew_polgroup_id
+  & country_id == params$country_id
+  & result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max( tabulate(result_fct) ),
+    tot_votes = sum( tabulate(result_fct) ) ), 
+  keyby = list(mandate, polgroup_id, natparty_id, rcv_id) ] |> 
+  join_polit_labs()
+
+# Aggregate -------------------------------------------------------------------#
+cohesion_dt_avg = cohesion_dt[
+  !is.na(cohesion),
+  list(
+    avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
+  by = list(mandate, political_group, national_party )
+][order(avg)] 
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = cohesion_dt_avg$national_party[
+  cohesion_dt_avg$mandate == 10L]  
+
+# Plot
+cohesion_dt_avg |>   
+  ggplot(aes(x = avg/100,
+             y = factor(national_party, levels = plot_rank),
+             fill = political_group) ) +
+  geom_col(width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = avg), 
+            hjust = -0.2, size = 4, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(values =polgroup_cols) +
+  scale_x_continuous(oob=scales::rescale_none,
+                     labels = scales::percent, limits = c(0, 1.1)) +
+  labs(#title = "Cohesion (%) - All Groups",
+    caption = "Notes: The height of the bars represent the mean of the distribution of the cohesion rates.",
+    x = "", y = "", fill="") +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        legend.position = "top",
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold", size = 10),
+        strip.text.y.right = element_text(angle = 0))
+```
+
+
+## Speeches
+### Frequencies and Durations
+In an attached Excel spreadsheet, we detail the frequency of MEPs' speeches per Part-Sessions, as well as per single day.
+```{r}
+# List of all MEPs from target country
+country_meps_current = meps_current$pers_id[
+  meps_current$country_id == params$country_id
+]
+country_meps_current_target = country_meps_current[
+  !country_meps_current %in% renew_meps_country_party_noshow]
+
+
+#------------------------------------------------------------------------------#
+# Split the vector in chunks of size 50 each
+chunk_size <- 50L
+pers_ids_chunks <- split(
+  x = country_meps_current_target,
+  f = ceiling(seq_along(country_meps_current_target) / chunk_size)
+)
+
+# loop ---------------------------------------------------#
+list_tmp <- vector(mode = "list", length = length(pers_ids_chunks) )
+for ( i_param in seq_along(pers_ids_chunks) ) {
+  # print(i_param)
+  # Create an API request
+  req <- httr2::request(paste0(
+    "https://data.europarl.europa.eu/api/v2/speeches?parliamentary-term=10&person-id=",
+    paste0(pers_ids_chunks[[i_param]], collapse = ","),
+    "&search-language=en&language=en&format=application%2Fld%2Bjson&offset=0") )
+  
+  # Add time-out and ignore error
+  resp <- req |>
+    httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0") |>
+    httr2::req_error(is_error = ~FALSE) |>
+    httr2::req_throttle(30 / 60) |>
+    httr2::req_perform()
+  
+  # If not an error, download and make available in ENV
+  if ( httr2::resp_status(resp) == 200L) {
+    resp_body <- resp |>
+      httr2::resp_body_json(simplifyDataFrame = TRUE) |>
+      purrr::pluck("data")
+    list_tmp[[i_param]] <- resp_body
+  } else if ( exists("today_date") ) {
+    stop("API request failed. Data is not available yet. Please try again later.")
+  }
+  # remove objects
+  rm(req, resp, resp_body)
+}
+
+
+speech_duration_list = vector(mode = "list", length = length(list_tmp))
+for (i_tmp in seq_along(list_tmp)) {
+  df_tmp = list_tmp[[i_tmp]]
+  
+  # Get column of activity label
+  if ( is.data.frame(df_tmp$activity_label)
+       && dim(df_tmp$activity_label)[2] == 1 ) {
+    df_tmp$activity_label = unlist(df_tmp$activity_label)
+  }
+  
+  if( is.data.frame( df_tmp$had_participation ) &&
+      dim(df_tmp$had_participation)[2] > 1 ) {
+    had_participation = df_tmp$had_participation
+    had_participation$id = gsub(pattern = "eli/dl/participation/|_.*",
+                                replacement = "", x = had_participation$id,
+                                perl = TRUE)
+  }
+  
+  df_tmp = df_tmp[, c("activity_id", "had_activity_type", "activity_date",
+                      "activity_start_date", "activity_end_date", "activity_label")]
+  
+  # Merge
+  df_tmp = merge(x = df_tmp, y = had_participation,
+                 by.x = "activity_id", by.y = "id", all = TRUE)
+  
+  # Store results
+  speech_duration_list[[i_tmp]] = df_tmp
+  
+  # Remove objects
+  rm(df_tmp, had_participation)
+}
+
+speech_duration = data.table::rbindlist(l = speech_duration_list,
+                                        use.names = TRUE, fill = TRUE)
+speech_duration = speech_duration |>
+  dplyr::mutate(
+    # Create year-week string with leading 0 weeks
+    year_week = paste0(
+      lubridate::year(activity_date),
+      stringr::str_pad(string = lubridate::isoweek(activity_date), 
+                       width = 2, side = "left", pad = "0") ),
+    activity_start_date = lubridate::as_datetime(activity_start_date,
+                                                 tz = "Europe/Brussels"),
+    activity_end_date = lubridate::as_datetime(activity_end_date,
+                                               tz = "Europe/Brussels"),
+    time_diff_seconds = round(activity_end_date - activity_start_date, digits = 1),
+    pers_id = as.integer( gsub(pattern = "person/", replacement = "",
+                               x = had_participant_person, fixed = TRUE) ) ) |>
+  dplyr::mutate(plenary_week = paste(
+    min(activity_date), max(activity_date), sep = " - "), .by = year_week ) |> 
+  join_meps_names() |>
+  dplyr::filter(!participation_role %in% "def/ep-roles/CHAIR")
+
+
+speech_duration_by_session = speech_duration |> 
+  summarise(
+    `Speeches per Session` = n(), 
+    `Speech duration` = round(sum(time_diff_seconds, na.rm = TRUE), digits = 1),
+    .by = c(plenary_week, pers_id, mep_name )) |> 
+  dplyr::full_join(
+    y = irl_constituencies,
+    by = "pers_id"
+  ) |> 
+  dplyr::select(- pers_id) 
+
+# speech_duration_by_session |> 
+#   knitr::kable(align = "c")
+```
+
+
+### Keywords
+We run a series of queries with all Irish MEPs and a list of keywords.
+The product is provided as a separate spreadsheet file. 
+The list of keywords is as follows
+```{r}
+keywords = c(
+  "Farmers", "Mercosur", "Palestine", "Gaza", "UNRWA", "Ukraine", "PFAS", 
+  "forever chemicals", "Unanimity", "Taxation", "Ireland", "Dublin", "QMV",
+  "Qualified Majority Voting", "Passerelle", "Pillar I", "Pillar II", 
+  "Single Farm Payment", "Capping", "Sanctions", "Convergence", "Nitrates",
+  "Barry Andrews", "Billy Kelleher", "Barry Cowen", "Cynthia Ni Mhurchu")
+cat(keywords, sep = "; ", fill = TRUE, width = 80)
+```
+
+
+```{r}
+#| include: false
+
+calls_grid = expand.grid(
+  pers_id = country_meps_current_target,
+  keyword = keywords
+) |> 
+  dplyr::mutate(keyword = as.character(keyword))
+
+keywords_list = vector(mode = "list", length = nrow(calls_grid))
+for ( i_row in seq_len(nrow(calls_grid) ) ) {
+  cat("Checking pers_id", 
+      calls_grid$pers_id[i_row], 
+      "for", 
+      calls_grid$keyword[i_row],
+      "\n")
+  
+  # API Call ------------------------------------------------------------------#
+  req <- httr2::request(paste0(
+    "https://data.europarl.europa.eu/api/v2/speeches?parliamentary-term=10&person-id=",
+    calls_grid$pers_id[i_row],
+    "&text=",
+    ifelse(test = grepl(pattern = "\\s", x = calls_grid$keyword[i_row]),
+           yes = gsub(pattern = "\\s", 
+                      replacement = "%20", 
+                      x = calls_grid$keyword[i_row]),
+           no = calls_grid$keyword[i_row]),
+    "&search-language=en&include-output=xml_fragment&language=en&format=application%2Fld%2Bjson&offset=0") ) |>
+    httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0") 
+  resp = req |>
+    httr2::req_error(is_error = ~FALSE) |>
+    httr2::req_throttle(capacity = 490, fill_time_s = 300) |> # call politely
+    httr2::req_retry(max_tries = 5, # retry a bunch of times in case of failures
+                     backoff = ~ 2 ^ .x + runif(n = 1, min = -0.5, max = 0.5) ) |>
+    httr2::req_perform()
+  
+  # If not an error, download and make available in ENV
+  if ( httr2::resp_status(resp) == 200L) {
+    # Extract DF
+    resp_body <- resp |>
+      httr2::resp_body_json(simplifyDataFrame = TRUE) |>
+      purrr::pluck("data")
+    
+    # Include grid values
+    resp_body$pers_id = calls_grid$pers_id[i_row]
+    resp_body$keyword = calls_grid$keyword[i_row]
+    
+    # Store in list
+    keywords_list[[i_row]] = resp_body
+  } else {
+    cat("\nNo hit for ", 
+        calls_grid$pers_id[i_row], 
+        " - ", 
+        calls_grid$keyword[i_row],
+        "\n",
+        sep = "")
+  }
+  
+  #----------------------------------------------------------------------------#
+  # INCLUDE this if you want to get the actual TRANSCRIPT ---------------------#
+  # if (exists("resp_body")) {
+  #   # Extract text from xml fragment ----------------------------------------#
+  #   text_list = vector(mode = "list", 
+  #                      length = length(resp_body$recorded_in_a_realization_of))
+  #   for (i_text in seq_along(resp_body$recorded_in_a_realization_of)) {
+  #     df_tmp = as.data.frame(resp_body$recorded_in_a_realization_of[i_text])
+  #     df_tmp$xmlFragment = df_tmp$api.xmlFragment$en
+  #     df_tmp = df_tmp[, !names(df_tmp) %in% c("originalLanguage", "api.xmlFragment")]
+  #     text_list[[i_text]] = df_tmp
+  #     rm(df_tmp)
+  #   } 
+  #   
+  #   # Append DFs
+  #   text_dt = data.table::rbindlist(l = text_list, use.names = TRUE, fill = TRUE) 
+  #   # Add metadata
+  #   text_dt[, `:=`(
+  #     pers_id = calls_grid$pers_id[i_row],
+  #     keyword = calls_grid$keyword[i_row]
+  #   )]
+  #   
+  #   # Store in list
+  #   keywords_list[[i_row]] = text_dt
+  # }
+  rm(req, resp, resp_body, text_dt, text_list)
+}
+
+keywords_dt = lapply(X = keywords_list, 
+                     FUN = function(i_pair) {
+                       if ( !is.null(i_pair) ) {
+                         pair_df = i_pair[, c("activity_id", "pers_id", "keyword")]
+                       }
+                     }
+) |> 
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+keywords_dt_clean = keywords_dt |> 
+  left_join(
+    y = speech_duration, 
+    by = c("activity_id", "pers_id")
+  ) |> 
+  mutate(
+    mep_name_lower = stringi::stri_trans_general(tolower(mep_name), "Latin-ASCII"),
+    keyword_lower = tolower(keyword),
+    is_same = mep_name_lower == keyword_lower 
+  ) |> 
+  filter(!is_same) |> 
+  select(activity_date, mep_name, keyword, activity_label)
+
+
+
+# split_text <- unlist(stringr::str_split(text_dt$xmlFragment, "</p>"))
+# split_text <- split_text[1:(length(split_text) - 1)] # Remove the last empty string
+# 
+# # Delete all the metadata (HTML/XML tags) from each split part
+# # We use a regular expression to match any HTML/XML tag: <[^>]+>
+# # This pattern matches '<' followed by one or more characters that are not '>', followed by '>'.
+# # The '+' makes it greedy, but since we're replacing all, it's fine.
+# parsed_text <- stringr::str_replace_all(split_text, "<[^>]+>", "")
+# # Clean up any leading/trailing whitespace that might remain
+# parsed_text <- trimws(parsed_text)
+# # Remove any empty strings that might have resulted from the splitting and cleaning
+# parsed_text <- parsed_text[parsed_text != ""]
+```
+
+```{r}
+#| echo: false
+
+#------------------------------------------------------------------------------#
+# save to disk Excel and upload ------------------------------------------------
+writexl::write_xlsx(
+  x = list(
+    speech_duration = speech_duration[, c("activity_date", "activity_label", 
+                                          "time_diff_seconds", "mep_name")],
+    speech_duration_by_session = speech_duration_by_session, 
+    keywords_dt_clean = keywords_dt_clean
+  ),
+  path = here::here(
+    "data_out", "tmp", "natparty_tmp", "irl_ff","speeches.xlsx"
+  ),
+  format_headers = TRUE)
+```
+
+
+
+```{r}
+#| eval: false
+#| results: asis
+
+# # Print the parsed text
+# cat(
+#    "**TEXT STARTS**\n\n",
+#    paste(parsed_text, collapse = "\n"),
+#     "\n\n**TEXT ENDS**",
+#    sep = ""
+# )
+```
+

@@ -1,0 +1,512 @@
+---
+title: "Renew's Metrics and VLs"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+script_starts <- Sys.time()
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "stringr", "tidyr", "tidyselect",
+                        "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+# Cohesion rates --------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10, base_family = "roboto") )
+
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+```
+
+The objective of this short note is to investigate Renew's metrics in the area of Parliamentary Work in the light of the Group's Lines as expressed in the Voting Lists.
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Data and Methods
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+# check whether data already exists
+if ( file.exists( here::here(
+  "data_out", "vl_vote", "vl_vote_rcv.csv") ) ) {
+  # get date of last version
+  mtime <- as.Date(file.info(
+    here::here("data_out", "vl_vote", "vl_vote_rcv.csv"))[["mtime"]])
+  if ( (Sys.Date() - mtime) < 1L ) {
+    # read data ---------------------------------------------------------------#
+    vl_vote_rcv <- data.table::fread(file = here::here(
+      "data_out", "vl_vote", "vl_vote_rcv.csv") )
+  } else {
+    # If the data is older than today, stop and recreate --------------#
+    stop("Your data on disk is old. Go back and refresh it.")
+  }
+} else {
+  # If the data is not there, create data from source -------------------------#
+  stop( 
+    "You don't have the data to run this. Go back and run the script at /scripts_r/merge_vl_vote_results.qmd") }
+rm(mtime)
+
+# Recode data 
+vl_vote_rcv[vote == "-", re_vote := -1L]
+vl_vote_rcv[vote == "+", re_vote := 1L]
+vl_vote_rcv[vote == "free vote", re_vote := NA_integer_]
+vl_vote_rcv[, rcv_id := as.integer( gsub(pattern = "^.*DEC-", replacement = "", 
+                                         x = event_dec_itm_id, perl = TRUE) ) ]
+dates_tokeep <- unique(vl_vote_rcv$date)
+
+# Subset to 10th mandate and available dates
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"),
+  na.strings = c(NA_character_, "") 
+)
+
+pl_attendance <- data.table::fread(here::here(
+  "data_out", "attendance", "pl_attendance_10.csv") )
+
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+
+meps_current = data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(pl_votes)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+
+# Parameters
+renew_polgroup_id <- 7035L
+
+renew_current_meps = unique(meps_current$pers_id[
+  meps_current$polgroup_id == renew_polgroup_id
+])
+renew_current_parties = unique(meps_current$natparty_id[
+  meps_current$polgroup_id == renew_polgroup_id
+])
+```
+
+In this note, we ony consider RCV during the 10th mandate. 
+Further, when we compare official EP results with Renew's Group Line, we have to restrict our sample to the period November 2024 - `r max(pl_votes$activity_date)`, as these are the only Voting Lists I managed to harmonise so far.
+
+The script relies on, inter alia, two main sources of data: the harmonised VLs created by Renew; and the official RCV results as provided by the EP administration.
+Please be aware that the script breaks if these two main sources of data are not aligned, prompting the user to refresh them.
+
+
+## How often does the Group's Majority coincide with the Group's line?
+```{r}
+# Calculate majorities by Group
+polgroups_mjrt <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    result >= -1L
+  ])
+
+# Subset to Renew
+renew_mjrt <- polgroups_mjrt[
+  polgroup_id == renew_polgroup_id
+]
+
+vl_renew_mjrt = vl_vote_rcv[
+  !is.na(re_vote), 
+  list(rcv_id, re_vote) ] |> 
+  left_join(
+    y = renew_mjrt,
+    by = "rcv_id"
+  ) |> 
+  dplyr::mutate(is_same = re_vote == result) 
+
+missing_mjrt = vl_renew_mjrt$rcv_id[
+  is.na(vl_renew_mjrt$polgroup_id)
+]
+
+# Check that we don't miss any vote
+if ( all( unique( pl_votes$decision_outcome[pl_votes$rcv_id %in% missing_mjrt]) %in% 
+          c("WITHDRAWN", "LAPSED") ) ) {
+  vl_renew_mjrt = vl_renew_mjrt[ 
+    !is.na(polgroup_id)]
+} else {
+  warning("Check the data, you might be missing some votes!")
+}
+
+avg_same = vl_renew_mjrt |> 
+  dplyr::summarise(avg_same = round(100*mean(is_same, na.rm = TRUE), digits = 2)) |> 
+  dplyr::pull(avg_same)
+```
+
+The percentage of votes where the Group's majority coincided with the Group's line was: **`r avg_same`%**.
+
+There have been 2 cases where the empirical majority was different from the Group line indicated in the VLs:
+
+* *Délibérations de la commission des pétitions en 2023*; A10-0063/2025 - Gheorghe Falcă - Proposition de résolution (ensemble du texte) (2025-05-07). 
+The Group line was to vote `for`, but the Group ended up 
+However, in this case, the `Remariks` column stated the following: "*Key votes: If amendment 15, 23 or 24 is not adopted, then abstain for the final vote*".
+So, in my opinion, this is not controversial.
+* *Décharge 2023: budget général de l'Union - Commission, agences exécutives et Fonds européens de développement*; A10-0074/2025 – Niclas Herbst – After § 143 – Am 27.
+The Group line was to vote `against`, but we ended up voting `for`.
+There is no indication in the `Remarks` column that would make me think that this was intended: "*Parliament has called on the Union and its Member States to put in place a legal framework enabling Russia to be classified as a State sponsor of terrorism; tabled by MEps from SE; FI*".
+The EP vote results indicate that this amendment was tabled by **ECR**.
+
+
+## Alignment with Renew's Group Line: Within Renew
+### MEPs Level
+Here we calculate **alignment** as the share of votes where MEPs' votes coincided with the Voting Line expressed in the Voting List. 
+*Prior to running any calculations*, we take out the cases where MEPs were **excused* according to the official *Attendance Lists*. 
+Put differently, we include all cases where MEPs did or should have voted, meaning they either were in the House but chose not to vote, or they were absent but not included in the official *Attendance Lists*.
+```{r}
+#| fig.width: 8
+#| fig.height: 10
+
+renew_meps_plot = vl_vote_rcv[
+  !is.na(re_vote), 
+  list(rcv_id, re_vote) ] |> 
+  dplyr::left_join(
+    y = meps_rcv_mandate[
+      polgroup_id == renew_polgroup_id
+    ],
+    by = "rcv_id"
+  ) |> 
+  # Get the vote dates - we need to merge with ATTENDANCE
+  dplyr::left_join(
+    y = pl_votes[, list(activity_date = as.Date(activity_date), rcv_id)],
+    by = "rcv_id"
+  ) |> 
+  # Merge with ATTENDANCE - we need to exclude those who were officially EXCUSED
+  dplyr::left_join(
+    y = pl_attendance[, list(activity_date = as.Date(activity_date), pers_id,
+                             is_present)],
+    by = c("activity_date", "pers_id")
+  ) |> 
+  # Take out EXCUSED MEPs
+  # dplyr::filter(!is_present %in% 0L) |> 
+  dplyr::filter(result >= -2L) |> # Exclude all ABSENT
+  dplyr::mutate(is_same = re_vote == result) |> 
+  dplyr::summarise(
+    n_votes = n(),
+    avg_same = mean(is_same, na.rm = TRUE), 
+    .by = pers_id) |> 
+  join_meps_names() |> 
+  dplyr::filter(
+    # Just get CURRENT RENEW MEPs ---------------------------------------------#
+    !is.na(mep_name)
+    & pers_id %in% renew_current_meps
+  ) |>
+  dplyr::mutate(mep_name = fct_reorder(.f = mep_name, .x = avg_same) ) 
+
+renew_meps_plot |> 
+  ggplot(aes(x = avg_same, y = mep_name, fill = n_votes)) +
+  geom_col(colour="black", linewidth = 0.1) +
+  scale_x_continuous(labels = scales::percent) +
+  scale_fill_distiller(type = "seq", direction = 1) +
+  labs(x="Share of Alignment with Renew's Group Line (%)", y="",
+       fill="Number\nof\nvotes")
+```
+
+
+### National Party Level
+Here we calculate the same metric as in the previous Section, only this time at the party level.
+The same time of filtering as above is applied prior to any calculations. 
+```{r}
+#| fig.width: 8
+#| fig.height: 6
+
+party_mjrt <- get_natparty_majority(data_in = meps_rcv_mandate[
+  polgroup_id == renew_polgroup_id
+  & result >=-2 # Exclude absent
+])
+
+vl_vote_rcv[
+  !is.na(re_vote), 
+  list(rcv_id, re_vote) ] |> 
+  dplyr::left_join(
+    y = party_mjrt,
+    by = "rcv_id"
+  ) |> 
+  dplyr::inner_join(
+    y = na.omit(unique(meps_current[, list(natparty_id, country_id)])),
+    by = "natparty_id"
+  ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(is_same = re_vote == result) |> 
+  dplyr::summarise(avg_same = mean(is_same, na.rm = TRUE), 
+                   .by = c(country_iso3c, natparty_id) ) |> 
+  join_polit_labs() |> 
+  dplyr::filter(
+    !is.na(natparty_id)
+    & natparty_id %in% renew_current_parties) |> 
+  dplyr::mutate(
+    national_party = paste(country_iso3c, national_party, sep = " - "),
+    national_party = fct_reorder(.f = national_party, 
+                                 .x = avg_same) ) |> 
+  ggplot(aes(x = avg_same, y = national_party)) +
+  geom_col(colour="black", fill = "grey", linewidth = 0.1) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x="Share of Alignment with Renew's Group Line (%)", y="")
+```
+
+
+## Alignment with Renew's Group Line: Outside Renew
+### MEPs Level
+In addition to the filtering mentioned above, in this Section we also impose a filter of at least 50 votes to calculates the alignment.
+Put differently, a non-Renew MEP must have voted at least 50 times to feature in the graph below.
+For presentational purposes, we just select the 50 MEPs with the highest alignment.
+```{r}
+#| fig.width: 8
+#| fig.height: 9
+
+vl_vote_rcv[
+  !is.na(re_vote), 
+  list(rcv_id, re_vote) ] |> 
+  left_join(
+    y = meps_rcv_mandate[
+      polgroup_id != renew_polgroup_id
+    ],
+    by = "rcv_id"
+  ) |> 
+  dplyr::left_join(
+    y = pl_votes[, list(activity_date = as.Date(activity_date), rcv_id)],
+    by = "rcv_id"
+  ) |> 
+  dplyr::left_join(
+    y = pl_attendance[, list(activity_date = as.Date(activity_date), pers_id,
+                             is_present)],
+    by = c("activity_date", "pers_id")
+  ) |> 
+  # Take out EXCUSED MEPs
+  # dplyr::filter(!is_present %in% 0L) |> 
+  dplyr::filter(result >= -2L) |> # Exclude all ABSENT
+  dplyr::mutate(is_same = re_vote == result) |> 
+  dplyr::summarise(
+    n_votes = dplyr::n(),
+    avg_same = mean(is_same, na.rm = TRUE), 
+    .by = pers_id) |> 
+  dplyr::filter(n_votes > 50L) |> 
+  dplyr::slice_max(order_by = avg_same, n = 50) |> 
+  join_meps_names() |> 
+  dplyr::filter(!is.na(mep_name)) |> 
+  dplyr::mutate(mep_name = fct_reorder(.f = mep_name, .x = avg_same) ) |> 
+  ggplot(aes(x = avg_same, y = mep_name, fill = n_votes)) +
+  geom_col(colour="black", linewidth = 0.1) +
+  scale_x_continuous(labels = scales::percent) +
+  scale_fill_distiller(type = "seq", direction = 1) +
+  labs(x="Share of Alignment with Renew's Group Line (%)", y="",
+       fill="Number\nof\nvotes")
+```
+
+
+### National Party Level
+Here we impose te same filters as in the previous sections, only this time applied to parties instead of MEPs.
+```{r}
+#| fig.width: 8
+#| fig.height: 9
+
+party_mjrt <- get_natparty_majority(data_in = meps_rcv_mandate[
+  polgroup_id != renew_polgroup_id
+  & result >= -2 # Exclude absents
+])
+
+vl_vote_rcv[
+  !is.na(re_vote), 
+  list(rcv_id, re_vote) ] |> 
+  dplyr::left_join(
+    y = party_mjrt,
+    by = "rcv_id"
+  ) |> 
+  dplyr::left_join(
+    y = unique( meps_rcv_mandate[, list(country_id, natparty_id) ] ),
+    by = "natparty_id"
+  ) |> 
+  dplyr::mutate(is_same = re_vote == result) |> 
+  dplyr::summarise(avg_same = mean(is_same, na.rm = TRUE), 
+                   .by = c(country_id, natparty_id) ) |> 
+  dplyr::slice_max(order_by = avg_same, n = 50) |> 
+  join_polit_labs() |> 
+  join_meps_countries() |> 
+  dplyr::filter(!is.na(natparty_id)) |> 
+  dplyr::mutate(
+    national_party = paste(country_iso3c, national_party, sep = " - "),
+    national_party = fct_reorder(.f = national_party, .x = avg_same) ) |> 
+  ggplot(aes(x = avg_same, y = national_party)) +
+  geom_col(colour="black", fill = "grey", linewidth = 0.1) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x="Share of Alignment with Renew's Group Line (%)", y="")
+```
+
+
+## Renew's Cohesion Rates with and without Free Votes
+In this Section we calculate the overall cohesion rate with and without 'free votes'.
+The assumption is that, if we exclude free votes, the metric should go up. 
+
+First, how many free votes were there in the period considered?
+```{r}
+sum(vl_vote_rcv$vote == "free vote")
+```
+
+What's the difference in the average cohesion rates with and without free votes, during the period considered (i.e. since November 2024)? 
+```{r}
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result,
+                                        levels = -3L : 1L,
+                                        labels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Vectors of RCV IDs
+rcvids_freevote <- unique(vl_vote_rcv$rcv_id[
+  vl_vote_rcv$vote == "free vote"])
+rcvids_vl <- unique(vl_vote_rcv$rcv_id)
+
+data.table::rbindlist(
+  l = list(
+    meps_rcv_mandate[
+      result >= -1L # only official votes
+      
+      & rcv_id %in% rcvids_vl
+      & polgroup_id == renew_polgroup_id,
+      list(cohesion_rate = cohesion_hn(result_fct)),
+      by = list(rcv_id, polgroup_id)
+    ][, list(
+      `Average Cohesion Rate` = round(mean(cohesion_rate, na.rm = TRUE),
+                                      digits = 1),
+      RCV = "All"
+    )],
+    meps_rcv_mandate[
+      result >= -1L # only official votes
+      & polgroup_id == renew_polgroup_id
+      & rcv_id %in% rcvids_vl
+      & !rcv_id %in% rcvids_freevote,
+      list(cohesion_rate = cohesion_hn(result_fct)),
+      by = list(rcv_id, polgroup_id)
+    ][, list(
+      `Average Cohesion Rate` = round(mean(cohesion_rate, na.rm = TRUE), 
+                                      digits = 1),
+      RCV = "No Free Votes"
+    )]
+  )
+) |> 
+  knitr::kable()
+```
+
+```{r}
+#| eval: false
+
+#------------------------------------------------------------------------------#
+### Cumulative cohesion rates with and without FREE VOTES ----------------------
+
+cohesion_nofv = vl_vote_rcv[
+  meps_rcv_mandate, 
+  on = "rcv_id", nomatch = NULL
+][
+  result >= -1L # only official votes
+  & polgroup_id == renew_polgroup_id,
+  list(cohesion_rate = cohesion_hn(result_fct)),
+  keyby = list(date, vote_order_bydate, rcv_order_byvote, rcv_id)
+][!is.na(cohesion_rate),
+  `:=`(
+    RCV = "No Free Votes",
+    cum_cohesion = dplyr::cummean(cohesion_rate)) ] 
+
+cohesion_all = pl_votes[
+  meps_rcv_mandate, on = "rcv_id", nomatch = NULL
+][result >= -1L # only official votes
+  & polgroup_id == renew_polgroup_id,
+  list(cohesion_rate = cohesion_hn(result_fct)),
+  keyby = list(date = activity_date, activity_order, rcv_id)
+][!is.na(cohesion_rate), 
+  `:=`(
+    RCV = "All",
+    cum_cohesion = dplyr::cummean(cohesion_rate) ) ] 
+
+
+data.table::rbindlist(l = list(cohesion_nofv, cohesion_all),
+                      use.names = TRUE, fill = TRUE) |> 
+  dplyr::filter(!is.na(cum_cohesion)) |> 
+  dplyr::arrange(date, rcv_id) |> 
+  dplyr::mutate(rcv_id = as.factor(rcv_id)) |>
+  ggplot(aes(x = rcv_id, y = cum_cohesion,
+             colour = RCV, fill = RCV, group = RCV ) ) +
+  geom_smooth() +
+  geom_point(alpha = 0.2) +
+  scale_x_discrete(
+    breaks = c(as.character(min(cohesion_all$rcv_id)),
+               as.character(min(cohesion_nofv$rcv_id)),
+               as.character(max(cohesion_all$rcv_id))),
+    labels = c("July 2024", "November 2024", "April 2025") ) +
+  labs(x="Time", y="Cumulative Average Cohesion Rate") +
+  theme_minimal() +
+  theme(
+    # axis.text.x = element_blank(),
+    # panel.grid.major.x = element_blank(),
+    # panel.grid.minor.x = element_blank()
+  )
+ggsave(filename = here::here("figures", "cumulative_cohesion_renew.pdf"),
+       device = "pdf", dpi = 300, height = 7, width = 12.5)
+```

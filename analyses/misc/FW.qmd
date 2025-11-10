@@ -1,0 +1,431 @@
+---
+title: "Freie Wähler"
+date: "`r Sys.Date()`"
+format: 
+  pdf:
+    number-sections: true
+    number-depth: 2
+    shift-heading-level-by: -1
+    colorlinks: true
+    geometry:
+      - top=5mm
+      - right=5mm
+      - bottom=20mm
+      - left=5mm
+      - heightrounded
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(here)
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- "2024-07-14"
+current_month = lubridate::month(x = Sys.Date(), label = TRUE, abbr = FALSE)
+current_year = lubridate::year( x = Sys.Date() )
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+# Cohesion rate ---------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+custom_theme = theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold", size = 26),
+        legend.text = element_text(face="bold",  size = 22),
+        plot.caption = element_text(size = 16),
+        strip.text = element_text(face = "bold", size = 20, hjust = 0.5),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold", size = 20),
+        legend.position = "bottom")
+theme_set(new = custom_theme)
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+
+
+#------------------------------------------------------------------------------#
+## Data -------------------------------------------------------------------
+# Full data
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id") )
+# Nominal change from GUE to The Left
+meps_rcv_mandate[polgroup_id == 5151L, polgroup_id := 6259L] 
+
+# Votes
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_10.csv"))
+
+# Recode
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+# left join
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+
+
+# List of RCV IDs and Committees
+rcvid_cmts_10 <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+# sort(unique(rcvid_cmts_10$committee_lab))
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+rcvid_cmts_10 <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+# sort(unique(rcvid_cmts_10$committee_lab))
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes_09 <- nrow(votes_dt[mandate == 9L])
+n_votes_10 <- nrow(votes_dt[mandate == 10L])
+n_rcv_09 <- length( unique( meps_rcv_mandate$rcv_id[
+  meps_rcv_mandate$mandate == 9L] ) )
+n_rcv_10 <- length( unique( meps_rcv_mandate$rcv_id[
+  meps_rcv_mandate$mandate == 10L] ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+```
+
+
+## Alignment
+### Alignment by Party
+The table below summarises the alignment of **Freie Wähler** with both Renew and ECR.
+```{r}
+# Current MEPs configuration
+meps_current <- data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+renew_partyids_current = unique(meps_current$natparty_id[
+  meps_current$polgroup_id %in% renew_group_ids
+])
+
+###--------------------------------------------------------------------------###
+# Check what party within each Group voted the same ---------------------------#
+# Count votes within each party
+mjrt_polgroup <- get_polgroup_majority(data_in = meps_rcv_mandate[
+  result >= -1 ] ) 
+
+mjrt_parties = get_natparty_majority(data_in = meps_rcv_mandate[
+  result >= -1
+  & mandate == 10L
+  & natparty_id %in% renew_partyids_current
+])
+
+
+###--------------------------------------------------------------------------###
+mjrt_renew_parties = mjrt_parties[
+  mjrt_polgroup[polgroup_id %in% renew_group_ids],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_renew_parties[, is_same := as.integer(result == i.result)]
+
+
+mjrt_renew_parties_avg = mjrt_renew_parties[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(natparty_id)
+] |> 
+  join_polit_labs() |> 
+  dplyr::left_join(
+    y = unique(meps_current[, list(country_id,natparty_id)]),
+    by = "natparty_id"
+  ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(country_party = paste(country_iso3c, national_party, sep = " - ")) |> 
+  dplyr::arrange(desc(avg))
+
+
+###--------------------------------------------------------------------------###
+mjrt_ecr_parties = mjrt_parties[
+  mjrt_polgroup[polgroup_id %in% 7037L],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_ecr_parties[, is_same := as.integer(result == i.result)]
+
+
+mjrt_ecr_parties_avg = mjrt_ecr_parties[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(natparty_id)
+] |> 
+  join_polit_labs() |> 
+  dplyr::left_join(
+    y = unique(meps_current[, list(country_id,natparty_id)]),
+    by = "natparty_id"
+  ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(country_party = paste(country_iso3c, national_party, sep = " - ")) |> 
+  dplyr::arrange(desc(avg))
+
+
+###--------------------------------------------------------------------------###
+mjrt_epp_parties = mjrt_parties[
+  mjrt_polgroup[polgroup_id %in% 7018L],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_epp_parties[, is_same := as.integer(result == i.result)]
+
+
+mjrt_epp_parties_avg = mjrt_epp_parties[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(natparty_id)
+] |> 
+  join_polit_labs() |> 
+  dplyr::left_join(
+    y = unique(meps_current[, list(country_id,natparty_id)]),
+    by = "natparty_id"
+  ) |> 
+  join_meps_countries() |> 
+  dplyr::mutate(country_party = paste(country_iso3c, national_party, sep = " - ")) |> 
+  dplyr::arrange(desc(avg))
+
+
+# Table
+bind_rows(
+  mjrt_renew_parties_avg |> 
+    mutate(political_group = "Renew",
+           avg = round(avg*100, digits = 2)),
+  mjrt_ecr_parties_avg |> 
+    mutate(political_group = "ECR",
+           avg = round(avg*100, digits = 2) ),
+  mjrt_epp_parties_avg |> 
+    mutate(political_group = "EPP",
+           avg = round(avg*100, digits = 2) ) 
+) |> 
+  filter(natparty_id == 6807L) |> 
+  select(national_party, political_group, `alignment (%)` = avg) |> 
+  knitr::kable(align = "c")
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4.5
+#| eval: false
+
+# The plot below looks at changes over time by portraying FW's cumulative similarity with the three Groups mentioned above.
+
+rcvid_date <- unique(
+  votes_dt[, list(date = activity_date, rcv_id)]
+)
+last_pl_month = data.table::month( max(votes_dt$activity_date) )
+last_pl_year = data.table::year( max(votes_dt$activity_date) )
+month_year = paste(last_pl_month, last_pl_year, sep = "/")
+
+
+cum_bynatparty = bind_rows(
+  mjrt_renew_parties |> 
+    mutate(political_group = "Renew"),
+  mjrt_ecr_parties |> 
+    mutate(political_group = "ECR"),
+  mjrt_epp_parties |> 
+    mutate(political_group = "PPE") 
+) |> 
+  filter(natparty_id == 6807L) |> 
+  left_join(
+    y = rcvid_date,
+    by = "rcv_id"
+  ) |> 
+  arrange(date, rcv_id, political_group) |> 
+  mutate(cum_same = dplyr::cummean(is_same), 
+         .by = political_group)
+
+cum_bynatparty |>
+  mutate( rcv_id = as.factor(rcv_id) ) |> 
+  ggplot(aes(x = rcv_id, y = cum_same, group = political_group,
+             colour = political_group) ) +
+  geom_point(alpha = 0.1, show.legend = FALSE) +
+  geom_smooth(se = FALSE)  +
+  labs(x="Time", y="Cumulative Average Similarity", colour="") +
+  scale_x_discrete(
+    breaks = c(as.character(min(cum_bynatparty$rcv_id)),
+               as.character(max(cum_bynatparty$rcv_id))),
+    labels = c("July 2024", "May 2025") ) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_colour_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(hjust=c(0,1)),
+    panel.spacing.x = unit(5, "mm")
+  )
+```
+
+
+
+```{r}
+#| eval: false
+
+# ### Alignment by MEPS
+# The table below summarises the alignment of **Freie Wähler**'s MEPs with both Renew and ECR.
+
+###--------------------------------------------------------------------------###
+mjrt_renew_meps = meps_rcv_mandate[
+  polgroup_id == renew_group_ids & natparty_id == 6807L
+][
+  mjrt_polgroup[polgroup_id %in% renew_group_ids],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_renew_meps[, is_same := as.integer(result == i.result)]
+
+
+mjrt_renew_meps_avg = mjrt_renew_meps[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id)
+] |> 
+  join_meps_names() |> 
+  dplyr::arrange(desc(avg))
+
+
+###--------------------------------------------------------------------------###
+mjrt_ecr_meps = meps_rcv_mandate[
+  polgroup_id == renew_group_ids & natparty_id == 6807L
+][
+  mjrt_polgroup[polgroup_id %in% 7037L],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_ecr_meps[, is_same := as.integer(result == i.result)]
+
+
+mjrt_ecr_meps_avg = mjrt_ecr_meps[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id)
+] |> 
+  join_meps_names() |> 
+  dplyr::arrange(desc(avg))
+
+
+###--------------------------------------------------------------------------###
+mjrt_epp_meps = meps_rcv_mandate[
+  polgroup_id == renew_group_ids & natparty_id == 6807L
+][
+  mjrt_polgroup[polgroup_id %in% 7018L],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_epp_meps[, is_same := as.integer(result == i.result)]
+
+
+mjrt_epp_meps_avg = mjrt_epp_meps[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id)
+] |> 
+  join_meps_names() |> 
+  dplyr::arrange(desc(avg))
+
+###--------------------------------------------------------------------------###
+# Table
+bind_rows(
+  mjrt_renew_meps_avg |> 
+    mutate(political_group = "Renew",
+           avg = round(avg*100, digits = 2)),
+  mjrt_ecr_meps_avg |> 
+    mutate(political_group = "ECR",
+           avg = round(avg*100, digits = 2) ),
+  mjrt_epp_meps_avg |> 
+    mutate(political_group = "EPP",
+           avg = round(avg*100, digits = 2) )
+) |> 
+  filter(pers_id %in% c( 256962 , 256946 , 197430 ) ) |> 
+  select(mep_name, political_group, `alignment (%)` = avg) |> 
+  knitr::kable(align = "c")
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+#| eval: false
+
+# The plot below looks at changes over time by portraying the cumulative similarity with FW's individual MEPs with the three Groups mentioned above.
+
+cum_bymeps = bind_rows(
+  mjrt_renew_meps |> 
+    mutate(political_group = "Renew"),
+  mjrt_ecr_meps |> 
+    mutate(political_group = "ECR"),
+  mjrt_epp_meps |> 
+    mutate(political_group = "PPE") 
+) |> 
+  filter(pers_id %in% c( 256962 , 256946 , 197430 ) ) |> 
+  join_meps_names() |> 
+  left_join(
+    y = rcvid_date,
+    by = "rcv_id"
+  ) |> 
+  arrange(date, rcv_id, political_group) |> 
+  mutate(cum_same = dplyr::cummean(is_same), 
+         .by = c(political_group, mep_name) )
+
+cum_bymeps |>
+  mutate( rcv_id = as.factor(rcv_id) ) |> 
+  ggplot(aes(x = rcv_id, y = cum_same, group = political_group,
+             colour = political_group) ) +
+  geom_point(alpha = 0.1, show.legend = FALSE) +
+  geom_smooth(se = FALSE)  +
+  facet_wrap(~mep_name, nrow=1) +
+  labs(x="Time", y="Cumulative Average Similarity", colour="") +
+  scale_x_discrete(
+    breaks = c(as.character(min(cum_bynatparty$rcv_id)),
+               as.character(max(cum_bynatparty$rcv_id))),
+    labels = c("July 2024", "May 2025") ) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_colour_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(hjust=c(0,1)),
+    panel.spacing.x = unit(5, "mm")
+  )
+```
+
+

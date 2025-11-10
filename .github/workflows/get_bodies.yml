@@ -1,0 +1,60 @@
+# Name of the workflow
+name: get_bodies
+
+# Event - What starts this workflow?
+# on: [push, workflow_dispatch]
+on:
+  schedule:
+  # At 01:00, from MON to FRI
+    - cron: "0 1 * * 1-5"
+
+# Jobs - What the Action should do? 
+jobs:
+  get-bodies:
+    # Use Ubuntu   
+    runs-on: ubuntu-latest 
+    steps:
+      # enable Action to see structure and content of GitHub repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Install R
+      - name: Load R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          # use public RStudio package manager
+          use-public-rspm: true
+
+      # install R packages
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        # further details on packages
+        with:
+          # cache them
+          cache-version: 2
+          # list additional packages
+          packages: |
+            any::curl
+            any::data.table
+            any::dplyr
+            any::here
+            any::httr2
+            any::lubridate
+            any::janitor
+            any::jsonlite
+            any::pacman
+            any::pak
+            any::readr
+            any::stringi
+            any::tidyr
+            any::tidyselect
+        
+      # print message
+      - name: R get bodies via EP API  
+        # Code to execute R script
+        run: Rscript scripts_r/api_bodies.R
+      # Commit files otherwise it would run without saving anything
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+            commit_message: Update bodies
+

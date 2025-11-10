@@ -1,0 +1,61 @@
+---
+title: "Renew Europe Voting List"
+output: word_document
+params:
+  selected_doctitle: NA
+  selected_rapporteur: NA
+  selected_docid: NA
+  selected_doctype: NA
+---
+
+```{r eval = FALSE, echo = FALSE}
+# For PDF output, change the header to have "output: pdf_document".
+#
+# Note that due to an issue in rmarkdown, the default value of a parameter in
+# the header cannot be `NULL`, so I used a default of `NA` for the default value
+# of `n`.
+```
+
+
+```{r, echo = FALSE, results='asis'}
+cat("__Document Title__: ",
+    params$selected_doctitle,
+    "\n\n",
+    sep = "")
+
+
+# Rapporteur ------------------------------------------------------------------#
+if (length(params$selected_rapporteur) > 1L) {
+  cat("__Rapporteur__: ",
+      paste0(params$selected_rapporteur, collapse = "; "),
+      "\n\n",
+      sep = "")
+} else if (length(params$selected_rapporteur) == 1L) {
+  cat("__Rapporteur__: ",
+      params$selected_rapporteur,
+      "\n\n",
+      sep = "")
+}
+
+
+# Doc ID ----------------------------------------------------------------------#
+if (length(params$selected_docid) > 1L) {
+  cat("__Doc ID__: ",
+      paste0(params$selected_docid, collapse = "; "),
+      "\n\n",
+      sep = "")
+} else if (length(params$selected_docid) == 1L) {
+  cat("__Doc ID__: ",
+      params$selected_docid,
+      "\n\n",
+      sep = "")
+}
+
+
+# Document Type ---------------------------------------------------------------#
+cat("__Document Type__: ",
+    params$selected_doctype,
+    "\n\n",
+    sep = "")
+```
+

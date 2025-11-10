@@ -1,0 +1,429 @@
+---
+title: "EP Political Groups' Metrics"
+subtitle: "Today's Votes (`r Sys.Date()`)"
+author:
+  - Marco SCIPIONI
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Main findings
+```{r}
+#| include: false
+
+source(file = here::here("analyses", "metrics", "vote_metrics_day.R"))
+```
+
+```{r}
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+# TODAY: Most Cohesive Political Groups ----------------------------------------
+if (length(pg_max_cr_today_avg) > 1) {
+  cat("* _Today_, the most cohesive Political Groups in the EP were: __",
+      paste0(pg_max_cr_today_avg, collapse = ", "),
+      "__.\n",
+      sep = ""
+  ) 
+} else if (length(pg_max_cr_today_avg) == 1) {
+  cat("* _Today_, the most cohesive Political Group in the EP was: __",
+      pg_max_cr_today_avg,
+      "__.\n",
+      sep = ""
+  ) 
+}
+```
+
+```{r}
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+# TERM: Most Cohesive Political Groups -----------------------------------------
+if (length(pg_max_cr_mandate_avg) > 1) {
+  cat("* In this _legislative term_, the most cohesive Political Groups in the EP have been: __",
+      paste0(pg_max_cr_mandate_avg, collapse = ", "),
+      "__.\n",
+      sep = ""
+  ) 
+} else if (length(pg_max_cr_mandate_avg) == 1) {
+  cat("* In this _legislative term_, the most cohesive Political Group in the EP has been: __",
+      pg_max_cr_mandate_avg,
+      "__.\n",
+      sep = ""
+  ) 
+}
+```
+
+```{r}
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+# FINAL VOTES - TODAY: Most Cohesive Political Groups --------------------------
+if (length(pg_max_cr_today_final) > 1) {
+  cat(
+    "* If we just zoom in onto _final votes_, the most cohesive Political Groups in the EP today were: __",
+    paste0(pg_max_cr_today_final, collapse = ", "),
+    "__; ",
+    sep = ""
+  ) 
+} else if (length(pg_max_cr_today_final) == 1) {
+  cat(
+    "* If we just zoom in onto _final votes_, the most cohesive Political Group in the EP today was: __",
+    pg_max_cr_today_final,
+    "__; ",
+    sep = ""
+  ) 
+}
+
+
+#------------------------------------------------------------------------------#
+# FINAL VOTES - TERM: Most Cohesive Political Groups ---------------------------
+if (length(pg_max_cr_mandate_final) > 1) {
+  cat(
+    "whereas the most cohesive Political Groups in the EP during this legislative terms have been: __",
+    paste0(pg_max_cr_mandate_final, collapse = ", "),
+    "__.\n",
+    sep = ""
+  ) 
+} else if (length(pg_max_cr_mandate_final) == 1) {
+  cat(
+    "whereas the most cohesive Political Group in the EP during this legislative terms has been: __",
+    pg_max_cr_mandate_final,
+    "__.\n",
+    sep = ""
+  ) 
+}
+```
+
+```{r}
+#| results: 'asis'
+
+if (n_votes_today > 1) {
+  cat("* The group has performed the worst in these RCVs:",
+      paste0("\n  + ", 
+             worst_cohesion$vote_label, 
+             " - ", 
+             worst_cohesion$activity_label_mul), 
+      ".\n\n",
+      sep = ""
+  ) 
+}
+```
+
+
+## Cohesion Rates
+### Overall cohesion rates
+Here we calculate the average cohesion rate by Political Groups for today's session (right-hand side of the plot).
+To better appreciate the results, we contrast today's results with the legislature (left-hand side of the plot). 
+```{r}
+#| fig-width: 9
+#| fig-height: 4
+
+#------------------------------------------------------------------------------#
+plot_rank <- cohesion_bypolgroup_avg$political_group[
+  cohesion_bypolgroup_avg$period == "10th legislature"]
+
+# Plot ------------------------------------------------------------------------#
+cohesion_bypolgroup_avg |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg) ) +
+  geom_col(aes(fill = political_group), 
+           colour = "black", linewidth = 0.1, show.legend = FALSE) +
+  geom_text(aes(label = avg), size = 3, nudge_y = 5) +
+  facet_wrap(~period) +
+  scale_fill_manual(values = polgroup_cols) +
+  ylim(0, 105) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by EP Political Groups - Today and Full Mandate",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+```
+
+
+### Cohesion rates by final
+The plot below includes final votes and other votes (i.e. amendments, split, and separate votes) in the metric breakdown.
+```{r}
+#| fig-width: 9
+#| fig-height: 6
+
+#------------------------------------------------------------------------------#
+plot_rank <- cohesion_bypolgroup_final$political_group[
+  cohesion_bypolgroup_final$period == "10th legislature"
+  & cohesion_bypolgroup_final$is_final == "Final"]
+
+# Plot ------------------------------------------------------------------------#
+cohesion_bypolgroup_final |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank), y = avg) ) +
+  geom_col(aes(fill = factor(is_final), group = factor(is_final)),
+           colour = "black", linewidth = 0.1, position = "dodge") +
+  geom_text(aes(label = avg, group = factor(is_final)), size = 3,
+            hjust = -0.1, position = position_dodge(width = 1), inherit.aes = TRUE) +
+  facet_wrap(~period) +
+  ylim(0, 105) +
+  scale_fill_manual(values = cols_final) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by EP Political Groups for Final and Other Votes - Today and Full Mandate",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold") )
+```
+
+
+<!-- ### Cohesion rates by Committee -->
+<!-- **NOT CURRENTLY RUNNING THIS AS WE DON'T HAVE ENOUGH DATA** -->
+```{r}
+#| eval: false
+#| fig-width: 8
+#| fig-height: 12
+
+###--------------------------------------------------------------------------###
+# List of RCV IDs and Doc IDs -------------------------------------------------#
+rcvid_docid_all <- data.table::fread( here::here(
+  "data_out", "rcv", "rcvid_docid_10.csv"),
+  na.strings = c(NA_character_, "") ) 
+
+# Committees ------------------------------------------------------------------#
+plenary_docs_committee <- data.table::fread( here::here(
+  "data_out", "docs_pl", "plenary_docs_committee.csv"),
+  select = c("identifier", "committee_lab", "doc_id"),
+  na.strings = c(NA_character_, "") )
+
+rcvid_docid_cmt <- rcvid_docid_all |> 
+  dplyr::left_join(
+    y = plenary_docs_committee,
+    by = "doc_id"
+  )
+
+
+#------------------------------------------------------------------------------#
+cohesion_bycommittee <- cohesion_dt |> 
+  # RCVs and DOC IDs ----------------------------------------------------------#
+  dplyr::left_join(
+    y = rcvid_docid_all,
+    by = "rcv_id") |> 
+  # DOC IDs and Committees ----------------------------------------------------#
+  dplyr::left_join(
+    y = plenary_docs_committee[, list(committee_lab, doc_id) ],
+    by = "doc_id" ) 
+
+cohesion_bycommittee[
+  !is.na(committee_lab),
+  list(avg_cohesion = mean(cohesion) ),
+  by = list(political_group, committee_lab)] |> 
+  dplyr::mutate(political_group = reorder_within(
+    political_group, avg_cohesion, committee_lab) ) |>
+  ggplot(aes(x=political_group, y = avg_cohesion)) +
+  geom_col(colour = "black", fill = "grey80", linewidth = 0.1) +
+  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by Committees, 9th mandate",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+  scale_x_reordered() +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+# ggsave(filename = here::here("figures", "cohesion_bycommittee.pdf"),
+#        device = "pdf", dpi = 300, height = 8, width = 12)
+```
+
+
+```{r}
+#| results: 'asis'
+
+if (n_votes_today > 1) {
+  cat("## Where were we less cohesive?\n\n
+The plots above were showing the average cohesion rates.
+However, as mentioned above, our formula for cohesion rates gives us back a distribution of values.
+The plot below illustrates such distribution.
+Every dot is a vote - finals are larger and blue, non final are smaller and red -, and the thick black line is the average cohesion rate for every Group (which was also displayed in the Section above).\n\n")
+}
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+if (n_votes_today > 1) {
+  library(ggiraph)
+  
+  plt = cohesion_today |> 
+    na.omit() |> 
+    dplyr::left_join(
+      y = votes_today[, list(rcv_id, vote_label, activity_label_mul)],
+      by = "rcv_id") |> 
+    dplyr::mutate(
+      vote_label = gsub(pattern = "'", replacement = " ", 
+                        x = vote_label),
+      is_final_fct = ifelse(test = is_final == 1L,
+                            yes = "Final", no = "Not Final"),
+      activity_label_mul = gsub(pattern = "'", replacement = " ", 
+                                x = activity_label_mul) ) |>
+    ggplot(aes(x=fct_rev(political_group), y = cohesion) ) +
+    stat_summary(fun = mean, geom = "crossbar", linewidth=0.3) +
+    ggiraph::geom_jitter_interactive(
+      aes(colour = is_final_fct, size = is_final_fct,
+          tooltip = paste(vote_label, activity_label_mul, sep = "\n"),
+          data_id = paste(vote_label, activity_label_mul, sep = "\n") ),
+      width = 0.2, height = 0, alpha = 0.7) +
+    # geom_jitter(aes(colour = is_final_fct, size = is_final_fct),
+    #             width = 0.2, height = 0, alpha = 0.7) +
+    scale_colour_manual(values = cols_final) +
+    scale_size_manual(values = c(3, 1)) +
+    coord_flip() +
+    labs(x="", y="Cohesion Rates (%)", size="", colour = "",
+         title = "Cohesion Rates by EP Political Groups and Final Vote - Today and Full Mandate",
+         caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+    guides(fill = guide_legend(nrow = 1)) +
+    theme_minimal() +
+    theme(plot.title.position = "plot",
+          plot.title = element_text(face = "bold"),
+          legend.position = "top",
+          # strip.text.y.right = element_text(angle = 0, face = "bold"),
+          axis.text.y = element_text(face = "bold") )
+  
+  ggiraph::girafe(ggobj = plt)
+  
+}
+```
+
+
+```{r}
+#| results: 'asis'
+
+if (n_votes_today > 1) {
+  worst_cohesion_print = worst_cohesion |> 
+    dplyr::filter(cohesion < 90) 
+  
+  if ( nrow(worst_cohesion_print) > 0 ) {
+    cat("Now we can check where our Group has performed the worst. In the table below we isolate the ten RCVs with the lowest cohesion rate (provided that they were below 90%).\n\n") 
+  } else {
+    cat("\nIn none of today's RCVs Renew had a cohesion rate below 90%.\n\n")
+  }
+}
+```
+
+
+```{r}
+if (n_votes_today > 1 && nrow(worst_cohesion_print) > 0) {
+  
+  worst_cohesion_print |> 
+    dplyr::select(vote_label, activity_label_mul, cohesion) |> 
+    knitr::kable(align = "c")
+}
+```
+
+
+```{r}
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+## EPP breaches of coalition agreements ----------------------------------------
+if ( file.exists(here::here(
+  "data_out", "daily", paste0("epp_coalitions_", today_date, ".csv")
+) ) ) {
+  
+  # Read in data
+  epp_coalitions = data.table::fread(file = here::here(
+    "data_out", "daily", paste0("epp_coalitions_", today_date, ".csv") ),
+    select = c("rcv_id", "is_pfe_ecr", "is_pfe_ecr_esn") )
+  
+  # Merge
+  votes_today = epp_coalitions[
+    votes_today,
+    on = "rcv_id"
+  ]
+  
+  # Print title of Section --------------------------------------------------#
+  cat("\n## EPP Breaches of the Coalition Agreement\n\nThe table below lists the votes where the EPP majority voted differently from both S&D and Renew, and together with either (A) ECR and PfE, or (B) ECR, ESN, and PfE.\n")
+  
+  # Process and print table
+  votes_today |> 
+    dplyr::filter(
+      decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+      & (is_pfe_ecr == 1 | is_pfe_ecr_esn == 1)
+    ) |> 
+    dplyr::mutate(
+      `(A) EPP + ECR + PfE` = ifelse(is_pfe_ecr == 1L, "Yes", "No"),
+      `(B) EPP + ECR + ESN + PfE` = ifelse(is_pfe_ecr_esn == 1L, "Yes", "No"),
+    ) |> 
+    dplyr::select(
+      Dossier = vote_label, `RCV Label` = activity_label_mul, 
+      `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`) |> 
+    knitr::kable(align = "c")
+}
+```
+
+
+## Data and Methods
+The objective of this short note is to investigate groups' cohesion during the EP's last Plenary Session.
+
+We include in our analysis all votes taken by roll-call votes (RCVs) in the last Plenary Session as well as, for comparative purposes, data for the entire 10th legislature 14 July 2024.
+We currently have `r n_rcv_tot` RCVs in our database for this legislature.
+It is important to note that the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - which are not included in this analysis. 
+As a rough approximation, about `r round(n_rcv_tot/n_votes_tot*100)`% of the votes during this mandate have been taken by RCV.
+In today's session, we had `r n_votes_today` votes and `r n_rcv_today` RCVs. 
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+{{< pagebreak >}}
+
+
+```{r}
+#| results: 'asis'
+
+n_novotes <- length(rcv_today$pers_id[
+  rcv_today$result == -2L
+  & rcv_today$polgroup_id == renew_polgroup_id
+]
+)
+
+if (n_novotes > 0L ) {
+  cat("## ANNEX: List of Renew MEPs who did not vote albeit present\n\n")
+}
+```
+
+```{r}
+
+if (n_novotes > 0L ) {
+  rcv_today[
+    result == -2L
+    & polgroup_id == renew_polgroup_id,
+    list(pers_id, rcv_id)] |> 
+    join_meps_names() |> 
+    dplyr::left_join(
+      y = votes_today[, list(rcv_id, vote_label, activity_label_mul)],
+      by = "rcv_id") |> 
+    dplyr::select(-c(rcv_id, pers_id)) |> 
+    knitr::kable(align = "c")
+}
+```

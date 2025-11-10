@@ -1,0 +1,198 @@
+---
+title: "Communicating about voting data at national level"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r misc}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "ggplot2", "here", "lubridate",
+                        "janitor", "stringi", "tidyr", "tidyselect", "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Cohesion rate ---------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+# Join functions --------------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# Vote Colours  ---------------------------------------------------------------#
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# set theme globally for ggplots ----------------------------------------------#
+# REF: https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10))
+```
+
+The objective of this short note is to identify cases where the EPP broke the coalition agreement during Plenary votes.
+For the purpose of this note, we identify 'breaches' as votes wherein the EPP's majority did not vote in the same way as S&D and Renew's majorities, and together with far right Groups, namely ECR, ESN, PfE. 
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+# RCVs ------------------------------------------------------------------------#
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+
+# Votes -----------------------------------------------------------------------#
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_10.csv"), 
+  na.strings = c(NA_character_, "") )  
+
+# Vote dictionary -------------------------------------------------------------#
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+
+
+### MEP last Plenary day -------------------------------------------------------
+meps_current <- data.table::fread( file = here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+
+###--------------------------------------------------------------------------###
+### MEPs mandate ---------------------------------------------------------------
+meps_mandate <- data.table::fread(
+  here::here("data_out", "meps", "meps_mandate_10.csv"))
+```
+
+
+### EPP's right turn
+In this sub-section we select all votes during the last Plenary where the EPP voted differently from both Renew and S&D, and voted in the same way as ESN and PfE.
+We produce a separate spreadsheet with the detailed information.
+```{r}
+# Get the Groups' majority by rcv_id ------------------------------------------#
+who_won_bygroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[result >= -2]) # exclude absent
+
+epp_mjrt <- who_won_bygroup[
+  polgroup_id == 7018L
+][, c("polgroup_id", "who_won") := NULL]
+
+epp_groups <- epp_mjrt[
+  who_won_bygroup[polgroup_id != 7018L],
+  on = "rcv_id", nomatch = NULL
+][, who_won := NULL] |> 
+  join_polit_labs() |> 
+  dplyr::select(-polgroup_id)
+```
+
+
+#### EPP coalition with PfE and ECR
+```{r}
+epp_coalitions <- epp_groups |> 
+  tidyr::pivot_wider(names_from = political_group, values_from = i.result) |> 
+  dplyr::mutate(
+    is_pfe_ecr = ifelse(
+      test = (result != Renew) & (result != `S&D`) 
+      & (result == PfE & result == ECR),
+      yes = 1L, no = 0L),
+    is_pfe_ecr_esn = ifelse(
+      test = (result != Renew) & (result != `S&D`) 
+      & (result == PfE & result == ECR & result == ESN),
+      yes = 1L, no = 0L) ) |> 
+  dplyr::rename(PPE = result)
+
+epp_pfe_ecr <- sort(epp_coalitions$rcv_id[
+  epp_coalitions$is_pfe_ecr == 1L])
+votes_dt |> 
+  dplyr::filter(rcv_id %in% epp_pfe_ecr) |> 
+  dplyr::arrange(activity_date, activity_order) |> 
+  dplyr::mutate(n = dplyr::row_number()) |> 
+  dplyr::select(n, activity_date, doc_id, activity_label_fr, referenceText_fr) |> 
+  knitr::kable(align = "c")
+```
+
+
+#### EPP coalition with PfE and ECR and ESN
+```{r}
+epp_pfe_ecr_esn <- sort(epp_coalitions$rcv_id[
+  epp_coalitions$is_pfe_ecr_esn == 1L])
+votes_dt |> 
+  dplyr::filter(rcv_id %in% epp_pfe_ecr_esn) |> 
+  dplyr::arrange(activity_date, activity_order) |> 
+  dplyr::mutate(n = dplyr::row_number()) |> 
+  dplyr::select(n, activity_date, doc_id, activity_label_fr, referenceText_fr) |> 
+  knitr::kable(align = "c")
+```
+
+
+## Divisions amongst the far right Groups
+
+
+## EPP suuport of Patriots' amendments
+```{r}
+
+rcvid_pfe_ams = votes_dt[
+  activity_date == "2025-04-02"
+  & ( grepl(pattern = "PfE", x = responsible_organization_label_fr)
+      | grepl(pattern = "PfE", x = responsible_organization_label_en) ),
+][["rcv_id"]]
+
+p = meps_rcv_mandate[
+  rcv_id %in% rcvid_pfe_ams,
+  list(tally = .N),
+  keyby = list(rcv_id, polgroup_id, result)    
+] |> 
+  join_polit_labs() |> 
+  filter(political_group == "PPE") |> 
+  slice_max(order_by = tally, n = 1, by = rcv_id) |> 
+  filter(result == 1) |> 
+  left_join(
+    y = votes_dt,
+    by = "rcv_id"
+  ) |> 
+  select(
+    activity_start_date, epp_majority = tally, doc_id,
+    activity_label_mul, referenceText_fr,
+    number_of_attendees, number_of_votes_abstention, number_of_votes_against,
+    number_of_votes_favor)
+
+write.csv(x = p, "20250402_epp_majority_pfe_amends.csv")
+```
+

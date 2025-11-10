@@ -1,0 +1,1272 @@
+---
+title: "EP Political Groups' Metrics during the 10th EP Mandate"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Methodology
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(here)
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2019-07-01")
+current_month = lubridate::month(x = Sys.Date(), label = TRUE, abbr = FALSE)
+current_year = lubridate::year( x = Sys.Date() )
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+# Cohesion rate ---------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+custom_theme = theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold", size = 26),
+        legend.text = element_text(face="bold",  size = 26), 
+        legend.position = "bottom",
+        plot.caption = element_text(size = 16),
+        strip.text = element_text(face = "bold", size = 20, hjust = 0.5),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text.x = element_text(face="bold", size = 30),
+        axis.text.y = element_text(face="bold", size = 26),
+        axis.title = element_text(face="bold", size = 20))
+theme_set(new = custom_theme)
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+
+
+#------------------------------------------------------------------------------#
+## Data -------------------------------------------------------------------
+# Full data
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_all.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id") )
+# Nominal change from GUE to The Left
+meps_rcv_mandate[polgroup_id == 5151L, polgroup_id := 6259L] 
+
+# Votes
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_all.csv"))
+
+# Recode
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+# left join
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+
+
+# List of RCV IDs and Committees
+rcvid_cmts_10 <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+# sort(unique(rcvid_cmts_10$committee_lab))
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+rcvid_cmts_all <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_all.csv") )
+# sort(unique(rcvid_cmts_all$committee_lab))
+rcvid_cmts_all[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+rcvid_cmts_10[, .N, by = committee_lab][order(-N)] |> 
+  write_csv(here::here("data_out", "rcv", "tally_rcv_bycmt.csv"))
+
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes_09 <- nrow(votes_dt[mandate == 9L])
+n_votes_10 <- nrow(votes_dt[mandate == 10L])
+n_rcv_09 <- length( unique( meps_rcv_mandate$rcv_id[
+  meps_rcv_mandate$mandate == 9L] ) )
+n_rcv_10 <- length( unique( meps_rcv_mandate$rcv_id[
+  meps_rcv_mandate$mandate == 10L] ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+```
+
+* Where possible, this presentation compares the 9th to the 10th EP mandate.
+During the **9th mandate**, `r n_votes_09` votes took place, out of which `r n_rcv_09` were RCVs.
+As of `r paste(current_month, current_year)`, we have had `r n_votes_10` during the **10th mandate**, `r n_rcv_10` of which were RCVs.
+* Only relative to Plenary activity [**MODIFY THIS IF COMMMITTEE DATA IS EVENTUALLY INCLUDED**]
+
+
+## Participation in the votes
+```{r}
+meps_rcv_mandate[, `:=`(
+  has_voted = data.table::fifelse(test = result >= -1L, yes = 1L, no = 0L) 
+) ]
+
+voted_dt <- meps_rcv_mandate[
+  !is.na(has_voted)
+  & !is.na(polgroup_id), 
+  .N, 
+  keyby = list(mandate, polgroup_id, pers_id, has_voted)]    
+voted_dt[, tot := sum(N, na.rm = TRUE), by = list(mandate, polgroup_id, pers_id)]
+voted_dt[, attendance_rate := round(N / tot, digits = 3)]
+attendance_bypolgroup = voted_dt[
+  has_voted == 1L, 
+  list(attendance_rate_avg = mean(attendance_rate, na.rm=TRUE)),
+  by = list(mandate, polgroup_id)
+] |> 
+  join_polit_labs() |> 
+  dplyr::arrange( desc(attendance_rate_avg) )
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = attendance_bypolgroup$political_group[
+  attendance_bypolgroup$mandate == 10L
+]
+
+# Plot
+# REF: https://stackoverflow.com/questions/11020437/consistent-width-for-geom-bar-in-the-event-of-missing-data?noredirect=1&lq=1
+attendance_bypolgroup |> 
+  dplyr::filter(political_group %in% plot_rank) |> 
+  dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9), 
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = attendance_rate_avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(attendance_rate_avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position = position_dodge(width=1)) + 
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  labs(
+    y = "Participation Rate (%)",
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the attandance rates during RCVs. Attendance rate is defined as participation in RCVs.",
+    x = "", y = "", fill = "") +
+  scale_y_continuous(limits=c(0.5, 1), 
+                     oob=scales::rescale_none,
+                     labels = scales::percent) 
+ggsave(filename = here::here("figures", "attendancerate_bypolgroup_ppt.jpeg"), 
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "attendancerate_bypolgroup_ppt.svg"), 
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+```
+
+
+## Cohesion Rates
+The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
+
+$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
+
+As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
+However, experts have highlighted other forms of vote are actually at the MEPs' disposal, i.e. being present in the House but not showing up for specific votes (`no_vote`), or being absent on the voting day (`absent`).
+We do not count those in this note, but can be included if needs be.
+Further, and to be clear, here we do not make use of data coming from the Attendance Registers, but these can be included if needs be.
+
+
+### Overall cohesion rates
+```{r}
+###--------------------------------------------------------------------------###
+# Read in function
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result_fct,
+                                        levels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Calculate Cohesion
+cohesion_dt <- meps_rcv_mandate[
+  !is.na(polgroup_id)
+  & result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max( tabulate(result_fct) ),
+    tot_votes = sum( tabulate(result_fct) ) ), 
+  keyby = list(mandate, polgroup_id, rcv_id) ] |> 
+  join_polit_labs()
+
+# Aggregate -------------------------------------------------------------------#
+cohesion_dt_avg = cohesion_dt[, list(avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
+                              by = list(mandate, political_group)][order(-avg)] 
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = cohesion_dt_avg$political_group[
+  cohesion_dt_avg$mandate == 10L
+]
+
+# Plot
+cohesion_dt_avg |>  
+  dplyr::filter(political_group %in% plot_rank) |> 
+  dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg/100, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = avg), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  labs(
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the cohesion rates.",
+    x = "", y = "", fill="") +
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) 
+ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Cohesion rates by final
+```{r}
+#| fig-width: 8
+#| fig-height: 5
+
+#------------------------------------------------------------------------------#
+# Merge RCV with Finals -------------------------------------------------------#
+cohesion_final_dt <- unique(votes_dt[mandate == 10L, list(rcv_id, is_final)])[
+  cohesion_dt, on = "rcv_id", nomatch = NULL]
+
+# Colours ---------------------------------------------------------------------#
+# cols_final <- c(Final = "#0868ac", `Not Final` = "#636363")
+
+
+# Aggregate -------------------------------------------------------------------#
+# REF: https://stackoverflow.com/questions/40211451/geom-text-how-to-position-the-text-on-bar-as-i-want
+cohesion_final_avg_dt = cohesion_final_dt[, list(
+  avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
+  by = list(political_group, is_final)
+][, is_final := ifelse(test = is_final == 1L,
+                       yes = "Final", no = "Not Final")
+][order(-avg)]
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = cohesion_final_avg_dt$political_group[
+  cohesion_final_avg_dt$is_final == "Final"
+]
+
+# Plot
+cohesion_final_avg_dt |> 
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg/100, fill = factor(is_final) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = avg), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(
+    values = c(`Final` = "#E7298A", `Not Final` = "#173481")
+    ) +
+  scale_y_continuous(oob=scales::rescale_none, 
+                     limits = c(0, 1.005),
+                     labels = scales::percent) +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the cohesion rates.") 
+ggsave(filename = here::here("figures", "cohesion_bypolgroup_byfinal_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "cohesion_bypolgroup_byfinal_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Cohesion rates by Committee
+```{r}
+#------------------------------------------------------------------------------#
+# Inner merge here: we only want RCVs from 10th mandate
+cohesion_bycommittee <- rcvid_cmts_10[
+  cohesion_dt,
+  on = "rcv_id", nomatch = NULL
+]
+
+cohesion_bycommittee_avg = cohesion_bycommittee[
+  !is.na(committee_lab),
+  list(avg = mean(cohesion, na.rm = TRUE) ),
+  by = list(mandate, political_group, committee_lab)] 
+
+dt_plot = data.table::rbindlist(
+  l = list(
+    cohesion_dt_avg[political_group == "Renew" & mandate == 10L],
+    cohesion_bycommittee_avg[political_group == "Renew" & mandate == 10L]), 
+  use.names = TRUE, fill = TRUE
+)
+dt_plot = dt_plot[, committee_lab := ifelse(test = is.na(committee_lab), 
+                                            yes = "Overall", no = committee_lab)
+][, is_overall := ifelse(test = committee_lab == "Overall", 
+                         yes = 1L, no = 0L)
+][order(-avg)]
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = dt_plot$committee_lab
+
+# Drop Committees with very few votes
+cmts_todrop = c("AFCO", "JURI", "PECH", "REGI", "SANT", "TRAN")
+
+# Plot
+dt_plot |> 
+  dplyr::filter(!committee_lab %in% cmts_todrop) |> 
+  ggplot(aes(x = factor(committee_lab, levels = plot_rank),
+             y = avg/100, fill = factor(is_overall) ) ) +
+  geom_col(width=0.9, linewidth=0.1, colour = "black", show.legend = FALSE) +
+  geom_text(aes(label = round(avg, digits = 1) ), 
+            vjust = -0.2, size = 10) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(values = c("#173481", "#E7298A")) +  
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the cohesion rates.") +
+  theme(
+        axis.text.x = element_text(face="bold", size = 30, angle = 45,
+                                   hjust = 1, vjust = 1.3)
+  )
+ggsave(filename = here::here("figures", "cohesion_bycmt_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "cohesion_bycmt_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 200, height = 11, width = 23, bg = "white")
+```
+
+
+```{r}
+#| eval: false
+# Plot
+dt_plot |>
+  dplyr::left_join(
+    y = rcvid_cmts_10 |> 
+      dplyr::summarise(n_votes = n(),.by = committee_lab),
+    by = "committee_lab"
+  ) |> 
+  dplyr::mutate(
+    n_votes = ifelse(test = is.na(n_votes), yes = n_rcv_10, no = n_votes)
+  ) |> 
+  ggplot(aes(x = factor(committee_lab, levels = plot_rank),
+             y = avg/100, fill = factor(is_overall) ) ) +
+  geom_col( aes( alpha = log(n_votes)),
+            linewidth=0.1, colour = "black", show.legend = FALSE) +
+  geom_text(aes(label = round(avg, digits = 1) ), 
+            vjust = -0.2, size = 10) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(values = c("#173481", "#E7298A")) +  
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the cohesion rates.") 
+# ggsave(filename = here::here("figures", "cohesion_bycmt_avg_ppt.svg"),
+#        device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+# ggsave(filename = here::here("figures", "cohesion_bycmt_avg_ppt.jpeg"),
+#        device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+## Effectiveness
+### Effectiveness Rate
+```{r}
+# This is defined as MEPs present AND voting along the Group's majority
+cohesion_dt[, effective := max_mode/tot_votes]
+effective_avg = cohesion_dt[, list(
+  avg = mean(effective, na.rm = TRUE) ),
+  by = list(mandate, political_group)
+][order(mandate, -avg)]
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = effective_avg$political_group[
+  effective_avg$mandate == 10L
+]  
+
+# Plot
+effective_avg |>   
+  dplyr::filter(political_group %in% plot_rank) |> 
+   dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1) ), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  labs(
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the effectiveness rates.",
+    x = "", y = "Average Effectiveness (%)", fill="") +
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) 
+ggsave(filename = here::here("figures", "effective_bypolgroup_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "effective_bypolgroup_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Effectiveness in Absolute Numbers
+```{r}
+# Current MEPs configuration
+meps_current <- data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+# Aggregate by Group
+polgroups_sizes = meps_current[, list(
+  `Number of MEPs` = length(unique(pers_id))),
+  keyby = polgroup_id ] |> 
+  join_polit_labs()
+
+# Merge
+effective_abs = effective_avg[
+  mandate == 10L
+][polgroups_sizes, on = "political_group"
+][, `Effective number of MEPs` := round(avg*`Number of MEPs`, digits = 0)
+][order(-`Effective number of MEPs`)] |> 
+  tidyr::pivot_longer(cols = c(`Number of MEPs`, `Effective number of MEPs`), 
+                      names_to = "var", values_to = "value")
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = effective_abs$political_group[
+  effective_abs$var == "Effective number of MEPs"
+] 
+
+# Plot
+effective_abs |> 
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = value, fill = factor(var) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = value), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(values = c(`Effective number of MEPs` = "#E7298A", 
+                               `Number of MEPs` = "#173481") ) +  
+  scale_y_continuous(oob=scales::rescale_none) +
+  labs(x="", y="Number of MEPs", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary.") 
+ggsave(filename = here::here("figures", "effective_bypolgroup_abs_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "effective_bypolgroup_abs_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+## Win Share
+### Overall Winning side
+```{r}
+###--------------------------------------------------------------------------###
+# Get the Groups' majority by rcv_id
+mjrt_house <- get_house_majority(data_in = meps_rcv_mandate[result >= -1])
+
+###--------------------------------------------------------------------------###
+# Check what party within each Group voted the same ---------------------------#
+# Count votes within each party
+mjrt_polgroup <- get_polgroup_majority(data_in = meps_rcv_mandate[
+  result >= -1 ] ) 
+
+###--------------------------------------------------------------------------###
+## Calculate similarity --------------------------------------------------------
+# Merge group line with party vote --------------------------------------------#
+mjrt_house_polgroup <- merge(
+  x = mjrt_house,
+  y = mjrt_polgroup, 
+  by = c("rcv_id"), all = FALSE) |> 
+  join_polit_labs() 
+
+# Are Group and party majorities the same? ----------------------------------###
+mjrt_house_polgroup = mjrt_house_polgroup[
+  unique(meps_rcv_mandate[, list(rcv_id, mandate)]),
+  on = "rcv_id", nomatch = NULL
+][, is_same := as.integer(result.x == result.y)] 
+
+winshare_mean <- mjrt_house_polgroup[, list(
+  avg = mean(is_same, na.rm = TRUE)),
+  by = list(mandate, political_group)][order(mandate ,-avg)]
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = winshare_mean$political_group[
+  winshare_mean$mandate == 10L
+]
+
+# Plot
+winshare_mean |>
+  dplyr::filter(political_group %in% plot_rank) |> 
+   dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  labs(
+    y = "Average Win Share (%)",
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the win shares.",
+    x = "", y = "", fill="") +
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent,
+                     limits = c(0, 1)) 
+ggsave(filename = here::here("figures", "winshare_bypolgroup_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "winshare_bypolgroup_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Winning side by final
+```{r}
+#------------------------------------------------------------------------------#
+# Merge RCV with Finals -------------------------------------------------------#
+winshare_final_dt <- unique(votes_dt[
+  mandate == 10L, 
+  list(rcv_id, is_final)]
+)[mjrt_house_polgroup, 
+  on = "rcv_id", nomatch = NULL]
+
+# Aggregate -------------------------------------------------------------------#
+# REF: https://stackoverflow.com/questions/40211451/geom-text-how-to-position-the-text-on-bar-as-i-want
+winshare_final_avg_dt = winshare_final_dt[, list(
+  avg = mean(is_same, na.rm = TRUE)), 
+  by = list(political_group, is_final)
+][, is_final := ifelse(test = is_final == 1L,
+                       yes = "Final", no = "Not Final")
+][order(-avg)]
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = winshare_final_avg_dt$political_group[
+  winshare_final_avg_dt$is_final == "Final"
+]
+
+# Plot
+winshare_final_avg_dt |> 
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg, fill = factor(is_final) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(
+    values = c(`Final` = "#E7298A", `Not Final` = "#173481")
+  ) +  
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent, limits = c(0, 1) ) +
+  labs(x="", y="Average Win Share (%)", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the win shares.") 
+ggsave(filename = here::here("figures", "winshare_bypolgroup_byfinal_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "winshare_bypolgroup_byfinal_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Winning side by Committee
+```{r}
+#------------------------------------------------------------------------------#
+# Inner merge here: we only want RCVs from 10th mandate
+winshare_bycommittee <- rcvid_cmts_10[
+  mjrt_house_polgroup,
+  on = "rcv_id", nomatch = NULL
+]
+
+winshare_bycommittee_avg = winshare_bycommittee[
+  !is.na(committee_lab),
+  list(avg = mean(is_same, na.rm = TRUE) ),
+  by = list(mandate, political_group, committee_lab)] 
+
+dt_plot = data.table::rbindlist(
+  l = list(
+    winshare_mean[political_group == "Renew" & mandate == 10L],
+    winshare_bycommittee_avg[political_group == "Renew" & mandate == 10L]), 
+  use.names = TRUE, fill = TRUE
+)
+dt_plot = dt_plot[, committee_lab := ifelse(test = is.na(committee_lab), 
+                                            yes = "Overall", no = committee_lab)
+][, is_overall := ifelse(test = committee_lab == "Overall", 
+                         yes = 1L, no = 0L)
+][order(-avg)]
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = dt_plot$committee_lab
+
+# Plot
+dt_plot |> 
+    dplyr::filter(!committee_lab %in% cmts_todrop) |> 
+  ggplot(aes(x = factor(committee_lab, levels = plot_rank),
+             y = avg, fill = factor(is_overall) ) ) +
+  geom_col(width=0.9, linewidth=0.1, colour = "black", show.legend = FALSE) +
+  geom_text(aes(label = round(avg*100, digits = 1) ), 
+            vjust = -0.2, size = 10) +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_fill_manual(
+    values = c(`0`="#173481", `1`="#E7298A")
+    ) +  
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) +
+  labs(x="", y="Average Win Share (%)", fill="",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the win shares.") +
+  theme(
+        axis.text.x = element_text(face="bold", size = 30, angle = 45,
+                                   hjust = 1, vjust = 1.3)
+  ) 
+ggsave(filename = here::here("figures", "winshare_bycmt_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "winshare_bycmt_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+
+```
+
+
+## Affinity: Group Level
+### Overall
+We first calculate the overall affinity of all other Groups to Renew, unfiltered.
+Affinity is defined as the rate with which either the *majorities within Groups/national parties* vote in the same way, or *MEPS* vote in the same way. 
+Here we use only EP official types of votes.
+```{r}
+#------------------------------------------------------------------------------#
+# Merge
+mjrt_renew_groups <- merge(
+  x = mjrt_polgroup[polgroup_id %in% renew_group_ids, list(rcv_id, result)],
+  y = mjrt_polgroup,
+  by = c("rcv_id"), all = FALSE)
+mjrt_renew_groups[, is_same := as.integer( result.x == result.y ) ]
+mjrt_renew_groups <- mjrt_renew_groups[  
+  unique(meps_rcv_mandate[, list(rcv_id, mandate)]),
+  on = "rcv_id", nomatch = NULL
+] |> 
+  join_polit_labs()
+```
+
+Because of ties within Groups (i.e. absence of a majority), we may lose some votes. 
+How many?
+```{r}
+#| eval: false
+
+# lost RCVs due to ties
+sum(!unique(meps_rcv_mandate$rcv_id) %in% unique(mjrt_renew_groups$rcv_id))
+```
+
+What's the overall picture?
+```{r}
+# get the mean
+mjrt_renew_groups_avg = mjrt_renew_groups[
+  political_group != "Renew",
+  list(
+    avg = mean(is_same)),
+  by = list(mandate, political_group)
+][order(mandate, -avg)]  
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = mjrt_renew_groups_avg$political_group[
+  mjrt_renew_groups_avg$mandate == 10L
+]
+
+# Plot
+mjrt_renew_groups_avg |>   
+  dplyr::filter(political_group %in% plot_rank) |> 
+   dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>
+  ggplot(aes(x = factor(political_group, levels = plot_rank),
+             y = avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+  ) +
+  labs(
+    y = "Average Affinity (%)",
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the affinity rates.",
+    x = "", y = "", fill="") +
+  scale_y_continuous(oob = scales::rescale_none,
+                     labels = scales::percent,
+                     limits = c(0, 1)) 
+ggsave(filename = here::here("figures", "affinity_bypolgroup_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg  = "white")
+ggsave(filename = here::here("figures", "affinity_bypolgroup_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+### Committees
+In this sub-section, we break down the aggregate trends witnessed above by Committees.
+```{r}
+#------------------------------------------------------------------------------#
+# Inner merge here: we only want RCVs from 10th mandate
+mjrt_renew_groups_cmts <- rcvid_cmts_10[
+  mjrt_renew_groups,
+  on = "rcv_id", nomatch = NULL
+]
+
+#------------------------------------------------------------------------------#
+# Aggregate -------------------------------------------------------------------#
+mjrt_renew_groups_cmts_avg = mjrt_renew_groups_cmts[
+  mandate == 10L
+  & political_group != "Renew",
+  list(
+    avg = mean(is_same)),
+  by = list(political_group, committee_lab)
+][order(-avg)]  
+
+
+# Plot ------------------------------------------------------------------------#
+# REF: https://github.com/juliasilge/juliasilge.com/issues/10
+mjrt_renew_groups_cmts_avg |>   
+  dplyr::filter(political_group != "NI"
+                & !committee_lab %in% cmts_todrop) |> 
+  dplyr::mutate(political_group_fct = tidytext::reorder_within(
+    x = political_group, by = avg, within = committee_lab)) |> 
+  ggplot(aes(x = political_group_fct, y = avg, fill = political_group) ) +
+  geom_col(width=0.9, linewidth=0.1, colour = "black") +
+  facet_wrap(~committee_lab, scales = "free_y", nrow=4) +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_fill_manual(values = polgroup_cols) +
+  labs(
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the affinity rates.",
+    x = "", y = "", fill="") +
+  guides(fill = guide_legend(nrow = 1)) + 
+  scale_y_continuous(
+    guide = guide_axis(check.overlap = TRUE),
+    oob = scales::rescale_none,
+    breaks = c(0, 0.5, 1),
+    labels = scales::percent, 
+    limits = c(0, 1)) +
+  theme(
+    legend.text = element_text(face="bold",  size = 30), 
+    axis.text.x = element_text(face="bold", size = 22),
+    axis.text.y = element_blank(),
+    panel.spacing.x = unit(10, "mm"),
+    strip.text = element_text(face = "bold", size = 30, hjust = 0.5),
+  )
+ggsave(filename = here::here("figures", "affinity_bypolgroup_bycmt_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg  = "white")
+ggsave(filename = here::here("figures", "affinity_bypolgroup_bycmt_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 200, height = 11, width = 23, bg = "white")
+```
+
+
+### Changes between mandates
+```{r}
+#------------------------------------------------------------------------------#
+committee_long <- data.table::fread(here::here(
+  "data_out", "bodies", "committee_long.csv") )
+
+
+# Inner merge here: we only want RCVs from 10th mandate
+mjrt_renew_groups_cmts <- rcvid_cmts_all[
+  mjrt_renew_groups,
+  on = "rcv_id", nomatch = NULL
+] |> 
+  dplyr::left_join(
+    y = unique(committee_long[
+      joint_committees_labs != "" & !is.na(joint_committees_labs), 
+      list(label, joint_committees_labs)]),
+    by = c("committee_lab" = "label")
+  ) |> 
+  dplyr::mutate(
+    committee_lab = ifelse(
+      test = grepl(pattern = "^CJ", x = committee_lab) 
+            & joint_committees_labs != "",
+    yes = joint_committees_labs, no = committee_lab)
+  )
+
+#------------------------------------------------------------------------------#
+# Aggregate -------------------------------------------------------------------#
+mjrt_renew_groups_cmts_avg = mjrt_renew_groups_cmts[
+  political_group %in% c("PPE", "S&D", "Verts/ALE", "ECR"),
+  list(
+    n_obs = .N,
+    avg = mean(is_same)),
+  by = list(mandate, political_group, committee_lab)
+][order(avg)]  
+
+
+## PPE -------------------------------------------------------------------------
+# Change over time ------------------------------------------------------------#
+change_dt_epp <- mjrt_renew_groups_cmts_avg |> 
+  dplyr::filter(political_group == "PPE") |> 
+  dplyr::select(mandate, committee_lab, avg) |> 
+  tidyr::pivot_wider(names_from = mandate, names_prefix = "term_", 
+                     values_from = avg) |> 
+  dplyr::mutate(change = term_10 - term_9,
+                is_positive = ifelse(change > 0, 1L, 0L)) |> 
+  na.omit()
+
+
+# Plot ------------------------------------------------------------------------#
+plot_rank_epp <- mjrt_renew_groups_cmts_avg$committee_lab[
+  mjrt_renew_groups_cmts_avg$political_group == "PPE" 
+  & mjrt_renew_groups_cmts_avg$mandate == 10L
+]
+
+epp_plot = mjrt_renew_groups_cmts_avg |>
+  dplyr::filter(political_group == "PPE"
+                & committee_lab %in% plot_rank_epp) |> 
+ dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>                
+  ggplot(aes(x = avg,
+             y = factor(committee_lab, levels = plot_rank_epp) ) ) +
+  geom_segment(
+    data = change_dt_epp,
+    aes(x = term_9, xend = term_10,
+        y = committee_lab, yend = committee_lab,
+        colour = factor(is_positive)),
+    linewidth = 1, show.legend = FALSE) +
+  geom_point(aes(fill = factor(mandate)), #, size = n_obs
+             shape = 21, size = 4, colour = "black", stroke = 0.1) +
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  scale_colour_manual(
+    values = c("0" = "#173481", "1" = "#E7298A")
+    ) +
+  facet_wrap(~political_group) +
+  labs(#title = "Cohesion (%) - All Groups",
+    x = "Average Affinity (%)", y = "", fill="") +
+  scale_x_continuous(
+    guide = guide_axis(check.overlap = TRUE),
+    oob = scales::rescale_none,
+    labels = scales::percent,
+    limits = c(0, 1)) +
+  theme(
+    panel.spacing.x = unit(7, "mm")
+  )
+
+
+## SD --------------------------------------------------------------------------
+# Change over time ------------------------------------------------------------#
+change_dt_sd <- mjrt_renew_groups_cmts_avg |> 
+  dplyr::filter(political_group == "S&D") |> 
+  dplyr::select(mandate, committee_lab, avg) |> 
+  tidyr::pivot_wider(names_from = mandate, names_prefix = "term_", 
+                     values_from = avg) |> 
+  dplyr::mutate(change = term_10 - term_9,
+                is_positive = ifelse(change > 0, 1L, 0L)) |> 
+  na.omit()
+
+
+# Plot ------------------------------------------------------------------------#
+plot_rank_sd <- mjrt_renew_groups_cmts_avg$committee_lab[
+  mjrt_renew_groups_cmts_avg$political_group == "S&D" 
+  & mjrt_renew_groups_cmts_avg$mandate == 10L
+]
+
+sd_plot = mjrt_renew_groups_cmts_avg |>
+  dplyr::filter(political_group == "S&D"
+                & committee_lab %in% plot_rank_sd) |> 
+ dplyr::mutate(
+    mandate = factor(mandate, levels = c(10, 9),
+                     labels = c("10th Mandate", "9th Mandate") ) 
+    ) |>                
+  ggplot(aes(x = avg,
+             y = factor(committee_lab, levels = plot_rank_sd) ) ) +
+  geom_segment(
+    data =  change_dt_sd,
+    aes(x = term_9, xend = term_10,
+        y = committee_lab, yend = committee_lab,
+        colour = factor(is_positive)),
+    linewidth = 1, show.legend = FALSE) +
+  geom_point(aes(fill = factor(mandate)), #, size = n_obs
+             shape = 21, size = 4, colour = "black", stroke = 0.1) +
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  scale_colour_manual(
+    values = c("0" = "#173481", "1" = "#E7298A")
+    ) +
+  facet_wrap(~political_group) +
+  labs(#title = "Cohesion (%) - All Groups",
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary. The height of the bars represent the mean of the distribution of the affinity rates.",
+    x = "Average Affinity (%)", y = "", fill="") +
+  scale_x_continuous(
+    guide = guide_axis(check.overlap = TRUE),
+    oob = scales::rescale_none,
+    labels = scales::percent,
+    limits = c(0, 1)) +
+  theme(
+    panel.spacing.x = unit(7, "mm")
+  )
+
+
+#------------------------------------------------------------------------------#
+#' Combine the 2 plots for EPP and SD into 1
+library(patchwork)
+# REF: https://patchwork.data-imaginist.com/articles/guides/layout.html
+epp_plot + sd_plot +
+  plot_layout(guides = 'collect') + 
+  plot_annotation(
+    subtitle = "Magenta segments represent increases from the 9th to the 10th mandate, whereas blue represent decreases.",
+    theme = theme(plot.subtitle = element_text(size = 24) ) )
+
+ggsave(filename = here::here("figures", "affinity_eppsd_cmt_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg  = "white")
+ggsave(filename = here::here("figures", "affinity_eppsd_cmt_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+## Alignment
+```{r}
+renew_partyids_current = unique(meps_current$natparty_id[
+  meps_current$polgroup_id %in% renew_group_ids
+])
+
+mjrt_parties = get_natparty_majority(data_in = meps_rcv_mandate[
+  polgroup_id %in% renew_group_ids
+  & result >= -1
+  & mandate == 10L
+])
+
+mjrt_renew_parties = mjrt_parties[
+  mjrt_polgroup[
+    polgroup_id %in% renew_group_ids, 
+    list(rcv_id, result, who_won)],
+  on = "rcv_id", nomatch = NULL
+]
+mjrt_renew_parties[, is_same := as.integer(result == i.result)]
+
+mjrt_renew_parties = mjrt_renew_parties |> 
+  dplyr::left_join(
+    y = unique(meps_current[, list(country_id, polgroup_id, natparty_id)]),
+    by = c("polgroup_id", "natparty_id")
+  )  |> 
+  dplyr::mutate(
+    natparty_id = ifelse(test = country_id==11L, yes=6935L, no=natparty_id),
+    natparty_id = ifelse(test = country_id==24L, yes=6872L, no=natparty_id)
+  )
+
+mjrt_renew_parties_avg = mjrt_renew_parties[, list(
+  avg = mean(is_same, na.rm = TRUE) ),
+  by = list(country_id, natparty_id)
+] |> 
+  join_polit_labs() |> 
+  join_meps_countries() |> 
+  dplyr::mutate(
+    country_party = paste(
+      country_iso3c, national_party, sep = " - "),
+    country_party = ifelse(
+      test = country_party == "ROU - USR", yes = "ROU", no = country_party),
+    country_party = ifelse(
+      test = country_party == "FRA - Ren", yes = "FRA - Ens", no = country_party)
+    ) |> 
+  dplyr::arrange(desc(avg))
+
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = mjrt_renew_parties_avg$country_party
+
+# Plot
+mjrt_renew_parties_avg |>   
+  ggplot(aes(x = factor(country_party, levels = plot_rank),
+             y = avg) ) +
+  geom_col(width=0.6, linewidth=0.1, colour = "black", fill = "#E7298A") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            hjust=0, vjust = -.7, size = 8, angle=45) + # hjust=0.4) + 
+  labs(#title = "Cohesion (%) - All Groups",
+    x = "", y = "", fill="") +
+  scale_y_continuous(oob=scales::rescale_none, limits = c(0, 1.1),
+                     labels = scales::percent) +
+  theme(
+    axis.text.x = element_text(angle = 60, vjust = 1.1, hjust = 1.1, 
+                               face="bold", size = 26)
+    )
+ggsave(filename = here::here("figures", "align_avg_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "align_avg_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+
+```
+
+
+## Win Share by Cohesion
+```{r}
+dplyr::inner_join(
+  x = cohesion_bycommittee_avg[
+    political_group == "Renew", list(committee_lab, cohesion = avg)
+  ],
+  y = winshare_bycommittee_avg[
+    political_group == "Renew", list(committee_lab, win_share = avg)
+  ],
+  by = "committee_lab"
+) |>
+  dplyr::left_join(
+    y = rcvid_cmts_10 |> 
+      dplyr::summarise(n_votes = n(),.by = committee_lab),
+    by = "committee_lab"
+  ) |> 
+  dplyr::filter(!committee_lab %in% "DEVE") |> 
+  ggplot(aes(x = cohesion/100, y = win_share)) +
+  geom_point(aes(size = n_votes, fill = n_votes), 
+             shape = 21,colour = "black", stroke = 0.1, show.legend = FALSE) +
+  ggrepel::geom_text_repel(aes(label = committee_lab), size = 7) +
+  geom_smooth(aes(weight = n_votes), method = "lm", se=FALSE) +
+  scale_y_continuous(oob=scales::rescale_none, limits = c(0.65, 1),
+                     labels = scales::percent) +
+  scale_x_continuous(oob=scales::rescale_none, limits = c(0.65, 1),
+                     labels = scales::percent) +
+  scale_size_continuous(range = c(8, 15))+
+  scale_fill_distiller(type = "seq", palette = 1, direction = 1) +
+  labs(x="Cohesion Rate (%)", y="Win Share (%)",
+       title = "The greater the Group's cohesion, the more we tend to win",
+       subtitle = "The size and colour of the dots are proportional to the number of votes in the policy area. The trend line takes into account the number of votes per Committee by providing more weight to the ones with more RCVs.") +
+  theme(
+    plot.subtitle = element_text(size = 16)
+  )
+ggsave(filename = here::here("figures", "winshare_cohesion_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "winshare_cohesion_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+```{r}
+dplyr::inner_join(
+  x = cohesion_bycommittee_avg[
+    political_group == "Renew", list(committee_lab, cohesion = avg)
+  ],
+  y = winshare_bycommittee_avg[
+    political_group == "Renew", list(committee_lab, win_share = avg)
+  ],
+  by = "committee_lab"
+) |>
+  dplyr::left_join(
+    y = rcvid_cmts_10 |> 
+      dplyr::summarise(n_votes = n(),.by = committee_lab),
+    by = "committee_lab"
+  ) |> 
+  dplyr::filter(!committee_lab %in% c("DEVE", cmts_todrop) ) |> 
+  ggplot(aes(x = cohesion/100, y = win_share)) +
+  geom_point(aes(size = n_votes, fill = n_votes), 
+             shape = 21,colour = "black", stroke = 0.1, show.legend = FALSE) +
+  ggrepel::geom_text_repel(aes(label = committee_lab), size = 7) +
+  geom_smooth(aes(weight = n_votes), method = "lm", se=FALSE) +
+  scale_y_continuous(oob=scales::rescale_none, limits = c(0.65, 1),
+                     labels = scales::percent) +
+  scale_x_continuous(oob=scales::rescale_none, limits = c(0.65, 1),
+                     labels = scales::percent) +
+  scale_size_continuous(range = c(8, 15))+
+  scale_fill_distiller(type = "seq", palette = 1, direction = 1) +
+  labs(x="Cohesion Rate (%)", y="Win Share (%)",
+       title = "The greater the Group's cohesion, the more we tend to win",
+       subtitle = "The size and colour of the dots are proportional to the number of votes in the policy area. The trend line takes into account the number of votes per Committee by providing more weight to the ones with more RCVs.") +
+  theme(
+    plot.subtitle = element_text(size = 16)
+  )
+ggsave(filename = here::here("figures", "winshare_cohesion_drop_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "winshare_cohesion_drop_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+
+## Coalitions
+```{r}
+coalition_dt = mjrt_polgroup[
+  unique(meps_rcv_mandate[, list(rcv_id, mandate)]),
+  on = "rcv_id"
+] |> 
+  join_polit_labs() |> 
+  dplyr::filter(
+    !is.na(polgroup_id) 
+    # & political_group %in% c("PPE", "S&D", "Renew") 
+    ) |>
+  tidyr::pivot_wider(id_cols = c(mandate, rcv_id),
+                     names_from = political_group, values_from = result) |> 
+  dplyr::mutate(
+    `Renew + PPE + S&D` = ifelse(test = (Renew == `S&D` & Renew == PPE), 
+                                 yes = 1, no = 0),
+    `PPE + S&D` = ifelse(test = (PPE == `S&D` & Renew != PPE), yes = 1, no = 0),
+    `Renew + PPE` = ifelse(test = (Renew == PPE & Renew != `S&D`), yes = 1, no = 0),
+    `Renew + S&D` = ifelse(test = (Renew == `S&D` & Renew != PPE), yes = 1, no = 0),
+    `No coalition` = ifelse(test = (Renew != `S&D` & Renew != PPE & PPE != `S&D`), 
+                            yes = 1, no = 0),
+    `PPE + ECR` = ifelse(test = (Renew != PPE & PPE != `S&D`
+                                 & PPE == ECR), 
+                         yes = 1, no = 0),
+    `PPE + Far Right` = ifelse(test = (Renew != PPE & PPE != `S&D`
+                                       & (
+                                         (PPE == ECR & PPE == ID)
+                                         | (PPE == ECR & PPE == PfE)
+                                       ) ), 
+                               yes = 1, no = 0)
+  ) |> 
+  tidyr::pivot_longer(cols = c(`Renew + PPE + S&D`, `PPE + S&D`, `Renew + PPE`, 
+                               `Renew + S&D`, `No coalition`, `PPE + ECR`, 
+                               `PPE + Far Right`) ) |> 
+  dplyr::mutate(is_coalition = ifelse(
+    test = name %in% c("Renew + PPE + S&D", "PPE + S&D", "Renew + PPE", 
+                       "Renew + S&D", "No coalition"), 
+    yes = "Coalition", no = "Right-wing coalition") ) |>  
+  dplyr::summarise(avg = mean(value, na.rm=TRUE),
+                   .by = c(mandate, is_coalition, name)) |> 
+  dplyr::arrange(desc(avg))
+
+# Plot ------------------------------------------------------------------------#
+# Plot rank
+plot_rank = coalition_dt$name[
+  coalition_dt$mandate == 10L
+]
+
+# Plot
+coalition_dt |> 
+  ggplot(aes(x = factor(name, levels = plot_rank),
+             y = avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  scale_fill_manual(values = c("#173481", "#E7298A")) +
+  labs(x = "", y = "", fill="") +
+  scale_y_continuous(oob=scales::rescale_none,
+                     labels = scales::percent) 
+ggsave(filename = here::here("figures", "coalition_align_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "coalition_align_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+
+coalition_dt |> 
+  ggplot(aes(x = factor(name, levels = plot_rank),
+             y = avg, fill = factor(mandate) ) ) +
+  geom_col(position = position_dodge2(width=1, preserve="single", padding=0),
+           width=0.9, linewidth=0.1, colour = "black") +
+  geom_text(aes(label = round(avg*100, digits = 1)), 
+            vjust = -0.2, size = 10, # hjust=0.4, 
+            position=position_dodge(width=1)) + 
+  facet_grid(~is_coalition, scales = "free_x", space="free") +
+  scale_fill_manual(
+    values = c(`10th Mandate` = "#E7298A", `9th Mandate` = "#173481")
+    ) +
+  labs(x = "", y = "", fill="") +
+  scale_y_continuous(oob=scales::rescale_none, limits = c(0, 1),
+                     labels = scales::percent) 
+ggsave(filename = here::here("figures", "coalition_align_farright_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "coalition_align_farright_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```
+
+
+## Lack of common values
+```{r}
+cohesion_bycommittee |> 
+  dplyr::left_join(
+    y = rcvid_cmts_10 |> 
+      dplyr::summarise(n_votes = n(),.by = committee_lab),
+    by = "committee_lab"
+  ) |>
+  dplyr::filter(n_votes > 30) |> 
+  dplyr::mutate(
+    political_group_fct = tidytext::reorder_within(
+      x = political_group, by = cohesion, within = committee_lab, 
+      fun = stats::IQR) ) |> 
+  ggplot(aes(x = cohesion/100, y = forcats::fct_rev(political_group_fct),
+             fill = political_group)) +
+  geom_boxplot(outliers = FALSE) +
+  facet_wrap(~committee_lab ,scales="free") +
+  tidytext::scale_y_reordered() +
+  scale_x_continuous(oob=scales::rescale_none, labels = scales::percent) +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  labs(x = "Cohesion Rates (%)", y="", fill="",
+       title = "The Group has only two Committees where divisions are present, and they are the same as during the last mandate.",
+       subtitle = stringr::str_wrap("Ideally, we would like to see short bars and clustered towards 100%. To the extent that we more away from 100%, it mwans that our average cohesion decreases. To the extent that the bars increases in lengths, there is more variation in the cohesion of our votes.", width = 230)) + 
+  theme(
+    axis.text.y = element_blank(),
+    panel.spacing.x = unit(7, "mm"),
+    plot.subtitle = element_text(size = 16)
+  ) 
+
+ggsave(filename = here::here("figures", "cohesion_variation_ppt.svg"),
+       device = "svg", dpi = 300, height = 11, width = 23, bg = "white")
+ggsave(filename = here::here("figures", "cohesion_variation_ppt.jpeg"),
+       device = "jpeg", dpi = 100, height = 11, width = 23, bg = "white")
+```

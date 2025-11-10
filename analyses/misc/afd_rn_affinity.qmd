@@ -1,0 +1,313 @@
+---
+title: "AfD-RN Affinity"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+warning: false
+---
+
+## Intro
+```{r misc}
+#| include: false
+
+#------------------------------------------------------------------------------#
+# rm(list = ls())
+start_report <- Sys.time()
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "future.apply", "ggplot2", "here",
+                        "lubridate", "janitor", "tidyr", "tidyselect") )
+
+
+#------------------------------------------------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2019-07-01")
+
+
+#------------------------------------------------------------------------------#
+# Graphics ---------------------------------------------------------------------
+vote_colours <- c(`for` = '#00AEEF',
+                  against = '#BE3455',
+                  abstain = "#969696",
+                  `no vote` = '#5D5CA4',
+                  absent = '#F47920')
+
+#------------------------------------------------------------------------------#
+# Functions --------------------------------------------------------------------
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Read data -------------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(here::here(
+  "data_out", "meps_rcv_mandate_all.csv") )
+
+# sapply(meps_rcv_mandate, function(x) sum(is.na(x))) # check
+
+# Fix change of name of `The Left`
+meps_rcv_mandate[polgroup_id == 5151L, polgroup_id := 6259L]
+
+# get eurovoc
+doc_eurovoc <- data.table::fread(here::here(
+  "data_out", "docs_pl", "plenary_docs_eurovoc.csv"))
+```
+
+The purpose of this doc is to explore the similarities in voting bahaviour between *RN* and *AfD*. 
+The key findings are:
+
+* The similarity between these two parties is above 60%.
+*AfD* came third amongst all parties in the EP when ranked based upon their similarity with *RN*. 
+On the other hand, *RN* came fifth in terms of similarity with *AfD*.
+* On some of the key votes during this mandate, the majorities within *RN* and *AfD* voted in the same way, including many of the votes on the Russian invasion of Ukraine.
+
+
+## Affinity between AfD and RN
+```{r test}
+#| eval: false
+
+# REF: https://juliasilge.github.io/widyr/index.html; https://github.com/juliasilge/widyr/blob/main/R/pairwise_count.R; 
+
+library(dplyr)
+library(gapminder)
+library(widyr)
+library(unvotes)
+
+gapminder %>%
+  pairwise_dist(country, year, lifeExp)
+# unvotes::un_votes
+pp = unvotes::un_votes |> 
+  pairwise_count(
+    item = country_code, # item to be counted the occurrences of
+    feature = rcid # group
+    ) |> 
+  arrange(desc(n))
+
+
+library(dplyr)
+dat <- tibble(group = rep(1:5, each = 2),
+               letter = c("a", "b",
+                       "a", "c",
+                          "a", "c",
+                         "b", "e",
+                          "b", "f"))
+m=as.matrix(dat)
+m %*% t(m)
+```
+
+
+### Overall affinity
+We start by calculating the overall affinity, that is the frequency with which the majoirities within the two parties have voted in the same way.
+To simplify all calculations, we assign all RN MEPs to *ID*, even if there is also an affiliation with *NI*.
+```{r}
+#------------------------------------------------------------------------------#
+# Get target party ID
+target_party_id <- national_parties$identifier[
+  national_parties$label == "AfD"
+] 
+target_party_meps <- unique(meps_rcv_mandate[
+  natparty_id %in% target_party_id, list(pers_id)
+])$pers_id
+
+
+###--------------------------------------------------------------------------###
+# reshape
+dim(meps_rcv_mandate)
+rcv_wide <- data.table::dcast(
+  data = meps_rcv_mandate,
+  formula = pers_id ~ rcv_id, value.var = "result")
+dim(rcv_wide)
+# check - do we have repeated obs?
+# rcv_wide[, .N, by = pers_id][order(N)]
+# rcv_wide[1:50, 1:15]
+
+
+dist_rcv <- as.matrix(
+  stats::dist(x = rcv_wide, method = "euclidean", diag = TRUE, upper = TRUE)
+)
+# head(dist_rcv)
+dim(dist_rcv)
+
+dist_rcv_tbl <- bind_cols(
+  rcv_wide[, 1], dist_rcv
+) 
+
+
+afd_dist <- dist_rcv_tbl|> 
+  dplyr::filter(pers_id %in% target_party_meps) |> 
+  tidyr::pivot_longer(cols = -pers_id, 
+                      names_to = "pers_id_col", values_to = "dist", 
+                      names_transform = list(pers_id_col = as.integer)) |> 
+  dplyr::full_join(
+    y = rcv_wide[, 1] |> 
+      dplyr::mutate(pers_id_col = dplyr::row_number()),
+    by = "pers_id_col"
+  ) |> 
+  dplyr::left_join(
+    y = unique(meps_mandate[, list(pers_id, mep_name_afd = mep_name)]),
+    by = c("pers_id.x" = "pers_id")
+  ) |> 
+    dplyr::left_join(
+    y = unique(meps_mandate[, list(pers_id, mep_name_other = mep_name)]),
+    by = c("pers_id.y" = "pers_id")
+  ) |> 
+  dplyr::select(mep_name_afd, dist, mep_name_other)
+
+```
+
+If we consider all RCVs in the 9th mandate, we observe that *RN* is the 5th party in ranking order of similarity for *AfD*.
+Put differently, this means that in more than 60% of RCVs where *AfD* expressed a majority, *RN* voted in the same way as *AfD*.
+```{r}
+#------------------------------------------------------------------------------#
+# similarity with AfD
+whowon_byparty_afd <- merge(
+  x = whowon_byparty[
+    natparty_id %in% 5369L, list(rcv_id, national_party, result)],
+  y = whowon_byparty[ !natparty_id %in% 5369L & !is.na(natparty_id) ], 
+  by = c("rcv_id"), all.x = TRUE, all.y = FALSE)
+
+whowon_byparty_afd[, is_same := as.integer(result.x == result.y)]
+
+afd_plot <- whowon_byparty_afd[
+  , list(avg = mean(is_same, na.rm = TRUE)),
+  by = list(national_party.y)
+][order(avg)]
+
+afd_plot |> 
+  filter( !national_party.y %in% "Bezpartyjna" ) |> 
+  mutate(national_party.y = forcats::fct_reorder(national_party.y, avg),
+         is_rn = ifelse(national_party.y == "RN", 1, 0)) |> 
+  slice_max(order_by = avg, n = 20, with_ties = TRUE) |> 
+  ggplot(aes(national_party.y, avg, fill = forcats::fct_rev(factor(is_rn) ) ) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  labs(x="National Party", y="Affinity with AfD, (%)") +
+  scale_y_continuous(labels = scales::percent) +
+  coord_flip() +
+  theme_minimal()
+```
+
+If we shift our focus on *RN*, *AfD* comes third in terms of similarity. 
+```{r}
+whowon_byparty_rn <- merge(
+  x = whowon_byparty[
+    natparty_id %in% 5494L, list(rcv_id, national_party, result)],
+  y = whowon_byparty[ !natparty_id %in% 5494L & !is.na(natparty_id) ], 
+  by = c("rcv_id"), all.x = TRUE, all.y = FALSE)
+
+whowon_byparty_rn[, is_same := as.integer(result.x == result.y)]
+
+rn_plot <- whowon_byparty_rn[
+  , list(avg = mean(is_same, na.rm = TRUE)),
+  by = list(national_party.y)
+][order(avg)]
+
+rn_plot |> 
+  filter( !national_party.y %in% "Bezpartyjna" ) |> 
+  mutate(national_party.y = forcats::fct_reorder(national_party.y, avg),
+         is_afd = ifelse(national_party.y == "AfD", 1, 0)) |> 
+  slice_max(order_by = avg, n = 20, with_ties = TRUE) |> 
+  ggplot(aes(national_party.y, avg, fill = forcats::fct_rev(factor(is_afd)))) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  labs(x="National Party", y="Affinity with RN, (%)") +
+  scale_y_continuous(labels = scales::percent) +
+  coord_flip() +
+  theme_minimal()
+```
+
+
+### Affinity on specific votes
+Instead of looking at aggregates, we can also look at some specific votes that marked this mandate.
+This is the list of votes we selected:
+
+* Nature restoration law (Nature restoration – `A9-0220/2023` – César Luena – Rejection)
+* Hungary (`B9-0257/2023` – Motion for a resolution (text as a whole)).
+* Poland (The rule of law crisis in Poland and the primacy of EU law - `B9-0532/2021` - Motion for a resolution (text as a whole)).
+* Russian invasion of Ukraine (Russian aggression against Ukraine – `B9-0123/2022` – Motion for a resolution (text as a whole))
+* Russia, state sponsor of terrorism (`RC-B9-0482/2022` – Motion for a resolution (as a whole))
+* Resolution on the establishment of a tribunal on the crime of aggression against Ukraine (`2022/3017(RSP)`; `RC-B9-0063/2023`)
+* Qatargate, European Parliament integrity (`A9-0262/2023` – Gabriele Bischoff – Proposal for a decision)
+
+```{r}
+# texts
+texts_selected <- c(
+  "Treaty change (`A9-0337/2023` - Guy Verhofstadt, Sven Simon, Gabriele Bischoff, Daniel Freund, Helmut Scholz - Proposition de résolution (ensemble du texte))",
+  "Nature restoration law (Nature restoration – `A9-0220/2023` – César Luena – Rejection)",
+  "Hungary (`B9-0257/2023` – Motion for a resolution (text as a whole))",
+  "Poland (The rule of law crisis in Poland and the primacy of EU law - `B9-0532/2021` - Motion for a resolution (text as a whole))",
+  "Citizens' participation (27. Citizens’ dialogues and citizens’ participation in EU decision-making – `A9-0213/2021` – Helmut Scholz – Motion for a resolution)",
+  "Covid, lessons learned (`A9-0217/2023` – Dolors Montserrat – Motion for a resolution (as a whole))",
+  "Covid, Towards a common European action on care (`A9-0189/2022` - Milan Brglez, Sirpa Pietikäinen - Motion for a resolution (as a whole)  (EMPL, FEMM Committees)))",
+  "Covid vaccine patent waiver (Meeting the Global COVID-19 challenge: effects of the waiver of the WTO TRIPS Agreement on COVID-19 vaccines, treatment, equipment and increasing production and manufacturing capacity in developing countries - `RC-B9-0306/2021` - Motion for a resolution)",
+  "Russian invasion of Ukraine (Russian aggression against Ukraine – `B9-0123/2022` – Motion for a resolution (text as a whole))",
+  "Russia, state sponsor of terrorism (`RC-B9-0482/2022` – Motion for a resolution (as a whole))",
+  "Resolution on the establishment of a tribunal on the crime of aggression against Ukraine (`2022/3017(RSP)`; `RC-B9-0063/2023`)",
+  "Climate law (`A9-0162/2020` - Jytte Guteland - Commission proposal)",
+  "ETS revision (Revision of the EU Emissions Trading System – `A9-0162/2022` – Peter Liese – Rejection – Am 682)",
+  "Social climate fund (Social Climate Fund – `A9-0157/2022` – David Casa, Esther de Lange – Provisional agreement – Am 171)",
+  "CBAM (Carbon border adjustment mechanism – `A9-0160/2022` – Mohammed Chahim – Provisional agreement – Am 266)",
+  "Qatargate, European Parliament integrity (`A9-0262/2023` – Gabriele Bischoff – Proposal for a decision)",
+  "Own resources (`A9-0155/2023` – José Manuel Fernandes, Valérie Hayer – Motion for a resolution (as a whole)",
+  "AI Act (`A9-0188/2023` – Brando Benifei, Dragoş Tudorache – Commission proposal)",
+  "Political advertising (`A9-0009/2023` – Sandro Gozi – Commission proposal)",
+  "Digital Services Act (Digital Services Act - `A9-0356/2021` - Christel Schaldemose - Commission proposal)",
+  "`A9-0056/2022` – Kira Marie Peter-Hansen, Samira Rafaela – Provisional agreement – Am 172",
+  "`A9-0337/2023` – Guy Verhofstadt, Sven Simon, Gabriele Bischoff, Daniel Freund, Helmut Scholz – Article 3 CFREU – Am 27",
+  "Sexual and reproductive health and rights in the EU, in the frame of women’s health - `A9-0169/2021` - Predrag Fred Matić - Motion for a resolution",
+  "`RC-B9-0068/2021` - Motion for a resolution" )
+# docs_id
+docsid_selected <- c("A9-0337/2023", "A9-0220/2023", "B9-0257/2023", "B9-0532/2021",
+                     "A9-0213/2021", "A9-0217/2023", "A9-0189/2022", "RC-B9-0306/2021",
+                     "B9-0123/2022", "RC-B9-0063/2023", "A9-0162/2020", "A9-0162/2022", 
+                     "A9-0157/2022", "A9-0160/2022", "A9-0262/2023", "A9-0155/2023",
+                     "A9-0188/2023", "A9-0009/2023", "A9-0356/2021", "RC-B9-0482/2022",
+                     "A9-0056/2022", "A9-0337/2023", "A9-0169/2021", "RC-B9-0068/2021")
+# rcv_id
+rcvid_selected <- c(134945, 157259, 160487, 155811, 136902, 157227, 146608, 133728,
+                    140111, 152245, 118521, 154244, 154183, 154165, 158165, 154622,
+                    156022, 152384, 139040, 150459, 154076, 161581, 134348, 127182)
+# append
+selected_rcvs <- dplyr::bind_cols(
+  texts_selected = texts_selected,
+  docsid_selected = docsid_selected, 
+  rcvid_selected = rcvid_selected)
+
+# recode
+whowon_byparty[result == 2L, result_fct := "no vote"]
+whowon_byparty[result == 3L, result_fct := "absent"]
+whowon_byparty[result == 1L, result_fct := "for"]
+whowon_byparty[result == 0L, result_fct := "abstain"]
+whowon_byparty[result == -1L, result_fct := "against"]
+```
+
+In the table below we summarise what the majorities within each party voted for, and then whether these majorities coincided (the `is_equal` column).
+```{r}
+whowon_byparty[
+  natparty_id %in% c(5369L, 5494L)
+  & rcv_id %in% c(157259, 160487, 155811, 140111, 152245, 118521, 154244, 154622), 
+  list( rcv_id, national_party, result_fct) ] |> 
+  pivot_wider(names_from = national_party, values_from = result_fct) |> 
+  left_join(y = selected_rcvs,
+            by = c("rcv_id" = "rcvid_selected") )  |> 
+  mutate(is_equal = AfD == RN) |> 
+  select(text = texts_selected, doc_id = docsid_selected, 
+         `AfD Majority` = AfD, 
+         `RN majority` = RN, 
+         is_equal) |> 
+  knitr::kable()
+```

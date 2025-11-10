@@ -1,0 +1,244 @@
+country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id,national_party,national_party_long
+1,AUT,Austria,5155,Verts/ALE,5165,Die Grünen,Die Grünen - Die Grüne Alternative
+1,AUT,Austria,5588,ID,5164,FPÖ,Freiheitliche Partei Österreichs
+1,AUT,Austria,5154,S&D,5163,SPÖ,Sozialdemokratische Partei Österreichs
+1,AUT,Austria,5153,PPE,5162,ÖVP,Österreichische Volkspartei
+1,AUT,Austria,5704,Renew,5168,NEOS,NEOS – Das Neue Österreich
+2,BEL,Belgium,5154,S&D,6454,Vooruit,Vooruit
+2,BEL,Belgium,6259,The Left,5518,PTB,Parti du Travail de Belgique
+2,BEL,Belgium,5153,PPE,6414,LesEng,Les Engagés
+2,BEL,Belgium,5148,ECR,5173,N-VA,Nieuw-Vlaamse Alliantie
+2,BEL,Belgium,5153,PPE,5174,CD&V,Christen-Democratisch & Vlaams
+2,BEL,Belgium,5704,Renew,5175,MR,Mouvement Réformateur
+2,BEL,Belgium,5704,Renew,5171,Open VLD,Open Vlaamse Liberalen en Democraten
+2,BEL,Belgium,5155,Verts/ALE,5169,GROEN,Groen
+2,BEL,Belgium,5152,NI,6465,Independent,Independent
+2,BEL,Belgium,5588,ID,5170,Vlaams Belang,Vlaams Belang
+2,BEL,Belgium,5153,PPE,5179,CSP,Christlich Soziale Partei
+2,BEL,Belgium,5155,Verts/ALE,5176,ECOLO,Ecologistes Confédérés pour l'Organisation de Luttes Originales
+2,BEL,Belgium,5154,S&D,5177,PS,Parti Socialiste
+3,BGR,Bulgaria,5704,Renew,5182,DPS,Movement for Rights and Freedoms
+3,BGR,Bulgaria,5153,PPE,5180,GERB,Citizens for European Development of Bulgaria
+3,BGR,Bulgaria,5153,PPE,5372,DSB,Democrats for Strong Bulgaria
+3,BGR,Bulgaria,5153,PPE,5584,SDS,Union of Democratic Forces
+3,BGR,Bulgaria,5154,S&D,5181,BSP,Bulgarian Socialist Party
+3,BGR,Bulgaria,5148,ECR,5374,VMRO,VMRO
+4,CYP,Cyprus,5153,PPE,5187,DI.SY.,Democratic Rally
+4,CYP,Cyprus,5154,S&D,5189,DI.KO.,Democratic Party
+4,CYP,Cyprus,5154,S&D,5190,K.S. EDEK,Movement for Social Democracy EDEK
+4,CYP,Cyprus,6259,The Left,5188,AKEL-ARISTERA-ND,Progressive Party of Working People - Left - New Forces
+5,CZE,Czechia,5704,Renew,5484,Ind.,Independent
+5,CZE,Czechia,5152,NI,6494,ANS,Aliance národních sil
+5,CZE,Czechia,5588,ID,5526,SPD,Svoboda a přímá demokracie
+5,CZE,Czechia,6259,The Left,5193,KSČM,Komunistická strana Čech a Moravy
+5,CZE,Czechia,5153,PPE,5458,STAN,Starostové a nezávisli
+5,CZE,Czechia,5155,Verts/ALE,5524,PIR,PIRÁTI
+5,CZE,Czechia,5704,Renew,5355,ANO 2011,ANO 2011
+5,CZE,Czechia,5153,PPE,5194,KDU-ČSL,Křesťanská a demokratická unie - Československá strana lidová
+5,CZE,Czechia,5153,PPE,5354,TOP09/STAN,TOP 09 a Starostové
+5,CZE,Czechia,5148,ECR,5191,ODS,Občanská demokratická strana
+5,CZE,Czechia,5154,S&D,5484,Ind.,Independent
+6,DEU,Germany,5153,PPE,5195,CDU,Christlich Demokratische Union Deutschlands
+6,DEU,Germany,5152,NI,5371,Die PARTEI,Die PARTEI
+6,DEU,Germany,5704,Renew,5198,FDP,Freie Demokratische Partei
+6,DEU,Germany,5704,Renew,5379,Freie Wähler,Freie Wähler
+6,DEU,Germany,5155,Verts/ALE,5197,GRÜNE.,Bündnis 90/Die Grünen
+6,DEU,Germany,5153,PPE,5200,CSU,Christlich-Soziale Union in Bayern e.V.
+6,DEU,Germany,5154,S&D,5196,SPD,Sozialdemokratische Partei Deutschlands
+6,DEU,Germany,5148,ECR,6453,BD,Bündnis Deutschland
+6,DEU,Germany,5155,Verts/ALE,5432,Independent,Independent
+6,DEU,Germany,5588,ID,5369,AfD,Alternative für Deutschland
+6,DEU,Germany,5155,Verts/ALE,5367,Piratenpartei DE,Piratenpartei Deutschland
+6,DEU,Germany,5152,NI,5432,Independent,Independent
+6,DEU,Germany,5155,Verts/ALE,5516,V,Volt
+6,DEU,Germany,5153,PPE,5366,Familien-Partei DE,Familien-Partei Deutschlands
+6,DEU,Germany,6259,The Left,5199,DIE LINKE.,DIE LINKE.
+6,DEU,Germany,5155,Verts/ALE,5368,ÖDP,Ökologisch-Demokratische Partei
+7,DNK,Denmark,5588,ID,5206,O,Dansk Folkeparti
+7,DNK,Denmark,5704,Renew,5451,Independent,Independent
+7,DNK,Denmark,5704,Renew,6460,M,Moderaterne
+7,DNK,Denmark,5704,Renew,5202,B,Det Radikale Venstre
+7,DNK,Denmark,5154,S&D,5201,A,Socialdemokratiet
+7,DNK,Denmark,5704,Renew,5207,V,"Venstre, Danmarks Liberale Parti"
+7,DNK,Denmark,5153,PPE,5203,C,Det Konservative Folkeparti
+7,DNK,Denmark,6259,The Left,5525,Enhedslisten,Enhedslisten
+7,DNK,Denmark,5155,Verts/ALE,5204,F,Socialistisk Folkeparti
+8,ESP,Spain,6259,The Left,5213,IU,Izquierda Unida
+8,ESP,Spain,5704,Renew,5401,CS,Ciudadanos – Partido de la Ciudadanía
+8,ESP,Spain,5155,Verts/ALE,5488,BNG,Bloque Nacionalista Galego
+8,ESP,Spain,5154,S&D,5212,PSOE,Partido Socialista Obrero Español
+8,ESP,Spain,5153,PPE,5211,PP,Partido Popular
+8,ESP,Spain,5704,Renew,5448,DCE,Delegación Ciudadanos Europeos
+8,ESP,Spain,6259,The Left,5395,PODEMOS,PODEMOS
+8,ESP,Spain,5154,S&D,5413,PSC-PSOE,Partit dels Socialistes de Catalunya (PSC-PSOE)
+8,ESP,Spain,5704,Renew,5442,Independiente,Independiente
+8,ESP,Spain,6259,The Left,6154,ANTICAPITALISTAS,ANTICAPITALISTAS
+8,ESP,Spain,5148,ECR,5577,VOX,VOX
+8,ESP,Spain,5155,Verts/ALE,5217,ERC,Esquerra Republicana de Catalunya
+8,ESP,Spain,5704,Renew,5426,PNV,Partido Nacionalista Vasco
+8,ESP,Spain,5152,NI,6100,JxCat-Junts,Junts per Catalunya - Lliures per Europa
+9,EST,Estonia,5588,ID,5519,EKRE,Eesti Konservatiivne Rahvaerakond
+9,EST,Estonia,5704,Renew,5353,KE,Eesti Keskerakond
+9,EST,Estonia,5704,Renew,5208,ER,Eesti Reformierakond
+9,EST,Estonia,5153,PPE,5495,PP,Isamaa
+9,EST,Estonia,5154,S&D,5210,SDE,Sotsiaaldemokraatlik Erakond
+10,FIN,Finland,5153,PPE,5224,KOK,Kansallinen Kokoomus
+10,FIN,Finland,5704,Renew,5223,KESK,Suomen Keskusta
+10,FIN,Finland,5154,S&D,5221,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti
+10,FIN,Finland,5148,ECR,5218,Perus,Perussuomalaiset
+10,FIN,Finland,6259,The Left,5357,VAS,Vasemmistoliitto
+10,FIN,Finland,5704,Renew,5222,SFP,Svenska folkpartiet
+10,FIN,Finland,5155,Verts/ALE,5220,VIHR,Vihreä liitto
+11,FRA,France,5155,Verts/ALE,5582,RPS,Régions et Peuples Solidaires
+11,FRA,France,5704,Renew,5482,Agir,Agir - La Droite constructive
+11,FRA,France,5155,Verts/ALE,5225,Europe Écologie,Europe Écologie
+11,FRA,France,6259,The Left,6049,GRS,Gauche républicaine et socialiste
+11,FRA,France,5154,S&D,5502,LaREM/MoDEM,Liste Renaissance
+11,FRA,France,5704,Renew,5490,MRSL,Mouvement Radical Social-Libéral
+11,FRA,France,5704,Renew,6441,LEE,Liste L'Europe Ensemble
+11,FRA,France,5704,Renew,6430,Hor,Horizons
+11,FRA,France,5154,S&D,5227,PS,Parti socialiste
+11,FRA,France,5704,Renew,5502,LaREM/MoDEM,Liste Renaissance
+11,FRA,France,5154,S&D,5714,Place publique,Place publique
+11,FRA,France,5588,ID,5494,RN,Rassemblement national
+11,FRA,France,5153,PPE,5441,Les Républicains,Les Républicains
+11,FRA,France,5148,ECR,6413,R,Reconquête!
+11,FRA,France,5704,Renew,5474,Parti Radical,Parti Radical
+11,FRA,France,5704,Renew,5427,MoDem,Mouvement Démocrate
+11,FRA,France,5704,Renew,5468,EM,La République en marche
+11,FRA,France,5704,Renew,6442,Ren,Renaissance
+11,FRA,France,5153,PPE,5590,Les centristes,Les centristes
+11,FRA,France,5152,NI,5479,Indépendant,Indépendant
+11,FRA,France,5152,NI,6464,DVD,Divers droite
+11,FRA,France,5154,S&D,5585,ND,Nouvelle Donne
+11,FRA,France,6259,The Left,5479,Indépendant,Indépendant
+11,FRA,France,6259,The Left,5523,LFI,La France Insoumise
+12,GRC,Greece,5153,PPE,5241,N.D.,Nea Demokratia
+12,GRC,Greece,5152,NI,5245,KKE,Communist Party of Greece
+12,GRC,Greece,5154,S&D,5591,KINAL,PASOK-KINAL
+12,GRC,Greece,5155,Verts/ALE,6498,KOSMOS,KOSMOS
+12,GRC,Greece,5152,NI,5449,Independent,Independent
+12,GRC,Greece,6259,The Left,6503,New Left,New Left
+12,GRC,Greece,5154,S&D,5449,Independent,Independent
+12,GRC,Greece,6259,The Left,5242,SYRIZA,Coalition of the Radical Left
+12,GRC,Greece,5148,ECR,5534,EL,Elliniki Lusi-Greek Solution
+12,GRC,Greece,5704,Renew,5449,Independent,Independent
+13,HRV,Croatia,5153,PPE,5247,HDZ,Hrvatska demokratska zajednica
+13,HRV,Croatia,5152,NI,6505,PRAVO I PRAVDA,PRAVO I PRAVDA
+13,HRV,Croatia,5148,ECR,6418,HS,Hrvatski suverenisti
+13,HRV,Croatia,5154,S&D,5249,SDP,Socijaldemokratska partija Hrvatske
+13,HRV,Croatia,5704,Renew,5361,IDS-DDI,Istarski demokratski sabor - Dieta democratica istriana
+14,HUN,Hungary,5154,S&D,5349,DK,Demokratikus Koalíció
+14,HUN,Hungary,5154,S&D,6466,EK,Esély Közösség
+14,HUN,Hungary,5704,Renew,5527,MOM,Momentum
+14,HUN,Hungary,5153,PPE,5420,KDNP,Kereszténydemokrata Néppárt
+14,HUN,Hungary,5152,NI,6457,JK,Jobbik – Konzervatívok
+14,HUN,Hungary,5152,NI,5253,Fidesz-KDNP,Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt
+15,IRL,Ireland,5704,Renew,5258,FF,Fianna Fáil Party
+15,IRL,Ireland,6259,The Left,5255,Ind.,Independent
+15,IRL,Ireland,6259,The Left,5256,SF,Sinn Féin
+15,IRL,Ireland,5153,PPE,5259,FG,Fine Gael Party
+15,IRL,Ireland,5155,Verts/ALE,5260,GP,Green Party
+15,IRL,Ireland,6259,The Left,5575,IFC,Independents for change
+16,ITA,Italy,5152,NI,5270,PD,Partito Democratico
+16,ITA,Italy,5704,Renew,5440,Independent,Independent
+16,ITA,Italy,5704,Renew,6477,IV - Centro,Italia Viva – Il Centro
+16,ITA,Italy,5152,NI,5440,Independent,Independent
+16,ITA,Italy,5152,NI,6502,AVS,Alleanza Verdi e Sinistra
+16,ITA,Italy,5704,Renew,6478,AZ,Azione
+16,ITA,Italy,5152,NI,5268,M5S,Movimento 5 Stelle
+16,ITA,Italy,5152,NI,6467,DC,Democrazia Cristiana
+16,ITA,Italy,5153,PPE,5262,FI,Forza Italia
+16,ITA,Italy,5148,ECR,5445,FdL,FRATELLI D' ITALIA
+16,ITA,Italy,5153,PPE,5440,Independent,Independent
+16,ITA,Italy,5155,Verts/ALE,5440,Independent,Independent
+16,ITA,Italy,5153,PPE,5272,SVP,Südtiroler Volkspartei
+16,ITA,Italy,5154,S&D,5270,PD,Partito Democratico
+16,ITA,Italy,5588,ID,5576,L,Lega
+16,ITA,Italy,5154,S&D,5440,Independent,Independent
+17,LTU,Lithuania,5704,Renew,5275,LRLS,Lietuvos Respublikos liberalų sąjūdis
+17,LTU,Lithuania,5155,Verts/ALE,5461,Ind.,Independent
+17,LTU,Lithuania,5148,ECR,5279,LLRA,Lietuvos lenkų rinkimų akcija – Krikščioniškų šeimų sąjunga
+17,LTU,Lithuania,5155,Verts/ALE,5282,LVZS,Lietuvos valstiečių ir žaliųjų sąjunga
+17,LTU,Lithuania,5153,PPE,5276,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
+17,LTU,Lithuania,5154,S&D,5363,LSDP,Lietuvos socialdemokratų partija
+17,LTU,Lithuania,5152,NI,5443,Darbo partija,Darbo partija
+18,LUX,Luxembourg,5704,Renew,5284,DP,Parti démocratique
+18,LUX,Luxembourg,5153,PPE,5285,CSV,Parti chrétien social luxembourgeois
+18,LUX,Luxembourg,5704,Renew,6499,FOKUS,Fokus
+18,LUX,Luxembourg,5154,S&D,5283,LSAP,Parti ouvrier socialiste luxembourgeois
+18,LUX,Luxembourg,5155,Verts/ALE,5286,Déi Gréng,Déi Gréng - Les Verts
+19,LVA,Latvia,5153,PPE,5292,V,"Partija """"VIENOTĪBA"""""
+19,LVA,Latvia,5154,S&D,6085,Gods,Gods kalpot Rīgai
+19,LVA,Latvia,5154,S&D,5289,Saskaņa SDP,"""""Saskaņa"""" sociāldemokrātiskā partija"
+19,LVA,Latvia,5704,Renew,5581,AP!,Attīstībai/Par!
+19,LVA,Latvia,5148,ECR,5288,TB/LNNK,"Nacionālā apvienība """"Visu Latvijai!""""-""""Tēvzemei un Brīvībai/LNNK"""""
+19,LVA,Latvia,5152,NI,5291,LKS,Latvijas Krievu savienība
+20,MLT,Malta,5154,S&D,5295,PL,Partit Laburista
+20,MLT,Malta,5153,PPE,5296,PN,Partit Nazzjonalista
+21,NLD,Netherlands,5154,S&D,5298,PvdA,Partij van de Arbeid
+21,NLD,Netherlands,5704,Renew,5299,D66,Democraten 66
+21,NLD,Netherlands,5148,ECR,5306,SGP,Staatkundig Gereformeerde Partij
+21,NLD,Netherlands,5704,Renew,5297,VVD,Volkspartij voor Vrijheid en Democratie
+21,NLD,Netherlands,5148,ECR,6231,Independent,Independent
+21,NLD,Netherlands,6259,The Left,5301,PvdD,Partij voor de Dieren
+21,NLD,Netherlands,5153,PPE,5305,ChristenUnie,ChristenUnie
+21,NLD,Netherlands,5704,Renew,6231,Independent,Independent
+21,NLD,Netherlands,5153,PPE,5303,CDA,Christen Democratisch Appèl
+21,NLD,Netherlands,5148,ECR,6342,MDD,Meer Directe Democratie
+21,NLD,Netherlands,5155,Verts/ALE,5300,GroenLinks,GroenLinks
+21,NLD,Netherlands,5152,NI,5533,FVD,Forum voor Democratie
+21,NLD,Netherlands,5148,ECR,6260,JA21,JA21
+22,POL,Poland,5154,S&D,4945,Independent,Independent
+22,POL,Poland,5155,Verts/ALE,5460,Independent,Independent
+22,POL,Poland,5148,ECR,5311,PiS,Prawo i Sprawiedliwość
+22,POL,Poland,5153,PPE,5314,PSL,Polskie Stronnictwo Ludowe
+22,POL,Poland,5154,S&D,6347,NL,Nowa Lewica
+22,POL,Poland,5704,Renew,6346,PL2050,Polska 2050
+22,POL,Poland,5153,PPE,5313,PO,Platforma Obywatelska
+22,POL,Poland,5154,S&D,5460,Independent,Independent
+22,POL,Poland,5153,PPE,5460,Independent,Independent
+22,POL,Poland,5148,ECR,6476,SP,Sovereign Poland
+22,POL,Poland,5148,ECR,5309,SPZZ,Solidarna Polska Zbigniewa Ziobro
+22,POL,Poland,5154,S&D,5310,SLD-UP,Sojusz Lewicy Demokratycznej - Unia Pracy
+23,PRT,Portugal,5153,PPE,5530,CDS-PP,Partido do Centro Democrático Social-Partido Popular
+23,PRT,Portugal,5154,S&D,5317,PS,Partido Socialista
+23,PRT,Portugal,6259,The Left,5416,PCP,Partido Comunista Português
+23,PRT,Portugal,5153,PPE,5315,PSD,Partido Social Democrata
+23,PRT,Portugal,6259,The Left,5318,BE,Bloco de Esquerda
+23,PRT,Portugal,5155,Verts/ALE,5423,Ind.,Independent
+24,ROU,Romania,5153,PPE,5324,PMP,Partidul Mișcarea Populară
+24,ROU,Romania,5155,Verts/ALE,5365,Independent,Independent
+24,ROU,Romania,5704,Renew,5580,USR,Uniunea Salvați România
+24,ROU,Romania,5148,ECR,6483,PNCR,Partidului Național Conservator Român (PNCR)
+24,ROU,Romania,5704,Renew,5365,Independent,Independent
+24,ROU,Romania,5154,S&D,5505,PROR,PRO Romania
+24,ROU,Romania,5152,NI,6500,AUR,Alianța pentru Unirea Românilor
+24,ROU,Romania,5153,PPE,5325,UDMR,Uniunea Democrată Maghiară din România
+24,ROU,Romania,5153,PPE,5323,PNL,Partidul Naţional Liberal
+24,ROU,Romania,5154,S&D,5320,PSD,Partidul Social Democrat
+24,ROU,Romania,5704,Renew,6432,REPER,Reînnoim Proiectul European al României
+25,SVK,Slovakia,5152,NI,6285,HREP,Hnutie Republika
+25,SVK,Slovakia,5153,PPE,5438,Ind.,Independent
+25,SVK,Slovakia,5153,PPE,5556,OĽaNO,Obyčajní ľudia a nezávislé osobnosti
+25,SVK,Slovakia,5704,Renew,5587,PS,Progresívne Slovensko
+25,SVK,Slovakia,5154,S&D,5438,Ind.,Independent
+25,SVK,Slovakia,5152,NI,5344,SMER-SD,SMER-Sociálna demokracia
+25,SVK,Slovakia,5152,NI,6287,Patriot,Slovak PATRIOT
+25,SVK,Slovakia,5704,Renew,5438,Ind.,Independent
+25,SVK,Slovakia,5153,PPE,5343,KDH,Kresťanskodemokratické hnutie
+25,SVK,Slovakia,5148,ECR,5384,SaS,Sloboda a Solidarita
+26,SVN,Slovenia,5153,PPE,5338,NSi-KD,Nova Slovenija – Krščanski demokrati
+26,SVN,Slovenia,5704,Renew,6447,GS,Gibanje Svoboda
+26,SVN,Slovenia,5154,S&D,5339,SD,Socialni demokrati
+26,SVN,Slovenia,5153,PPE,5411,SLS,Slovenska ljudska stranka
+26,SVN,Slovenia,5153,PPE,5337,SDS,Slovenska demokratska stranka
+27,SWE,Sweden,5155,Verts/ALE,5333,MP,Miljöpartiet de gröna
+27,SWE,Sweden,5153,PPE,5329,M,Moderaterna
+27,SWE,Sweden,5154,S&D,5328,S,Arbetarepartiet- Socialdemokraterna
+27,SWE,Sweden,6259,The Left,5335,V,Vänsterpartiet
+27,SWE,Sweden,5704,Renew,5331,FP,Liberalerna
+27,SWE,Sweden,5153,PPE,6504,FOLKLISTAN,Folklistan
+27,SWE,Sweden,5153,PPE,5330,KD,Kristdemokraterna
+27,SWE,Sweden,5704,Renew,5332,C,Centerpartiet
+27,SWE,Sweden,5148,ECR,5393,SD,Sverigedemokraterna

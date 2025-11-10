@@ -1,0 +1,240 @@
+---
+title: "Cumulative Alignment"
+date: "`r Sys.Date()`"
+format: 
+  #     - top=5mm
+  #     - right=5mm
+  #     - bottom=20mm
+  #     - left=5mm
+  #     - heightrounded
+  html: 
+    number-sections: true
+    number-depth: 2
+  # pdf:
+  #   number-sections: true
+  #   number-depth: 2
+  #   shift-heading-level-by: -1
+  #   colorlinks: true
+  #   geometry:
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(here)
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- "2024-07-14"
+current_month = lubridate::month(x = Sys.Date(), label = TRUE, abbr = FALSE)
+current_year = lubridate::year( x = Sys.Date() )
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+# Cohesion rate ---------------------------------------------------------------#
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+custom_theme = theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold", size = 26),
+        legend.text = element_text(face="bold",  size = 22),
+        plot.caption = element_text(size = 16),
+        strip.text = element_text(face = "bold", size = 20, hjust = 0.5),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold", size = 20),
+        legend.position = "bottom")
+theme_set(new = custom_theme)
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+
+
+#------------------------------------------------------------------------------#
+## Data -------------------------------------------------------------------
+# Full data
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id") )
+# Nominal change from GUE to The Left
+meps_rcv_mandate[polgroup_id == 5151L, polgroup_id := 6259L] 
+
+# Votes
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"))
+
+
+# List of RCV IDs and Committees
+rcvid_cmts_10 <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+# sort(unique(rcvid_cmts_10$committee_lab))
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+rcvid_cmts_10 <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+# sort(unique(rcvid_cmts_10$committee_lab))
+rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+
+# Current MEPs configuration
+meps_current <- data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+renew_partyids_current = unique(meps_current$natparty_id[
+  meps_current$polgroup_id %in% renew_group_ids
+])
+```
+
+
+## Alignment
+```{r}
+###--------------------------------------------------------------------------###
+# Get Groups' Majorities
+mjrt_polgroup <- get_polgroup_majority(data_in = meps_rcv_mandate[
+  result >= -1 
+  & polgroup_id != 6561L # Exclude 'Non-attached Members'
+]) 
+mjrt_polgroup = mjrt_polgroup[, list(
+  rcv_id, mjrt_result = result, mjrt_polgroup_id = polgroup_id
+)]
+
+# Extract combination of RCV_ID, dates, and integer for nicer plotting
+rcvid_date <- unique(
+  pl_votes[
+    decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+    & !is.na(number_of_attendees)
+  ][
+    order(activity_date, rcv_id), 
+    list(date = activity_date, rcv_id)]
+)
+rcvid_date[, `:=`(
+  date_id = as.integer(factor(date, levels = unique(date),
+                              ordered = TRUE) ),
+  rcv_id_int = seq_len(.N) # get a integer as index for nicer plotting
+) ]
+data.table::fwrite(x = rcvid_date, file = here::here(
+  "data_out", "rcv", "rcvid_date.csv") )                                          
+# rcvid_date[, date := NULL]
+
+# Extract initial and last month
+last_pl_month = data.table::month( max(pl_votes$activity_date) )
+last_pl_year = data.table::year( max(pl_votes$activity_date) )
+month_year = paste(last_pl_month, last_pl_year, sep = "/")
+
+
+###--------------------------------------------------------------------------###
+# Merge Groups' Majorities with MEPs' individual votes
+# dim(mjrt_polgroup)
+mjrt_polgroup_meps = mjrt_polgroup[
+  meps_rcv_mandate[
+    pers_id %in% meps_current$pers_id,
+    list(
+      pers_id, rcv_id, result, polgroup_id
+    )],
+  on = "rcv_id", nomatch = NULL, allow.cartesian=TRUE
+]
+mjrt_polgroup_meps[, is_same := as.integer(result == mjrt_result)]
+# dim(mjrt_polgroup_meps)
+
+# Merge with dates as integer
+mjrt_polgroup_meps = mjrt_polgroup_meps[
+  rcvid_date,
+  on = "rcv_id", nomatch = NULL
+]
+data.table::setorderv(x = mjrt_polgroup_meps, 
+                      cols = c("date_id", "rcv_id", "pers_id", "mjrt_polgroup_id"))
+cumulative_affinity = mjrt_polgroup_meps[, `:=`(
+  cum_same = dplyr::cummean(is_same)),
+  by = list(mjrt_polgroup_id, pers_id)
+]
+data.table::fwrite(x = cumulative_affinity[, list(rcv_id, mjrt_polgroup_id, 
+                                                  pers_id, polgroup_id, cum_same)], 
+                   file = here::here(
+  "data_out", "meps", "cumulative_affinity.csv") )
+```
+
+
+### Cumulative affinity (multiple MEPs)
+```{r}
+plot_test = cumulative_affinity[
+  mjrt_polgroup_id == 7035
+  & pers_id %in% c(197400, 23788, 202073) # Abir AL-SAHLANI; Adam BIELAN; Marc ANGEL 
+] 
+plot_test |> 
+  ggplot(aes(x = rcv_id_int, y = cum_same, 
+             colour = factor(pers_id), group = factor(pers_id))) +
+  geom_point()
+
+# cumulative_affinity[
+#   mjrt_polgroup_id == 7035
+#   & pers_id %in% c(23788), # Abir AL-SAHLANI; Adam BIELAN 
+#   .N,
+#   by = list(rcv_id)
+# ][order(N)]
+
+
+rcvid_date$rcv_id[!rcvid_date$rcv_id %in% unique(plot_test$rcv_id)]
+```
+
+
+### Cumulative affinity (multiple Groups)
+```{r}
+cumulative_affinity[
+  mjrt_polgroup_id %in% c(7035, 7018)
+  & pers_id %in% c(197400) # Abir AL-SAHLANI
+] |> 
+  ggplot(aes(x = rcv_id_int, y = cum_same, 
+             colour = factor(mjrt_polgroup_id), group = factor(mjrt_polgroup_id))) +
+  geom_point()
+```
+

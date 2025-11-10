@@ -1,0 +1,370 @@
+---
+title: "Political Party Splits in RCV data"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+{{< pagebreak >}}
+
+## Intro
+```{r misc}
+#| include: false
+
+start_report <- Sys.time()
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(lubridate)
+library(here)
+library(janitor)
+library(DT)
+library(googledrive)
+library(ggiraph)
+
+googledrive::drive_auth(email = "marco.scipioni05@gmail.com")
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots --------------------------------------------###
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal() +
+            theme(#base_size = 10,
+              plot.title.position = "plot",
+              plot.title = element_text(face = "bold"),
+              # legend.text = element_text(face="bold"),
+              panel.grid.major.x = element_blank(),
+              panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+              panel.grid.minor.y = element_line(colour = "grey70", linewidth = 0.1),
+              # axis.text.x = element_blank(),
+              strip.text.x = element_text(face = "bold"),
+              legend.position = "top"))
+
+# associate colours to EP political groups ----------------------------------###
+polgroups <- c("Renew", "EPP", "S&D", "Greens/EFA", "ID", "ECR", "The Left", "NI")
+polgroups_colours <- data.frame(
+  polgroups_fullname = c("Renew Europe Group", 
+                         "Group of the European People's Party (Christian Democrats)", 
+                         "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament",
+                         "Group of the Greens/European Free Alliance",
+                         "Identity and Democracy Group",
+                         "European Conservatives and Reformists Group",
+                         "The Left group in the European Parliament - GUE/NGL",
+                         "Non-attached Members"), 
+  polgroups = polgroups,
+  polgroups_labs = c("renew", "epp", "s_d", "greens_efa", "id", "ecr", "the_left", "ni"),
+  polgroups_labs_EP = c("Renew", "EPP", "S&D", "Greens/EFA", "ID", "ECR", "The Left", "NI"),
+  ep_cols = c("#fed976", "#045a8d", "#f03b20", "#238b45", "#9ecae1", "#4292c6", "#7f2704", "#bdbdbd")) 
+polgroups_colours_vct <- setNames(object = polgroups_colours$ep_cols,
+                                  nm = polgroups_colours$polgroups_labs_EP)
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+
+###--------------------------------------------------------------------------###
+# Function ---------------------------------------------------------------------
+# formula in Hix and Noury
+cohesion_hn <- function(votes_tally = rcv_today$result) {
+  # sum of votes by group must be bigger than 1. if sum=1, cohesion rate is always 1
+  if (sum(tabulate(votes_tally)) > 1) {
+    return(
+      ((max(tabulate(votes_tally)) - 0.5*(sum(tabulate(votes_tally)) - max(tabulate(votes_tally))))
+       / sum(tabulate(votes_tally))) * 100)
+  } else if (sum(tabulate(votes_tally)) == 1) {
+    # if not equal to 1, then issue warning and NA
+    message("One of the sums of the total votes by group is 1. It does not make sense to calculate cohesion rate")
+    return(cohesion_rate = NA_real_) } }
+```
+
+The objective of this short note is to understand the potential of EP voting-related data for communication purposes.
+
+
+## Data and Methods
+In our database we collected data relative to all RCVs in Plenaries during the period 2019-2023, augmented by tapping into other data sources such as OEIL Subject classification.
+For the purpose of this note though we just concentrate on the last Sitting of the Plenary.
+```{r}
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+rcv_allsessions <- data.table::fread(
+  file = here::here("data_out", "rcv", "rcv_allsessions.csv"),
+  encoding = "UTF-8", na.strings = c(NA_character_, ""))
+data.table::setorderv(x = rcv_allsessions, 
+                      # order of the XML file - do not change
+                      cols = c("session", "rcv_date", "rcv_id", "result",
+                               "political_group", "label"))
+# check last Plenary day
+max(rcv_allsessions$rcv_date)
+
+###--------------------------------------------------------------------------###
+# date ----------------------------------------------------------------------###
+# rcv_today[, date_time := rcv_date]
+rcv_allsessions[, `:=`(
+  rcv_time = lubridate::as_datetime(rcv_time, tz = "Europe/Brussels"), 
+  rcv_date = as.Date(rcv_date) ) ]
+# subset to last day of Plenary ---------------------------------------------###
+rcv_today <- rcv_allsessions[rcv_date == max(rcv_date, na.rm = TRUE)]
+rm(rcv_allsessions)
+today <- gsub(pattern = "-", replacement = "", x = unique(rcv_today$rcv_date) )[1]
+
+# Change the EPP name to harmonise it with the rest of EP data
+# unique(rcv_today$political_group)
+rcv_today[political_group == "PPE", political_group := "EPP"]
+rcv_today[political_group == "Verts/ALE", political_group := "Greens/EFA"]
+rcv_today[political_group == "GUE/NGL", political_group := "The Left"]
+
+# convert cols
+rcv_today[, `:=`(report_number = as.factor(report_number),
+                 session = as.factor(session))]
+# unique(rcv_today$pers_id)
+rcv_today[, c("row_id", "mep_id", "label", "family_name", "sort_label") := NULL] 
+
+
+###--------------------------------------------------------------------------###
+# current list of parties and MEPs for the EP now
+meps_current <- data.table::fread(here::here("data_out", "meps", "meps_current_full.csv")) 
+meps_grid <- expand.grid(
+  identifier = meps_current$identifier,
+  rcv_id = unique(rcv_today$rcv_id) ) 
+
+###--------------------------------------------------------------------------###
+# merge daily RCV with current MEPS
+rcv_today_full <- rcv_today |> 
+  dplyr::full_join(
+    y = meps_grid,
+    by = c("pers_id" = "identifier", 
+           "rcv_id" = "rcv_id") ) |> 
+  dplyr::left_join(meps_current,
+                   by = c("pers_id" = "identifier") ) |> 
+  dplyr::select(-c(session, family_name, given_name, sort_label)) |> 
+  data.table::as.data.table()
+rcv_today_full[, political_group := fifelse(
+  test = is.na(political_group.x), 
+  yes = political_group.y, no = political_group.x)]
+rcv_today_full[, c("political_group.x", "political_group.y") := NULL]
+
+# Flag for ABSENT
+rcv_today_full[, is_absent := mean( is.na(result) ),
+               by = list(pers_id)]
+rcv_today_full[, is_absent := data.table::fifelse(
+  test = is_absent > 0, yes = 1L, no = 0L)]
+# Flag for DID NOT VOTE
+rcv_today_full[, is_novote := fifelse(
+  test = is.na(result) & is_absent == 0L, # NO VOTE but PRESENT
+  yes = 1L, no = 0L) ]
+
+### Final votes ----------------------------------------------------------------
+# identify whether vote is final based on guess of what VoteWatch did -------###
+# c("single vote", "vote:.*", "as a whole", "Procedural vote", "Election", "joint text")
+rcv_today_full[, is_final := as.integer(
+  grepl(pattern = "vote unique|vote:.*|ensemble du texte|Election|Proposition de la Commission",
+        x = rcv_descriptiontext, ignore.case = T, perl = T) ) ]
+
+# Fill in cols ----------------------------------------------------------------#
+cols_tofill <- c("rcv_date", "rcv_descriptiontext", "n_rcv", "tally", "report_number",
+                 "rcv_time")
+rcv_today_full <- rcv_today_full |>
+  dplyr::group_by(rcv_id) |>
+  tidyr::fill(tidyselect::any_of(cols_tofill),
+              .direction = "downup") |>
+  dplyr::ungroup() |>
+  data.table::as.data.table()
+# sapply(rcv_today_full, function(x) sum(is.na(x)))
+
+# sort table
+data.table::setkeyv(x = rcv_today_full,
+                    cols = c("rcv_time", "political_group", "label"))
+# Sort data
+data.table::setcolorder(x = rcv_today_full,
+                        neworder = c("rcv_date", "rcv_time", "rcv_id",
+                                     "n_rcv", "label", "pers_id", "result"))
+
+###--------------------------------------------------------------------------###
+data.table::fwrite(rcv_today_full, here::here("data_out", "rcv_day",
+                                              paste0("rcv_", today, ".csv")))
+```
+
+
+## Find split votes
+```{r}
+# convert result to factor
+# rcv_today_full[, result := factor(result, levels = 1:3,
+#                                   labels = c("For", "Against", "Abstain") ) ]
+
+# calculate cohesion
+cohesion_bypolgroup <- rcv_today_full[
+  !is.na(result),
+  list(
+    cohesion = cohesion_hn(result),
+    max_mode = max(tabulate(result)),
+    tot_votes = sum(tabulate(result)) ), 
+  keyby = list(political_group, rcv_id, rcv_descriptiontext, is_final)][
+    order(-cohesion)]
+# sapply(rcv_attendance, function(x) sum(is.na(x)))
+
+# define when party is split as cohesion below 50
+cohesion_bypolgroup[
+  , `:=`(is_split = as.integer(cohesion < 50) ) ]
+# count_split <- cohesion_bypolgroup[
+#   , list(sum_split = sum(is_split, na.rm = TRUE),
+#          tot_rcv = .N), 
+#   keyby = list(political_group, national_party, rcv_date)]
+
+# save table
+data.table::setkeyv(x = cohesion_bypolgroup,
+                    cols = c("rcv_descriptiontext", "political_group", "rcv_id"))
+
+cohesion_bypolgroup[
+  is_split == 1 & is_final == 1 & !political_group %in% "NI",
+  list(political_group, rcv_id, rcv_descriptiontext, max_mode, tot_votes, cohesion)]
+```
+
+
+## Specific votes
+```{r}
+#| eval: false
+
+vote_result <- rcv_today_full[
+  !is.na(result)
+  & rcv_id == 166226,
+  list(Count = .N),
+  keyby = list(political_group, result)] |>
+  dplyr::mutate(result = factor(result, levels = 1:3, 
+                                labels = names(vote_colours)[1:3]))
+vote_result |>
+  ggplot(aes(x = forcats::fct_rev(political_group), y = Count, fill = result)) +
+  geom_col(colour="black", linewidth=0.1) +
+  labs(x = "", y = "Count", fill = "",
+       title = str_wrap("REPORT on the proposal for a directive of the European Parliament and of the Council on substantiation and communication of explicit environmental claims (Green Claims Directive)", width = 80) ) +
+  scale_fill_manual(values = vote_colours) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = "top",
+        plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.text = element_text(face="bold"),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold") )
+ggsave(filename = here::here("figures", paste0(166226, "_rcv.pdf")), 
+       dpi = 300, height = 4, width = 8)
+```
+
+
+
+## Are national parties internally cohesive?
+### Cohesion by national party
+We investigate whether national parties are internally cohesive. 
+In other words, if they tend to vote together or not. 
+The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
+
+$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
+
+Because of how cohesion rates is calculated, it does not make sense to calculate it for parties with just 1 MEP. 
+So, we filter the data to just the parties with more than 2 MEPs.
+
+As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
+However, experts have highlighted other forms of vote are actually at the MEPs' disposal, e.g. being present in the House but not showing up for specific votes. 
+We do not count those in this note, but can be included if needs be. 
+
+As a *second technical side note*, please be aware that not all RCVs are assigned to Committees.
+These tend to be related to procedural issues, and we exclude them from the following analysis. 
+
+If we define - somewhat arbitrarily - that a party is ***split*** if their cohesion rate on an RCV is below 50, then we can count how many times each party was split.
+Please also be aware that this is likely to be an underestimate of the overall dispersion within parties because of our prior choice not include *informal* ways of (non-) voting, such as not being present for a particular vote.
+
+To develop an intuition for how this metric works, please consider the 6 simplified scenarios in the table below
+```{r}
+kableExtra::kable(
+  tibble::tibble(
+    `Number of MEPs` = c(2, 2, 3, 3, 4, 4),
+    For = c(2, 1, 2, 1, 2, 3),
+    Against = c("-", 1, 1, 1, 1, 1),
+    Abstain = c("-", "-", "-", 1, 1, "-"), 
+    Cohesion = c(100, 25, 50, 0, 25, 62.5),
+    `Is split?` = c("No", "Yes", "No", "Yes", "Yes", "No")), 
+  align = "c")
+```
+
+We can also extract all the splits in the last sitting of the Plenary, as we do below. 
+```{r}
+#| eval: false
+
+# calculate cohesion
+cohesion_bynatparty_bycomm <- rcv_today[
+  national_party %in% country_parties_2meps$national_party,
+  list(
+    cohesion = cohesion_hn(result),
+    max_mode = max(tabulate(result)),
+    tot_votes = sum(tabulate(result)) ), 
+  by = list(political_group, national_party, rcv_date, rcv_id)][
+    order(-cohesion)]
+# sapply(rcv_attendance, function(x) sum(is.na(x)))
+
+# define when party is split as cohesion below 50
+cohesion_bynatparty_bycomm[
+  , `:=`(is_split = as.integer(cohesion < 50) )
+]
+count_split <- cohesion_bynatparty_bycomm[
+  , list(sum_split = sum(is_split, na.rm = TRUE),
+         tot_rcv = .N), 
+  keyby = list(political_group, national_party, rcv_date)]
+
+# print table
+reactable::reactable(cohesion_bynatparty_bycomm[
+  is_split == 1,
+  list(political_group, national_party, rcv_date, rcv_id,
+       max_mode, tot_votes, cohesion)
+][order(political_group, national_party, rcv_id)], 
+sortable = T, filterable = T, compact = T, fullWidth = T)
+```
+
+We can then extract the specific dossiers where parties were split, according to our definition, and then augment the table by providing more details on the votes themselves.
+Considering that the table would be too large to be sensibly attached here, we provide it as a spreadsheet if needs be.
+<!-- We deliberately exclude Renew affiliated parties from the table. -->
+```{r}
+#| eval: false
+
+# Display table
+splits <- cohesion_bynatparty_bycomm[is_split == 1] |> 
+  dplyr::left_join(
+    y = rcv_today,
+    by = c("political_group", "national_party", "rcv_id", "rcv_date")) |> 
+  dplyr::select(-c(is_split))
+data.table::fwrite(x = splits, 
+                   file = here::here("data_out", paste0("PV9_20231109_splits.csv")))
+```
+
+```{r}
+# rendering time
+end_report <- Sys.time()
+end_report - start_report
+```

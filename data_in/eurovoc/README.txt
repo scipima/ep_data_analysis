@@ -1,0 +1,1 @@
+This stores the original dictionaries from EUROVOC (https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/eurovoc).

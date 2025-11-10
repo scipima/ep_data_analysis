@@ -1,0 +1,353 @@
+---
+title: "Merge Voting Lists from Policy Advisors with Vote Results"
+format: html
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+## Introduction
+```{r}
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c(
+  "data.table", "dplyr", "here", "httr2", "lubridate", "janitor", "stringi", "stringr",
+  "tidyr", "tidyselect") )
+
+# Hard code the start of the mandate ------------------------------------------#
+if ( !exists("mandate_starts") ) {
+  mandate_starts <- as.Date("2024-07-14") }
+```
+
+The objective is to merge the Voting Lists coming from Policy Advisors with the Voting Results as available from the EP API.
+
+
+## EP API: Reconstruct the nested structure of the votes/RCV during the day
+First we get the list of all plenary documents from the API. 
+More precisely, these are `VOTE_RESULTS_PLENARY` and `VOTE_ROLLCALL_PLENARY`.
+```{r}
+#------------------------------------------------------------------------------#
+## GET/plenary-session-documents -----------------------------------------------
+# Returns the list of all EP Plenary Session documents
+
+#------------------------------------------------------------------------------#
+#' Plenary Part-Session Date.
+#' This parameter refers to the date of the first day of a given part-session.
+#' Parliament sits monthly in Strasbourg in a four-day part-session (Monday to Thursday).
+#' Additional part-sessions are held in Brussels.
+#' The format of the value is YYYY-MM-DD.
+#------------------------------------------------------------------------------#
+
+pl_session_docs = data.table::fread(here::here(
+  "data_out", "docs_pl", "pl_session_docs_10.csv") ) |>
+  dplyr::mutate(date = as.Date(
+    stringi::stri_replace(
+      str = identifier,
+      regex = "PV-\\d{1,2}-|-RCV|-VOT",
+      replacement = "")
+  ) ) |>
+  dplyr::select(id, identifier, date, label) |>
+  dplyr::filter(date >= mandate_starts) |>
+  dplyr::arrange(date)
+```
+
+
+### EPI API: Vote Items Order from Plenary Session Documents
+We first interrogate the plenary session document for the plenary day, which contains a number of pieces of information, such as the document reference numbers (e.g. `B-10-2024-0008`), the procedure id (`eli/dl/proc/2024-0128`), etc.
+```{r}
+# get VOT ids
+pl_ids <- sort( unique( pl_session_docs$identifier[
+  grepl(pattern = "VOT", x = pl_session_docs$identifier)
+] ) )
+pl_ids <- gsub(pattern = "-VOT", replacement = "", x = pl_ids, fixed = TRUE)
+
+# Split the vector in chunks of size 50 each
+chunk_size <- 50L
+ids_chunks <- split(
+  x = pl_ids, f = ceiling(seq_along(pl_ids) / chunk_size)
+)
+
+# loop to get all decisions
+list_tmp <- vector(mode = "list", length = length(ids_chunks) )
+for ( i_chunk in seq_along(ids_chunks) ) {
+  print(i_chunk)
+  # Create an API request
+  req <- httr2::request( paste0("https://data.europarl.europa.eu/api/v2/plenary-session-documents/",
+  paste0(ids_chunks[[i_chunk]], collapse = ","),
+  "?format=application%2Fld%2Bjson&language=en") )
+  # Add time-out and ignore error
+  resp <- req |>
+    httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0") |>
+    httr2::req_error(is_error = ~FALSE) |>
+    httr2::req_throttle(30 / 60) |>
+    httr2::req_perform()
+  # If not an error, download and make available in ENV
+  if ( httr2::resp_status(resp) == 200L) {
+    resp_body <- resp |>
+      httr2::resp_body_json(simplifyDataFrame = TRUE) |>
+      purrr::pluck("data")
+    list_tmp[[i_chunk]] <- resp_body
+  }
+  # remove objects
+  rm(req, resp, resp_body)
+}
+
+pl_items = data.table::rbindlist(
+  l = list_tmp, use.names = TRUE, fill = TRUE
+) |> 
+  dplyr::select(id, document_date, inverse_is_part_of) |> 
+  tidyr::unnest(inverse_is_part_of, keep_empty = TRUE, names_sep = "_") |> 
+  dplyr::select(id, document_date, inverse_is_part_of_refers_to,
+                inverse_is_part_of_inverse_is_part_of) |> 
+  tidyr::unnest(inverse_is_part_of_inverse_is_part_of, 
+                names_sep = "_", keep_empty = TRUE) |> 
+  dplyr::select(
+    doc_pl_id = id, 
+    document_date,
+    doc_pl_refers_to = inverse_is_part_of_refers_to,
+    doc_pl_itm = inverse_is_part_of_inverse_is_part_of_is_part_of,
+    doc_pl_itm_id = inverse_is_part_of_inverse_is_part_of_id,
+    doc_pl_itm_nbr = inverse_is_part_of_inverse_is_part_of_number,
+    doc_pl_title = inverse_is_part_of_inverse_is_part_of_title_dcterms,
+    doc_pl_dayseqnbr = inverse_is_part_of_inverse_is_part_of_numbering,
+    event_pl_itm_nbr = inverse_is_part_of_inverse_is_part_of_inverse_recorded_in_a_realization_of,
+    doc_pl_refers_to2 = inverse_is_part_of_inverse_is_part_of_refers_to
+  )
+```
+
+
+### EPI API: Vote Items Order from Plenary Session Documents Vote Results
+If we look at the `vote results`, we get a somewhat different set of information compared to what we get by interrogating the sheer *plenary session document*. 
+Two differences stand out:
+
+* the `refers_to` list in the data extracted from the plenary session document provides information on procedures, documents, etc.. 
+The `refers_to` list in the data extracted from the vote results only gives us back data on plenary documents, such as `A-` reports and `B-` resolutions.
+* the data extracted from the vote results contains reference to the realization of the vote results, in the form of e.g. `eli/dl/event/MTG-PL-2023-11-21-VOT-ITM-939723`.
+That piece of information is absent if we just interrogate the plenary session documents.
+
+As a **data dictionary**:
+
+* `vot_itm_number` is the order of the `VOT-ITM` during the day.
+* The order of the VOT-ITM during the day also appears in the `doc_vot_itm_id` as a string appended at the end of the `doc_vot_id`.
+* `event_vot_itm_id` is the unique identifier of the vote
+* `doc_pl_itm_id` represents the order of activities during the Plenary day, and can be linked to the `pl_items` dataset.
+
+```{r}
+#------------------------------------------------------------------------------#
+## VOTES -----------------------------------------------------------------------
+pl_session_docs_votes = data.table::fread(here::here( 
+  "data_out", "votes", "pl_session_docs_votes_10.csv") )
+```
+
+
+### EPI API: RCVs Order
+```{r}
+pl_session_docs_rcv = data.table::fread(here::here( 
+    "data_out", "rcv", "pl_session_docs_rcv_10.csv") )
+```
+
+**Data dictionary**: 
+
+* the `rcv_itm_number` sis the order of the DECs during the day.
+* the `event_dec_itm_id` is the unique identifier of the DECISION in the database.
+
+
+### Merge API Data
+```{r}
+pl_votes <- data.table::fread(here::here(
+  "data_out", "votes", "pl_votes_10.csv") )
+voteids_rcvids <- data.table::fread(here::here(
+  "data_out", "votes", "voteids_rcvids_10.csv") )
+
+vote_dec_sorted <- unique(
+  pl_votes[, list(
+    event_dec_itm_id = activity_id, 
+    event_vot_itm_id = inverse_consists_of,
+    activity_order, decision_method, comment_en, comment_fr)
+  ] ) |>
+  dplyr::left_join(
+    y = pl_session_docs_votes[, list(doc_vot_id, document_date, doc_pl_itm_id,
+                                          doc_vot_itm_id, vot_itm_number,
+                                          event_vot_itm_id,
+                                          vot_title_fr = title_dcterms_fr)], 
+    by = "event_vot_itm_id"
+  ) |> 
+  dplyr::mutate(event_dec_itm_id = paste0("eli/dl/event/", event_dec_itm_id)) |> 
+  dplyr::left_join(
+    y = pl_session_docs_rcv[, list(doc_rcv_id, doc_rcv_itm_id,
+                                        rcv_itm_number, event_dec_itm_id,
+                                        dec_title_fr = title_dcterms_fr)],
+    by = "event_dec_itm_id") |> 
+  dplyr::select(
+    document_date, doc_pl_itm_id, doc_vot_itm_id, doc_rcv_itm_id,
+    event_vot_itm_id, event_dec_itm_id,
+    vot_itm_number, activity_order, rcv_itm_number, 
+    decision_method, vot_title_fr, dec_title_fr, comment_en, comment_fr
+  ) |> 
+  dplyr::mutate(
+    document_date = as.character(document_date),
+    vot_itm_number = as.integer(vot_itm_number),
+    rcv_itm_number = as.integer(rcv_itm_number)
+  ) |> 
+  dplyr::arrange(document_date, doc_pl_itm_id, doc_vot_itm_id, activity_order, 
+                 doc_rcv_itm_id) |> 
+  data.table::as.data.table()
+```
+
+
+## PAs' VLs: Collect, Append, and Clean
+One thing to pay attention here is the last minute WITHDRAWALS, or files that are deemed INADMISSIBLE.
+These most likely will be in RENEW's Voting Lists, but will not show up in the EP Vote Records.
+Thus, you will have to manually recode these files to include strings to denote these cases and take them out.
+```{r}
+#------------------------------------------------------------------------------#
+## PAs' VLs: Collect, Append, and Clean ----------------------------------------
+# Paths to files, depending on OS ---------------------------------------------#
+if ( Sys.info()["sysname"] == "Windows" ) {
+  vl_files <- sort(
+    list.files(path = "~/github/renew_parl_work/data_out/vl_h/",
+               pattern = ".csv") )  
+  vl_files <- paste0("~/github/renew_parl_work/data_out/vl_h/", vl_files)
+} else {
+  vl_files <- sort(
+    list.files(path = "~/Documents/github/renew_parl_work/data_out/vl_h/",
+               pattern = ".csv") )
+  vl_files <- paste0("~/Documents/github/renew_parl_work/data_out/vl_h/", vl_files)
+}
+
+# Read them all in and append them --------------------------------------------#
+vl_dt <- lapply(X = vl_files, FUN = function(i_csv) {
+  data.table::fread(input = i_csv)
+} ) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE) |>
+  dplyr::mutate(
+    date = as.character(date),
+    # Deal with naming inconsistencies due to introduction of APP
+    vl_title_en = ifelse(
+      test = is.na(vt_title), yes = vl_title_en, no = vt_title),
+    vl_order = ifelse(
+      test = is.na(vt_order), yes = vl_order, no = vt_order),
+    vl_row_id = ifelse(
+      test = is.na(row_id), yes = vl_row_id, no = row_id)
+  ) |> 
+  dplyr::select(-c(vt_title, vt_order, row_id))
+data.table::fwrite(x = vl_dt, file = here::here(
+  "data_in", "vl_harmonised", "vl.csv" 
+))
+
+# Filter to just RCV, add IDs, and subset -------------------------------------#
+vl_rcv <- vl_dt |>
+  dplyr::filter(
+    grepl(pattern = "RCV", x = rcv_etc)
+    & !grepl(pattern = "[WITHDRAWN]", x = remarks, fixed = TRUE)
+    & !grepl(pattern = "[INADMISSIBLE]", x = remarks, fixed = TRUE)
+  ) |>
+  dplyr::arrange(date, vl_order, vl_row_id) |>
+  dplyr::mutate(
+    rcv_order_day = dplyr::row_number(),
+    vote_order_bydate = vl_order - ( min(vl_order) - 1L),
+    .by = date) |>
+  dplyr::mutate(
+    rcv_order_byvote = dplyr::row_number(),
+    tot_rcv_byvote = dplyr::n(),
+    .by = c(date, vl_order) ) |>
+  dplyr::select(date, vote_order_bydate, vl_order, vl_row_id, rcv_order_byvote,
+                tot_rcv_byvote, vl_title_en, subject_of_the_amendment, am_no, author,
+                vote, remarks)
+
+# Get a vector of VLs dates ---------------------------------------------------#
+activity_dates <- unique(vl_dt$date)
+if (any(is.na(activity_dates))) {
+  stop("You have NAs among your dates - Unlikely!") }
+activity_dates <- na.omit(activity_dates)
+```
+
+
+## Merge Vote Results with PA's VLs
+We test here the join of the vote results from the API with PAs' Voting Lists (VLs). 
+We filter the vote results just to RCVs, and do the same for PAs' VLs.
+Ideally, we should get the same number of rows.
+```{r}
+vote_rcv_sorted <- vote_dec_sorted[
+  document_date %in% activity_dates
+  & (grepl(pattern = "ROLLCALL", x = decision_method, fixed = TRUE)
+     | grepl(pattern = "RCV", x = comment_en)
+     | grepl(pattern = "AN", x = comment_fr) )
+][, `:=`(
+  rcv_order_byvote = seq_len(.N),
+  tot_rcv_byvote = .N),
+  by = list(document_date, vot_itm_number)
+][, `:=`(
+  vote_order_bydate = vot_itm_number - ( min(vot_itm_number, na.rm = TRUE) - 1L) ),
+  by = list(document_date)
+]
+```
+
+Check that the datasets are aligned.
+```{r}
+test_same <- merge(
+  x = vl_rcv[, .N, by = list(date, vote_order_bydate)],
+  y = vote_rcv_sorted[, .N, by = list(document_date, vote_order_bydate)], 
+  by.x = c("date", "vote_order_bydate"), 
+  by.y = c("document_date", "vote_order_bydate"),
+  all = TRUE
+) |> 
+  dplyr::mutate(is_same = N.x == N.y)
+
+if ( mean(test_same$is_same) != 1L ) {
+  test_same[test_same$is_same == FALSE]
+  stop("Datasets are not aligned - Check!")
+}
+if ( sum(sapply(test_same, function(x) sum(is.na(x)))) > 0L ) {
+  stop("Datasets are not aligned - Check!")
+}
+```
+
+Merge
+```{r}
+vl_vote_rcv <- merge(
+  x = vl_rcv[
+    !(date == "2025-03-12" & vote_order_bydate == 6),
+    list(date, vote_order_bydate, rcv_order_byvote, vote, remarks) ],
+  y = vote_rcv_sorted[
+    !(document_date == "2025-03-12" & vote_order_bydate == 6),
+    list(document_date, vote_order_bydate, rcv_order_byvote, event_vot_itm_id,
+         event_dec_itm_id) ], 
+  by.x = c("date", "vote_order_bydate", "rcv_order_byvote"), 
+  by.y = c("document_date", "vote_order_bydate", "rcv_order_byvote"),
+  all = TRUE
+)
+```
+
+Check that the VOTES coming from the VLs are indeed votes. 
+```{r}
+# unique(vl_vote_rcv$vote)
+vl_vote_rcv[vote == "+", renew_vote := "for"]
+vl_vote_rcv[vote == "-", renew_vote := "against"]
+vl_vote_rcv[vote == "0", renew_vote := "abstain"]
+vl_vote_rcv[
+  grepl(pattern = "free\\s?vote", x = vote, ignore.case = TRUE, perl = TRUE),
+  renew_vote := "free_vote"]
+
+if ( any(
+  !unique(vl_vote_rcv$renew_vote) %in% c("against", "free_vote", "for", "abstain") 
+  ) ) {
+  warning("Renew Votes have not been inserted correctly - Check!")
+}
+
+if ( any(vl_vote_rcv$vote == "–") ){
+  vl_vote_rcv[
+    vote == "–", 
+    `:=`(
+      vote = "-",
+      renew_vote = "against"
+      )]
+}
+```
+
+Save data
+```{r}
+data.table::fwrite(x = vl_vote_rcv, file = here::here(
+  "data_out", "vl_vote", "vl_vote_rcv.csv") )
+```

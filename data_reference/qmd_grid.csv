@@ -1,0 +1,239 @@
+country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id,national_party,national_party_long
+24,ROU,Romania,6561,NI,,,
+24,ROU,Romania,6561,NI,6645,SOS RO,S.O.S. România
+25,SVK,Slovakia,6561,NI,6723,SMER-SD,SMER-Sociálna demokracia
+12,GRC,Greece,6561,NI,6733,KKE,Communist Party of Greece
+3,BGR,Bulgaria,6561,NI,6763,DPS,Movement for Rights and Freedoms
+5,CZE,Czechia,6561,NI,6769,KSČM,Komunistická strana Čech a Moravy
+6,DEU,Germany,6561,NI,6802,AfD,Alternative für Deutschland
+6,DEU,Germany,6561,NI,6803,Die PARTEI,Die PARTEI
+6,DEU,Germany,6561,NI,6823,Independent,Independent
+5,CZE,Czechia,6561,NI,6843,Ind.,Independent
+6,DEU,Germany,6561,NI,6850,BSW,Bündnis Sahra Wagenknecht – Vernunft und Gerechtigkeit
+22,POL,Poland,6561,NI,6856,Konfederacja,Konfederacja Wolność i Niepodległość
+25,SVK,Slovakia,6561,NI,6895,HREP,Hnutie Republika
+8,ESP,Spain,6561,NI,7009,SALF,Se Acabó la Fiesta
+25,SVK,Slovakia,6561,NI,7010,Hlas–SD,Hlas – sociálna demokracia
+12,GRC,Greece,6561,NI,7011,NIKI,Dimokratikó Patriotikó Kínima «NIKI»
+12,GRC,Greece,6561,NI,7012,Plefsi Eleftherias,Plefsi Eleftherias
+4,CYP,Cyprus,6561,NI,7019,Independent,Independent
+11,FRA,France,6561,NI,7023,Sans parti,Sans parti
+6,DEU,Germany,6561,NI,7026,PdF,Partei des Fortschritts
+22,POL,Poland,6561,NI,7029,KKP,Konfederacja Korony Polskiej
+18,LUX,Luxembourg,6561,NI,7031,ADR,Alternativ Demokratesch Reformpartei
+21,NLD,Netherlands,7018,PPE,6639,NSC,Nieuw Sociaal Contract
+23,PRT,Portugal,7018,PPE,6640,AD,Aliança Democrática
+19,LVA,Latvia,7018,PPE,6649,JV,Jaunā Vienotība
+8,ESP,Spain,7018,PPE,6666,PP,Partido Popular
+16,ITA,Italy,7018,PPE,6676,SVP,Südtiroler Volkspartei
+17,LTU,Lithuania,7018,PPE,6678,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
+18,LUX,Luxembourg,7018,PPE,6683,CSV,Parti chrétien social luxembourgeois
+20,MLT,Malta,7018,PPE,6690,PN,Partit Nazzjonalista
+21,NLD,Netherlands,7018,PPE,6697,CDA,Christen Democratisch Appèl
+22,POL,Poland,7018,PPE,6703,PO,Platforma Obywatelska
+22,POL,Poland,7018,PPE,6704,PSL,Polskie Stronnictwo Ludowe
+23,PRT,Portugal,7018,PPE,6705,PSD,Partido Social Democrata
+24,ROU,Romania,7018,PPE,6709,PNL,Partidul Naţional Liberal
+24,ROU,Romania,7018,PPE,6711,UDMR,Uniunea Democrată Maghiară din România
+27,SWE,Sweden,7018,PPE,6713,M,Moderaterna
+27,SWE,Sweden,7018,PPE,6714,KD,Kristdemokraterna
+26,SVN,Slovenia,7018,PPE,6719,SDS,Slovenska demokratska stranka
+26,SVN,Slovenia,7018,PPE,6720,NSi-KD,Nova Slovenija – Krščanski demokrati
+25,SVK,Slovakia,7018,PPE,6722,KDH,Kresťanskodemokratické hnutie
+10,FIN,Finland,7018,PPE,6726,KOK,Kansallinen Kokoomus
+12,GRC,Greece,7018,PPE,6730,N.D.,Nea Demokratia
+13,HRV,Croatia,7018,PPE,6734,HDZ,Hrvatska demokratska zajednica
+15,IRL,Ireland,7018,PPE,6742,FG,Fine Gael Party
+16,ITA,Italy,7018,PPE,6744,FI,Forza Italia
+1,AUT,Austria,7018,PPE,6745,ÖVP,Österreichische Volkspartei
+2,BEL,Belgium,7018,PPE,6755,CD&V,Christen-Democratisch & Vlaams
+2,BEL,Belgium,7018,PPE,6760,CSP,Christlich Soziale Partei
+3,BGR,Bulgaria,7018,PPE,6761,GERB,Citizens for European Development of Bulgaria
+4,CYP,Cyprus,7018,PPE,6764,DI.SY.,Democratic Rally
+5,CZE,Czechia,7018,PPE,6770,KDU-ČSL,Křesťanská a demokratická unie - Československá strana lidová
+6,DEU,Germany,7018,PPE,6771,CDU,Christlich Demokratische Union Deutschlands
+6,DEU,Germany,7018,PPE,6776,CSU,Christlich-Soziale Union in Bayern e.V.
+7,DNK,Denmark,7018,PPE,6779,C,Det Konservative Folkeparti
+3,BGR,Bulgaria,7018,PPE,6783,SDS,Union of Democratic Forces
+5,CZE,Czechia,7018,PPE,6793,TOP09/STAN,TOP 09 a Starostové
+6,DEU,Germany,7018,PPE,6799,Familien-Partei DE,Familien-Partei Deutschlands
+6,DEU,Germany,7018,PPE,6801,ÖDP,Ökologisch-Demokratische Partei
+3,BGR,Bulgaria,7018,PPE,6804,DSB,Democrats for Strong Bulgaria
+23,PRT,Portugal,7018,PPE,6819,Ind.,Independent
+11,FRA,France,7018,PPE,6827,Les Républicains,Les Républicains
+5,CZE,Czechia,7018,PPE,6835,STAN,Starostové a nezávisli
+22,POL,Poland,7018,PPE,6836,Independent,Independent
+14,HUN,Hungary,7018,PPE,6847,TISZA,Tisztelet és Szabadság Párt
+9,EST,Estonia,7018,PPE,6849,PP,Isamaa
+21,NLD,Netherlands,7018,PPE,6851,BBB,BoerBurgerBeweging
+7,DNK,Denmark,7018,PPE,6852,I,Liberal Alliance
+23,PRT,Portugal,7018,PPE,6879,CDS-PP,Partido do Centro Democrático Social-Partido Popular
+22,POL,Poland,7018,PPE,7020,iPL,Inicjatywa Polska
+11,FRA,France,7018,PPE,7921,UDR,Union des droites pour la République
+21,NLD,Netherlands,7028,Verts/ALE,6638,Volt,Volt
+13,HRV,Croatia,7028,Verts/ALE,6647,Možemo!,Možemo!
+17,LTU,Lithuania,7028,Verts/ALE,6656,DSVL,Demokratų sąjunga „Vardan Lietuvos“
+26,SVN,Slovenia,7028,Verts/ALE,6658,Vesna,Vesna – zelena stranka
+7,DNK,Denmark,7028,Verts/ALE,6661,F,Socialistisk Folkeparti
+8,ESP,Spain,7028,Verts/ALE,6669,ERC,Esquerra Republicana de Catalunya
+10,FIN,Finland,7028,Verts/ALE,6671,VIHR,Vihreä liitto
+18,LUX,Luxembourg,7028,Verts/ALE,6684,Déi Gréng,Déi Gréng - Les Verts
+21,NLD,Netherlands,7028,Verts/ALE,6694,GroenLinks,GroenLinks
+27,SWE,Sweden,7028,Verts/ALE,6717,MP,Miljöpartiet de gröna
+1,AUT,Austria,7028,Verts/ALE,6748,Die Grünen,Die Grünen - Die Grüne Alternative
+2,BEL,Belgium,7028,Verts/ALE,6750,GROEN,Groen
+2,BEL,Belgium,7028,Verts/ALE,6757,ECOLO,Ecologistes Confédérés pour l'Organisation de Luttes Originales
+6,DEU,Germany,7028,Verts/ALE,6773,GRÜNE.,Bündnis 90/Die Grünen
+24,ROU,Romania,7028,Verts/ALE,6798,Independent,Independent
+16,ITA,Italy,7028,Verts/ALE,6826,Independent,Independent
+8,ESP,Spain,7028,Verts/ALE,6844,BNG,Bloque Nacionalista Galego
+6,DEU,Germany,7028,Verts/ALE,6859,V,Volt
+5,CZE,Czechia,7028,Verts/ALE,6862,PIR,PIRÁTI
+16,ITA,Italy,7028,Verts/ALE,6896,E.Verde,Europa Verde - Verdi
+19,LVA,Latvia,7028,Verts/ALE,6933,Progresīvie,Progresīvie
+16,ITA,Italy,7028,Verts/ALE,6944,AVS,Alleanza Verdi e Sinistra
+8,ESP,Spain,7028,Verts/ALE,6949,SMR,Movimiento Sumar
+11,FRA,France,7028,Verts/ALE,6953,Les Écologistes,Les Écologistes
+8,ESP,Spain,7028,Verts/ALE,7025,Compromís,Compromís
+21,NLD,Netherlands,7028,Verts/ALE,7952,GL-PvdA,GroenLinks-PvdA
+23,PRT,Portugal,7035,Renew,6641,IL,Iniciativa Liberal
+17,LTU,Lithuania,7035,Renew,6652,LS,Liberalų sąjūdis
+17,LTU,Lithuania,7035,Renew,6653,LP,Laisvės partija
+7,DNK,Denmark,7035,Renew,6663,V,"Venstre, Danmarks Liberale Parti"
+9,EST,Estonia,7035,Renew,6664,ER,Eesti Reformierakond
+10,FIN,Finland,7035,Renew,6673,SFP,Svenska folkpartiet
+18,LUX,Luxembourg,7035,Renew,6682,DP,Parti démocratique
+21,NLD,Netherlands,7035,Renew,6691,VVD,Volkspartij voor Vrijheid en Democratie
+21,NLD,Netherlands,7035,Renew,6693,D66,Democraten 66
+24,ROU,Romania,7035,Renew,6710,PMP,Partidul Mișcarea Populară
+27,SWE,Sweden,7035,Renew,6715,FP,Liberalerna
+27,SWE,Sweden,7035,Renew,6716,C,Centerpartiet
+10,FIN,Finland,7035,Renew,6725,KESK,Suomen Keskusta
+15,IRL,Ireland,7035,Renew,6739,Ind.,Independent
+15,IRL,Ireland,7035,Renew,6741,FF,Fianna Fáil Party
+1,AUT,Austria,7035,Renew,6749,NEOS,NEOS – Das Neue Österreich
+2,BEL,Belgium,7035,Renew,6752,Open VLD,Open Vlaamse Liberalen en Democraten
+2,BEL,Belgium,7035,Renew,6756,MR,Mouvement Réformateur
+3,BGR,Bulgaria,7035,Renew,6763,DPS,Movement for Rights and Freedoms
+6,DEU,Germany,7035,Renew,6774,FDP,Freie Demokratische Partei
+7,DNK,Denmark,7035,Renew,6778,B,Det Radikale Venstre
+19,LVA,Latvia,7035,Renew,6791,AP!,Latvijas attīstībai
+9,EST,Estonia,7035,Renew,6792,KE,Eesti Keskerakond
+6,DEU,Germany,7035,Renew,6807,Freie Wähler,Freie Wähler
+8,ESP,Spain,7035,Renew,6820,PNV,Partido Nacionalista Vasco
+24,ROU,Romania,7035,Renew,6872,USR,Uniunea Salvați România
+25,SVK,Slovakia,7035,Renew,6874,PS,Progresívne Slovensko
+22,POL,Poland,7035,Renew,6893,PL2050,Polska 2050
+2,BEL,Belgium,7035,Renew,6903,LesEng,Les Engagés
+26,SVN,Slovenia,7035,Renew,6909,GS,Gibanje Svoboda
+3,BGR,Bulgaria,7035,Renew,6932,PP-DB,We continue the change – Democratic Bulgaria
+11,FRA,France,7035,Renew,6935,Ens,L'Europe Ensemble
+7,DNK,Denmark,7035,Renew,6948,M,Moderaterne
+16,ITA,Italy,7036,The Left,6674,M5S,Movimento 5 Stelle
+21,NLD,Netherlands,7036,The Left,6695,PvdD,Partij voor de Dieren
+23,PRT,Portugal,7036,The Left,6707,BE,Bloco de Esquerda
+27,SWE,Sweden,7036,The Left,6718,V,Vänsterpartiet
+12,GRC,Greece,7036,The Left,6731,SYRIZA,Coalition of the Radical Left
+15,IRL,Ireland,7036,The Left,6739,Ind.,Independent
+15,IRL,Ireland,7036,The Left,6740,SF,Sinn Féin
+4,CYP,Cyprus,7036,The Left,6765,AKEL-ARISTERA-ND,Progressive Party of Working People - Left - New Forces
+6,DEU,Germany,7036,The Left,6775,DIE LINKE.,DIE LINKE.
+10,FIN,Finland,7036,The Left,6795,VAS,Vasemmistoliitto
+6,DEU,Germany,7036,The Left,6808,Die Tierschutzpartei,Partei Mensch Umwelt Tierschutz
+8,ESP,Spain,7036,The Left,6811,PODEMOS,PODEMOS
+8,ESP,Spain,7036,The Left,6812,EH BILDU,EH BILDU
+23,PRT,Portugal,7036,The Left,6817,PCP,Partido Comunista Português
+6,DEU,Germany,7036,The Left,6823,Independent,Independent
+2,BEL,Belgium,7036,The Left,6860,PVDA-PTB,PVDA-PTB
+7,DNK,Denmark,7036,The Left,6863,Enhedslisten,Enhedslisten
+11,FRA,France,7036,The Left,6878,LFI,La France Insoumise
+16,ITA,Italy,7036,The Left,6944,AVS,Alleanza Verdi e Sinistra
+8,ESP,Spain,7036,The Left,6949,SMR,Movimiento Sumar
+2,BEL,Belgium,7036,The Left,6950,Independent,Independent
+7,DNK,Denmark,7037,ECR,6637,Æ,Danmarksdemokraterne
+13,HRV,Croatia,7037,ECR,6644,DP,Domovinski pokret
+19,LVA,Latvia,7037,ECR,6655,AS,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija"
+10,FIN,Finland,7037,ECR,6670,Perus,Perussuomalaiset
+17,LTU,Lithuania,7037,ECR,6679,LLRA,Lietuvos lenkų rinkimų akcija – Krikščioniškų šeimų sąjunga
+17,LTU,Lithuania,7037,ECR,6680,LVZS,Lietuvos valstiečių ir žaliųjų sąjunga
+19,LVA,Latvia,7037,ECR,6685,TB/LNNK,"Nacionālā apvienība """"Visu Latvijai!"""" - """"Tēvzemei un Brīvībai/LNNK"""""
+21,NLD,Netherlands,7037,ECR,6699,SGP,Staatkundig Gereformeerde Partij
+22,POL,Poland,7037,ECR,6700,SPZZ,Solidarna Polska Zbigniewa Ziobro
+22,POL,Poland,7037,ECR,6702,PiS,Prawo i Sprawiedliwość
+2,BEL,Belgium,7037,ECR,6754,N-VA,Nieuw-Vlaamse Alliantie
+5,CZE,Czechia,7037,ECR,6768,ODS,Občanská demokratická strana
+12,GRC,Greece,7037,ECR,6781,EL,Elliniki Lusi-Greek Solution
+9,EST,Estonia,7037,ECR,6792,KE,Eesti Keskerakond
+24,ROU,Romania,7037,ECR,6798,Independent,Independent
+27,SWE,Sweden,7037,ECR,6810,SD,Sverigedemokraterna
+8,ESP,Spain,7037,ECR,6828,Independiente,Independiente
+16,ITA,Italy,7037,ECR,6831,FdL,FRATELLI D' ITALIA
+11,FRA,France,7037,ECR,6841,Indépendant,Indépendant
+24,ROU,Romania,7037,ECR,6914,PNCR,Partidului Național Conservator Român (PNCR)
+24,ROU,Romania,7037,ECR,6915,AUR,Alianța pentru Unirea Românilor
+11,FRA,France,7037,ECR,6922,DVD,Divers droite
+4,CYP,Cyprus,7037,ECR,6924,ELAM,Εθνικό Λαϊκό Μέτωπο
+3,BGR,Bulgaria,7037,ECR,6931,ITN,There Is Such a People
+22,POL,Poland,7037,ECR,6940,SP,Sovereign Poland
+9,EST,Estonia,7037,ECR,7024,Independent,Independent
+11,FRA,France,7037,ECR,7027,Mouvement conservateur,Mouvement conservateur
+18,LUX,Luxembourg,7037,ECR,7031,ADR,Alternativ Demokratesch Reformpartei
+13,HRV,Croatia,7037,ECR,7872,DOMiNO,Dom i nacionalno okupljanje
+11,FRA,France,7037,ECR,7876,IDL,Identité Libertés
+24,ROU,Romania,7037,ECR,7962,ACT,Partidul Acțiunea Conservatoare
+24,ROU,Romania,7038,S&D,5320,PSD,Partidul Social Democrat
+9,EST,Estonia,7038,S&D,6665,SDE,Sotsiaaldemokraatlik Erakond
+8,ESP,Spain,7038,S&D,6667,PSOE,Partido Socialista Obrero Español
+10,FIN,Finland,7038,S&D,6672,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti
+16,ITA,Italy,7038,S&D,6675,PD,Partito Democratico
+18,LUX,Luxembourg,7038,S&D,6681,LSAP,Parti ouvrier socialiste luxembourgeois
+19,LVA,Latvia,7038,S&D,6686,Saskaņa SDP,"""""Saskaņa"""" sociāldemokrātiskā partija"
+20,MLT,Malta,7038,S&D,6689,PL,Partit Laburista
+21,NLD,Netherlands,7038,S&D,6692,PvdA,Partij van de Arbeid
+23,PRT,Portugal,7038,S&D,6706,PS,Partido Socialista
+24,ROU,Romania,7038,S&D,6708,PSD,Partidul Social Democrat
+27,SWE,Sweden,7038,S&D,6712,S,Arbetarepartiet- Socialdemokraterna
+26,SVN,Slovenia,7038,S&D,6721,SD,Socialni demokrati
+14,HUN,Hungary,7038,S&D,6724,DK,Demokratikus Koalíció
+11,FRA,France,7038,S&D,6728,PS,Parti socialiste
+13,HRV,Croatia,7038,S&D,6735,SDP,Socijaldemokratska partija Hrvatske
+1,AUT,Austria,7038,S&D,6746,SPÖ,Sozialdemokratische Partei Österreichs
+2,BEL,Belgium,7038,S&D,6758,PS,Parti Socialiste
+3,BGR,Bulgaria,7038,S&D,6762,BSP,Bulgarian Socialist Party
+4,CYP,Cyprus,7038,S&D,6766,DI.KO.,Democratic Party
+6,DEU,Germany,7038,S&D,6772,SPD,Sozialdemokratische Partei Deutschlands
+7,DNK,Denmark,7038,S&D,6777,A,Socialdemokratiet
+11,FRA,France,7038,S&D,6785,Place publique,Place publique
+17,LTU,Lithuania,7038,S&D,6797,LSDP,Lietuvos socialdemokratų partija
+8,ESP,Spain,7038,S&D,6816,PSC-PSOE,Partit dels Socialistes de Catalunya (PSC-PSOE)
+12,GRC,Greece,7038,S&D,6876,KINAL,PASOK-KINAL
+22,POL,Poland,7038,S&D,6899,NL,Nowa Lewica
+2,BEL,Belgium,7038,S&D,6912,Vooruit,Vooruit
+15,IRL,Ireland,7038,S&D,7022,LABOUR,Labour Party
+21,NLD,Netherlands,7038,S&D,7952,GL-PvdA,GroenLinks-PvdA
+5,CZE,Czechia,7150,PfE,,,
+7,DNK,Denmark,7150,PfE,6662,O,Dansk Folkeparti
+21,NLD,Netherlands,7150,PfE,6696,PVV,Partij voor de Vrijheid
+14,HUN,Hungary,7150,PfE,6737,Fidesz-KDNP,Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt
+1,AUT,Austria,7150,PfE,6747,FPÖ,Freiheitliche Partei Österreichs
+2,BEL,Belgium,7150,PfE,6751,Vlaams Belang,Vlaams Belang
+5,CZE,Czechia,7150,PfE,6794,ANO 2011,ANO 2011
+14,HUN,Hungary,7150,PfE,6818,KDNP,Kereszténydemokrata Néppárt
+11,FRA,France,7150,PfE,6848,RN,Rassemblement national
+22,POL,Poland,7150,PfE,6856,Konfederacja,Konfederacja Wolność i Niepodległość
+16,ITA,Italy,7150,PfE,6870,L,Lega
+8,ESP,Spain,7150,PfE,6871,VOX,VOX
+23,PRT,Portugal,7150,PfE,6927,Chega,Chega
+19,LVA,Latvia,7150,PfE,6930,LPV,Latvija pirmajā vietā
+12,GRC,Greece,7150,PfE,7013,Phoní Loyikís,Foní Loyikís
+11,FRA,France,7150,PfE,7023,Sans parti,Sans parti
+5,CZE,Czechia,7150,PfE,7033,PSH,Přísaha
+5,CZE,Czechia,7150,PfE,7034,AUTO,Motoristé sobě
+3,BGR,Bulgaria,7151,ESN,6648,Revival,Revival
+6,DEU,Germany,7151,ESN,6802,AfD,Alternative für Deutschland
+14,HUN,Hungary,7151,ESN,6854,MHM,Mi Hazánk Mozgalom
+22,POL,Poland,7151,ESN,6856,Konfederacja,Konfederacja Wolność i Niepodległość
+5,CZE,Czechia,7151,ESN,6864,SPD,Svoboda a přímá demokracie
+25,SVK,Slovakia,7151,ESN,6895,HREP,Hnutie Republika
+11,FRA,France,7151,ESN,6902,R,Reconquête!
+17,LTU,Lithuania,7151,ESN,7021,TTS,Tautos ir teisingumo sąjunga

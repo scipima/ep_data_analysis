@@ -1,0 +1,758 @@
+---
+title: "Targeting Renew Europe-compatible MEPs outside the Group"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "readr", "tidyr", "tidyselect",
+                        "tidytext") )
+
+
+#------------------------------------------------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2019-07-01")
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )  
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+###--------------------------------------------------------------------------###
+## Graphics --------------------------------------------------------------------
+# Set global theme for ggplot2 ------------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10))
+
+# vote colours  -------------------------------------------------------------###
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+```
+
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+### RCV ------------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_all.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), 
+  na.strings = c(NA_character_, "") )
+# Nominal change from GUE to The Left
+meps_rcv_mandate[polgroup_id == 5151L, polgroup_id := 6259L] 
+
+### Votes ----------------------------------------------------------------------
+votes_dt <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_all.csv"), 
+  # select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+  #            "number_of_votes_abstention", "number_of_votes_against",
+  #            "number_of_votes_favor"), 
+  na.strings = c(NA_character_, "") )
+
+
+### MEP last Plenary day -------------------------------------------------------
+meps_current <- data.table::fread( file = here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(votes_dt)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+#------------------------------------------------------------------------------#
+# Hard code Groups
+renew_group_ids <- political_groups$identifier[
+  political_groups$label == "Renew"]
+
+# Hard code target MEPs 
+target_meps <- c(197699L, 256952L)
+target_meps_polgroups <- c(7036L, 6259L, 5151L)
+```
+
+The objectives of this short note is to identify Renew Europe-compatible MEPs outside the group. 
+It does that by calculating the  **affinity** (also called **similarity**) between Renew and other MEPs.
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Affinity between Renew and other Groups' MEPs
+In this section we calculate the affinity of two MEPs currently outside Renew with Renew's majority.
+In all visualisations below, we display also the top 5 MEPs according to the same metrics from EPP and S&D who have been *members during both the 9th and 10th mandates*, so that the data become from informative. 
+We do this in two different ways, namely by calculating both the **Euclidean distance** and the share of exact matches in votes.
+The former metric is more granular, enabling us to capture more profound disagreements between majorities and/or MEPs, whereas the latter only check whether the vote was identical.
+
+In the first subsection below we display the overall affinity, whereas in the second subsection we break it down by Committees.
+
+
+### Overall affinity
+
+::: {.panel-tabset}
+
+#### Euclidean distance
+```{r}
+# Get the Groups' majority by rcv_id ------------------------------------------#
+mjrt_polgroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    result >= -1] # exclude absent & no votes
+)
+
+# Get the target party majority
+renew_mjrt <- mjrt_polgroup[
+  polgroup_id %in% renew_group_ids]
+
+# Inner-join
+renew_othermeps <- renew_mjrt[
+  meps_rcv_mandate[
+    (pers_id %in% target_meps
+     | polgroup_id %in% c(5153L, 7018L, # EPP
+                          5154L, 7038L) ) #S&D
+    & result >= -1L],
+  on = "rcv_id", nomatch = NULL]
+
+# Calculate Euclidean distance
+renew_othermeps[, `:=`(
+  is_same = as.integer(result == i.result),
+  eucl_dist = sqrt((result - i.result)^2) # 0 if same, 2 if distant
+)]
+
+# take the average for plotting
+dist_avg_dt <- renew_othermeps[, list(
+  eucl_dist_avg = mean(eucl_dist, na.rm = TRUE) ),
+  by = list(pers_id)
+][, `:=`(
+  # normalise the euclidean for comparable plotting
+  eucl_dist_avg_norm = eucl_dist_avg / 2L
+)]
+```
+
+Affinity may be defined as the [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance) between Renew's majority and all other MEPs.
+The assumption here is that there is a qualitative difference between, say, *abstaining* and voting *against*, with the latter expressing a more profound disagreement with those who voted in *favour*.
+To measure affinity, we consider only EP official votes, that is `for`, `against`, `abstain`.
+
+When reading these figures, remember that **low numbers stand for high affinity**, whereas **high numbers represent low affinity**.
+The metric is bounded 0-1.
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+# plot -------------------------------------------------------------------------
+dist_avg_dt |>  
+  dplyr::inner_join(
+    y = meps_current[
+      polgroup_id %in% c(7018L, 7038L)
+      | pers_id %in% target_meps
+      | polgroup_id %in% target_meps_polgroups],
+    by = "pers_id") |>
+  join_polit_labs() |>
+  join_meps_names() |>
+  dplyr::slice_min(order_by = eucl_dist_avg_norm, n = 5, with_ties = FALSE, by = political_group) |> 
+  dplyr::mutate(mep_name = tidytext::reorder_within(
+    x = mep_name, by = eucl_dist_avg_norm, within = political_group) ) |> 
+  # dplyr::filter(political_group == "PPE") |>
+  ggplot(aes(x = mep_name, 
+             y = eucl_dist_avg_norm, fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  geom_text(aes(label = round(eucl_dist_avg_norm, digits = 4)), 
+            nudge_y = .01, size = 5) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  facet_grid(cols = vars(political_group), scales = "free_x", space = "free") +
+  scale_x_reordered() +
+  ylim(0, 1) +
+  labs(
+    x="", y="Normalised euclidean distance", 
+    title = "Distance between Renew's majority and other MEPs",
+    subtitle = stringr::str_wrap(
+      "The lower the value, the greater the affinity with Renew's majority. Only the top 5 MEPs by Group are shown.", width = 100) ) +
+  theme_minimal() +
+  scale_fill_manual(values = polgroup_cols) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+# ggsave(here::here("figures", "affinity_renew_meps.jpeg"),
+#        dpi=300, device="jpeg", height=3, width=8)
+```
+
+
+#### Share of identical votes
+Affinity is defined as the rate with which either the *majorities within Groups/national parties* vote in the same way, or *MEPS* vote in the same way. 
+To measure affinity, we consider only EP official votes, that is `for`, `against`, `abstain`.^[Because of ties within Groups (i.e. absence of a majority), we may lose some votes.]
+
+When reading these figures remember that, *contrary to the Euclidean distance*, **high numbers stand for high affinity**, and **low numbers represent low affinity**.
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+# plot -------------------------------------------------------------------------
+dist_avg_dt <- renew_othermeps[, list(
+  same_avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id)
+]
+
+dist_avg_dt_plot <- dist_avg_dt |>  
+  dplyr::inner_join(
+    y = meps_current[
+      polgroup_id %in% c(7018L, 7038L, 7036L)
+    ], by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_max(order_by = same_avg, n = 3, with_ties = FALSE, 
+                   by = political_group) |> 
+  dplyr::arrange(political_group, -same_avg)
+
+plot_rank <- dist_avg_dt_plot$mep_name
+
+dist_avg_dt_plot |> 
+  ggplot(aes(x = factor(mep_name, levels = plot_rank), 
+             y = same_avg, fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  geom_text(aes(label = round(same_avg*100, digits = 1)), 
+            nudge_y = .05, size = 3) +
+  facet_grid(cols = vars(political_group), scales = "free_x", space = "free") +
+  # scale_x_reordered() +
+  scale_x_discrete(labels = scales::wrap_format(10))+
+  labs(
+    x="", y="Alignment with Renew's Majority (%)", fill="",
+    title = "Alignment between Renew's majority and other MEPs",
+    subtitle = stringr::str_wrap(
+      "The higher the value, the greater the affinity with Renew's majority", 
+      width = 100) ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_fill_manual(values = polgroup_cols) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+ggsave(here::here("figures", "affinity_renew_meps_overall.pdf"),
+       dpi=300, device="pdf", height=4, width=8)
+```
+
+```{r}
+
+# plot -------------------------------------------------------------------------
+dist_avg_dt <- renew_othermeps[, list(
+  same_avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id)
+]
+
+dist_avg_dt_plot <- dist_avg_dt |>  
+  dplyr::inner_join(
+    y = meps_current[
+      polgroup_id %in% c(7036L)
+    ], by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_max(order_by = same_avg, n = 3, with_ties = FALSE, 
+                   by = political_group) |> 
+  dplyr::arrange(political_group, -same_avg)
+
+plot_rank <- dist_avg_dt_plot$mep_name
+
+dist_avg_dt_plot |> 
+  ggplot(aes(x = factor(mep_name, levels = plot_rank), 
+             y = same_avg, fill = mep_name) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  geom_text(aes(label = round(same_avg*100, digits = 1)), 
+            vjust = -0.2, size = 3, fontface = "bold") +
+  facet_grid(cols = vars(political_group), scales = "free_x", space = "free") +
+  # scale_x_reordered() +
+  scale_x_discrete(labels = scales::wrap_format(10))+
+  labs(
+    x="", y="Alignment with Renew's Majority (%)", fill="",
+    title = "Alignment between Renew's majority and other MEPs",
+    subtitle = stringr::str_wrap(
+      "The higher the value, the greater the affinity with Renew's majority", 
+      width = 100) ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+ggsave(here::here("figures", "affinity_renew_meps_overall_theleft.jpeg"),
+       dpi=300, device="jpeg", height=4, width=8)
+```
+
+```{r}
+
+# plot Pappas only May and June 2025 -------------------------------------------
+rcvid_tokeep = votes_dt$rcv_id[
+  votes_dt$activity_date >= as.Date("2025-05-01") 
+  & votes_dt$activity_date <= as.Date("2025-06-30")
+  & votes_dt$decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+]
+
+dist_avg_dt <- renew_othermeps[
+  rcv_id %in% rcvid_tokeep
+  & pers_id == 256952L,
+  list( same_avg = mean(is_same, na.rm = TRUE) )
+]
+```
+
+
+:::
+
+
+### By Committee
+
+* Between the 9th and 10th mandate, **Elena KOUNTOURA** was a member/Vice-Chair of: Committee on Transport and Tourism (Vice-Chair); Committee on Women’s Rights and Gender Equality; Special Committee on Artificial Intelligence in a Digital Age
+* During the 10th mandate, **Nikos PAPPAS** has been a member of: Committee on Industry, Research and Energy; Committee on Culture and Education.
+
+Again, we calculate the affinity metrics in two different ways, as explained above.
+As an additional constraint, we require *MEPs to have voted at least 5 times in each Committee* to be included in the metric.
+
+::: {.panel-tabset}
+
+#### Euclidean distance
+```{r}
+#| fig-width: 8
+#| fig-height: 16
+
+# Vector of Committees
+cmts_tocheck <- c("AFET", "CULT", "ECON", "ENVI", "FEMM", "IMCO", "ITRE", "LIBE",
+                  "TRAN")
+
+rcvid_cmts <- data.table::fread(file = here::here(
+  "data_out", "rcv", "rcvid_cmts_all.csv") )
+rcvid_cmts_filter <- rcvid_cmts[committee_lab %in% cmts_tocheck]
+
+# Get the target party majority
+renew_mjrt_choicecmts <- mjrt_polgroup[
+  rcv_id %in% unique(rcvid_cmts_filter$rcv_id)
+  & polgroup_id %in% renew_group_ids]
+
+# Inner-join
+renew_othermeps_choicecmts <- renew_mjrt_choicecmts[
+  meps_rcv_mandate[
+    (pers_id %in%  c(197699L, 256952L)
+     | polgroup_id %in% c(5153L, 7018L, # EPP
+                          5154L, 7038L) ) #S&D
+    & rcv_id %in% unique(rcvid_cmts_filter$rcv_id)
+    & result >= -1L],
+  on = "rcv_id", nomatch = NULL]
+
+
+# Calculate distances ---------------------------------------------------------#
+renew_othermeps_choicecmts[, `:=`(
+  is_same = as.integer(result == i.result),
+  eucl_dist = sqrt((result - i.result)^2) # 0 if same, 2 if distant
+)]
+
+
+# Merge Affinity with Committee -----------------------------------------------#
+renew_othermeps_choicecmts <- renew_othermeps_choicecmts |> 
+  dplyr::inner_join(
+    y = rcvid_cmts_filter,
+    by = "rcv_id") |> 
+  data.table::as.data.table()
+
+
+# Take the Average for Plotting -----------------------------------------------#
+dist_avg_dt <- renew_othermeps_choicecmts[, list(
+  n_rcv = .N,
+  eucl_dist_avg = mean(eucl_dist, na.rm = TRUE) ),
+  by = list(pers_id, committee_lab)
+][, `:=`(
+  # normalise the euclidean for comparable plotting
+  eucl_dist_avg_norm = eucl_dist_avg / 2L
+)]
+
+
+# Plot ------------------------------------------------------------------------#
+dist_avg_dt[
+  n_rcv > 5L,
+] |>  
+  dplyr::inner_join(
+    y = meps_current[
+      polgroup_id %in% c(7018L, 7038L, 7036L)
+    ], by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_min(order_by = eucl_dist_avg_norm, n = 5,with_ties = FALSE,
+                   by = c(political_group, committee_lab) ) |> 
+  dplyr::mutate(mep_name = tidytext::reorder_within(
+    x = mep_name, by = eucl_dist_avg_norm, within = committee_lab) ) |> 
+  # dplyr::filter(political_group == "PPE") |>
+  ggplot(aes(x = mep_name, 
+             y = eucl_dist_avg_norm, fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  facet_wrap(~committee_lab, scales = "free_y", ncol=1) +
+  # facet_grid(rows = vars(political_group), scales = "free_y", space = "free") +
+  scale_x_reordered() +
+  ylim(0, 1) +
+  labs(
+    x="", y="Normalised euclidean distance", 
+    title = "Distance between Renew's majority and other MEPs, by Committee",
+    subtitle = stringr::str_wrap(
+      "The lower the value, the greater the affinity with Renew's majority. Only the top 5 MEPs by Group are shown. MEPs must have voted at least 5 times in each Committee to be included in the metric.", width = 100) ) +
+  coord_flip() +
+  theme_minimal() +
+  scale_fill_manual(values = polgroup_cols) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text = element_text(face="bold"))
+```
+
+
+#### Share of identical votes
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+# Take the Average for Plotting -----------------------------------------------#
+dist_avg_dt <- renew_othermeps_choicecmts[, list(
+  n_rcv = .N,
+  same_avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id, committee_lab)
+]
+
+
+# Plot ------------------------------------------------------------------------#
+dist_avg_dt_plot <- dist_avg_dt[
+  !pers_id %in% c(197523, 37324, 86057),
+  # & n_rcv > 5L,
+] |>  
+  dplyr::inner_join(
+    y = meps_current[
+      polgroup_id %in% c(7018L, 7038L, 7036L)
+    ], by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_max(order_by = same_avg, n = 2, with_ties = FALSE,
+                   by = c(political_group, committee_lab) ) |> 
+  dplyr::arrange(political_group, -same_avg)
+
+dist_avg_dt_plot |> 
+  ggplot(aes(x = mep_name, 
+             y = same_avg, fill = political_group) ) +
+  geom_col(colour="black", linewidth=0.1, show.legend = FALSE) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  geom_text(aes(label = round(same_avg*100, digits = 1)), 
+            nudge_y = .05, size = 3) +
+  facet_wrap(~committee_lab, scales = "free_x", ncol=3) +
+  # facet_grid(rows = vars(political_group), scales = "free_y", space = "free") +
+  scale_x_discrete(labels = scales::wrap_format(5))+
+  labs(
+    x="", y="Alignment with Renew's Majority (%)", fill="",
+    title = "Alignment between Renew's majority and other MEPs, by Committee",
+    subtitle = stringr::str_wrap(
+      "The higher the value, the greater the affinity with Renew's majority", width = 100) ) +
+  theme_minimal() +
+  scale_fill_manual(values = polgroup_cols) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1.05)) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text.x = element_text(size = 7, angle = 90, hjust = 1, vjust = 0.5))
+ggsave(here::here("figures", "affinity_renew_meps_bycommittee.pdf"),
+       dpi=300, device="pdf", height=11, width=8)
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+# Take the Average for Plotting -----------------------------------------------#
+dist_avg_dt <- renew_othermeps_choicecmts[, list(
+  n_rcv = .N,
+  same_avg = mean(is_same, na.rm = TRUE) ),
+  by = list(pers_id, committee_lab)
+]
+
+
+# Plot ------------------------------------------------------------------------#
+dist_avg_dt_plot <- dist_avg_dt[
+  n_rcv > 5
+  & pers_id %in%  c(197699L, 256952L) ] |>  
+  dplyr::inner_join(
+    y = meps_current, by = "pers_id") |> 
+  join_polit_labs() |> 
+  join_meps_names() |> 
+  dplyr::slice_max(order_by = same_avg, n = 2, with_ties = FALSE,
+                   by = c(political_group, committee_lab) ) |> 
+  dplyr::arrange(political_group, -same_avg)
+
+dist_avg_dt_plot |> 
+  ggplot(aes(x = committee_lab, 
+             y = same_avg, fill = mep_name, group = mep_name) ) +
+  geom_col(position=position_dodge2(width = 0.9, preserve = "single"),
+           colour="black", linewidth=0.1) +
+  geom_hline(yintercept = 0, linewidth=0.5) +
+  geom_text(aes(label = round(same_avg*100, digits = 1)), #nudge_y = .05, 
+            position = position_dodge(0.9), vjust = -0.2, size = 3, fontface = "bold") +
+  # facet_wrap(~committee_lab, scales = "free_x", ncol=3) +
+  # facet_grid(rows = vars(committee_lab), scales = "free", space = "free") +
+  scale_x_discrete(labels = scales::wrap_format(5))+
+  labs(
+    x="", y="Alignment with Renew's Majority (%)", fill="",
+    title = "Alignment between Renew's majority and other MEPs, by Committee",
+    subtitle = stringr::str_wrap(
+      "The higher the value, the greater the affinity with Renew's majority", width = 100) ) +
+  theme_minimal() +
+  # scale_fill_manual(values = polgroup_cols) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1.05)) +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        legend.text = element_text(face="bold"),
+        strip.text.y = element_text(angle = 0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+        panel.grid.minor.y = element_line(colour = "grey70"),
+        axis.text.x = element_text(size = 7, face = "bold", hjust = 0.5, vjust = 0.5))
+ggsave(here::here("figures", "affinity_renew_meps_bycommittee_theleft.jpeg"),
+       dpi=300, device="jpeg", height=4, width=8)
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+
+# plot Pappas only May and June 2025 -------------------------------------------
+rcvid_tokeep = votes_dt$rcv_id[
+  votes_dt$activity_date >= as.Date("2025-05-01") 
+  & votes_dt$activity_date <= as.Date("2025-06-30")
+  & votes_dt$decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+]
+
+# Take the Average for Plotting -----------------------------------------------#
+dist_avg_dt <- renew_othermeps_choicecmts[
+  rcv_id %in% rcvid_tokeep
+  & pers_id == 256952L, 
+  list(
+    n_rcv = .N,
+    same_avg = mean(is_same, na.rm = TRUE) ),
+  by = list(committee_lab)
+]
+```
+
+:::
+
+
+### Ukraine
+```{r}
+votes_dt_10 <- data.table::fread(
+  file = here::here("data_out", "votes", "votes_dt_10.csv"),
+  # select = c("activity_date", "rcv_id", "mandate", "number_of_attendees",
+  #            "number_of_votes_abstention", "number_of_votes_against",
+  #            "number_of_votes_favor"),
+  na.strings = c(NA_character_, "") )
+
+votes_final_10 <- fread(here::here("data_out", "votes", "votes_final_10.csv")) |> 
+  dplyr::filter(is_final == 1L)
+
+votes_labels_10 <- fread(here::here("data_out", "votes", "votes_labels_10.csv"))
+ukraine_votes = unique(votes_labels_10[
+  grepl(pattern = "Ukraine", x = vote_label_en)
+  | grepl(pattern = "Ukraine", x = vote_label_fr)
+  | grepl(pattern = "Ukraine", x = vote_label_mul)
+][["activity_id"]])
+votes_dt_10[, vot_id := gsub(pattern = "eli/dl/event/", replacement = "", 
+                             x = inverse_consists_of)]
+rcvid_ukraine = votes_dt_10[vot_id %in% ukraine_votes][["rcv_id"]]
+rcvid_ukraine_finals = rcvid_ukraine[rcvid_ukraine %in% votes_final_10$rcv_id]
+
+
+dplyr::left_join(
+  x = renew_mjrt[rcv_id %in% rcvid_ukraine_finals],
+  y = meps_rcv_mandate[
+    rcv_id %in% rcvid_ukraine_finals
+    & pers_id %in% c(197699L, 256952L),
+    list(pers_id, rcv_id, result)],
+  by = "rcv_id"
+) |> 
+  join_meps_names() |> 
+  left_join(
+    y = votes_dt_10[, list(vot_id, rcv_id)],
+    by = "rcv_id"
+  ) |> 
+  # mutate(vot_id := gsub(pattern = "eli/dl/event/", replacement = "", 
+  #                         x = inverse_consists_of)) |> 
+  left_join(
+    y = unique(votes_labels_10[
+      vote_id %in% ukraine_votes, 
+      list(vote_label_en, activity_id)]),
+    by = c("vot_id" = "activity_id")
+  ) |> 
+  arrange(rcv_id) |> 
+  dplyr::select(
+    `Renew Majority` = result.x,
+    `MEP Vote` = result.y,
+    MEP = mep_name,
+    `Vote Label` = vote_label_en
+  ) |> 
+  fwrite(file = "ukrain.csv")
+```
+
+
+
+## Data and Methods
+```{r}
+#| eval: false
+
+# nikos pappas (10)
+# elena koutoura (9-10)
+# alignement with renew
+# commitees (check)
+# also check: afet, econ, envi, femm, imco, libe 
+
+
+#------------------------------------------------------------------------------#
+# April PLENARY ----------------------------------------------------------------#
+rcvid_target = votes_dt$rcv_id[
+  votes_dt$decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+  & votes_dt$activity_date %in% 
+    seq.Date(from = as.Date("2025-03-31"), 
+             to = as.Date("2025-04-03"),
+             by = 1)]
+meps_rcv_mandate[
+  rcv_id %in% rcvid_target
+  & pers_id == 256952L,
+  list(length(unique(rcv_id))),
+  keyby = result
+]
+
+merge(x = mjrt_polgroup[polgroup_id %in% renew_group_ids 
+                        & rcv_id %in% rcvid_target,
+                        list(rcv_id, result)],
+      y = meps_rcv_mandate[rcv_id %in% rcvid_target
+                           & result >= -1L
+                           & pers_id == 256952L],
+      by= "rcv_id") |> 
+  dplyr::mutate(is_same = as.integer(result.x == result.y) ) |> 
+  summarise(avg = mean(is_same, na.rm=TRUE))
+
+
+# LAST PLENARY ----------------------------------------------------------------#
+rcvid_target = votes_dt$rcv_id[
+  votes_dt$decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+  & votes_dt$activity_date %in% 
+    seq.Date(from = as.Date("2025-05-05"), 
+             to = as.Date("2025-05-08"),
+             by = 1)]
+meps_rcv_mandate[
+  rcv_id %in% rcvid_target
+  & pers_id == 256952L,
+  list(unique(rcv_id)),
+  keyby = result
+]
+
+merge(x = mjrt_polgroup[polgroup_id %in% renew_group_ids 
+                        & rcv_id %in% rcvid_target,
+                        list(rcv_id, result)],
+      y = meps_rcv_mandate[rcv_id %in% rcvid_target
+                           & result >= -1L
+                           & pers_id == 256952L],
+      by= "rcv_id") |> 
+  dplyr::mutate(is_same = as.integer(result.x == result.y) ) |> 
+  summarise(avg = mean(is_same, na.rm=TRUE))
+
+# ENTIRE 10 ----------------------------------------------------------------#
+rcvid_target = votes_dt$rcv_id[
+  votes_dt$mandate == 10L]
+meps_rcv_mandate[
+  rcv_id %in% rcvid_target
+  & pers_id == 256952L,
+  list(length(unique(rcv_id))),
+  keyby = result
+]
+
+merge(x = mjrt_polgroup[polgroup_id %in% renew_group_ids 
+                        & rcv_id %in% rcvid_target,
+                        list(rcv_id, result)],
+      y = meps_rcv_mandate[rcv_id %in% rcvid_target
+                           & result >= -1L
+                           & pers_id == 256952L],
+      by= "rcv_id") |> 
+  dplyr::mutate(is_same = as.integer(result.x == result.y) ) |> 
+  summarise(avg = mean(is_same, na.rm=TRUE))
+
+#------------------------------------------------------------------------------#
+```
+
+We include in our analysis all voting data relative to Roll-Call Votes (RCVs) in Plenaries during the current and previous mandates.
+To provide some context, we currently have `r length(unique(meps_rcv_mandate$rcv_id))` RCVs in our database for the current mandate.
+It is important to appreciate that what we have is only a subset of the all legislation being adopted. 
+Indeed, the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - but RCVs are the only ones where we able to trace votes to individual MEPs - that is, they are so-called *nominal* votes. 
+As a rough approximation, if we take out the likely duplicate rows from the voting archives, RCVs were approximately `r round(n_rcv/n_votes*100, digits=1)`% of the total votes during this mandate.

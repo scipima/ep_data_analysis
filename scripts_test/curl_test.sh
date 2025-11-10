@@ -1,0 +1,3 @@
+curl --etag-save "A-9-2022-0066" --etag-compare "A-9-2022-0066" -O 'https://data.europarl.europa.eu/api/v2/plenary-documents/A-9-2022-0066?format=application%2Fld%2Bjson' -H 'accept: application/ld+json' -H 'User-Agent: mascipioni-prd-2.0.0'
+
+curl -z "A-9-2022-0066" 'https://data.europarl.europa.eu/api/v2/plenary-documents/A-9-2022-0066?format=application%2Fld%2Bjson' -H 'accept: application/ld+json' -H 'User-Agent: mascipioni-prd-2.0.0'

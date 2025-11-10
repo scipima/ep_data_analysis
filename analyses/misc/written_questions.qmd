@@ -1,0 +1,461 @@
+---
+title: "Written Questions"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+  # html:
+  #   embed-resources: true
+  #   toc: true
+  #   toc-depth: 4
+  #   toc-title: Contents
+  #   number-sections: true
+  #   colorlinks: true
+  docx
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("curl", "data.table", "dplyr", "ggplot2", "here", "httr2",
+                        "lubridate", "janitor", "jsonlite", "readr", "stringi",
+                        "tidyr", "tidyselect") )
+
+
+# Data -------------------------------------------------------------------------
+parl_questions = data.table::fread(file = here::here(
+  "data_out", "parl_questions", "parl_questions.csv") )
+parl_questions = parl_questions[
+  grepl(pattern = "E-10-|E-9-|P-10-|P-9-", x = id, perl = TRUE)
+]
+n_priority = nrow(parl_questions[
+  grepl(pattern = "P-10-|P-9-", x = id, perl = TRUE)
+])
+n_nopriority = nrow(parl_questions[
+  grepl(pattern = "E-10-|E-9-", x = id, perl = TRUE)
+])
+
+
+list_tmp <- readr::read_rds("~/Documents/github/ep_api/data_out/parl_questions/parl_questions_list.rds") 
+
+
+# MEPs -------------------------------------------------------------------------
+meps_dates_ids <- data.table::fread(file = here::here(
+  "data_out", "meps", "meps_dates_ids_all.csv"),
+  key = c("pers_id", "activity_date") )
+meps_dates_ids[, c("country_id", "natparty_id") := NULL]
+meps_start_end = merge(
+  x = meps_dates_ids[, head(.SD, 1L),
+                     by = list(pers_id, polgroup_id) ],
+  y = meps_dates_ids[, tail(.SD, 1L),
+                     by = list(pers_id, polgroup_id) ],
+  by = c("pers_id", "polgroup_id", "mandate")
+)
+data.table::setnames(x = meps_start_end, 
+                     old = c("activity_date.x", "activity_date.y"),
+                     new = c("date_start", "date_end") )
+
+# Political Groups -------------------------------------------------------------
+political_groups_all <- data.table::fread(file = here::here(
+  "data_out", "bodies", "political_groups_all.csv") )
+
+# Renew IDs
+renew_polgroup_ids = c(5704L, 7035L)
+```
+
+This short note investigates the delays in answering to Parliamentary Questions by the Commission, especially towards Renew MEPs.
+
+We currently have `r nrow(parl_questions)` written questions available through the [EP API](https://data.europarl.europa.eu/en/developer-corner/opendata-api), of which `r n_priority` were priority, and `r n_nopriority` were not.
+
+
+## Renew's questions
+```{r}
+#| include: false
+
+### work_had_participation -----------------------------------------------------
+parl_question_work_had_participation <- lapply(
+  X = list_tmp,
+  FUN = function(i_question) {
+    if ( "workHadParticipation" %in% names(i_question) ) {
+      i_question[, c("id", "identifier", "document_date", "workHadParticipation")] 
+    }
+  }
+) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+# Unnest data.frame-column ----------------------------------------------------#
+parl_question_work_had_participation_unnest <- data.table::rbindlist(
+  l = parl_question_work_had_participation$workHadParticipation,
+  use.names = TRUE, fill = TRUE)
+
+# Rename ID
+data.table::setnames(x = parl_question_work_had_participation_unnest,
+                     old = "id", new = "participation_id")
+
+# Get ID
+parl_question_work_had_participation_unnest[, `:=`(
+  identifier = gsub(pattern = "(^.*)([A-Z].\\d{1,2}.\\d{4}.\\d{6})(.*$)",
+                    replacement = "\\2", x = participation_id )
+)]
+
+parl_question_work_had_participation_person = parl_question_work_had_participation_unnest[, lapply(
+  X = .SD, FUN = unlist), 
+  by = list(identifier), 
+  .SDcols = c("had_participant_person")]
+parl_question_work_had_participation_person[, had_participant_person := as.integer(
+  gsub("person/", replacement = "", x = had_participant_person) ) ]
+data.table::setnames(x = parl_question_work_had_participation_person,
+                     old = "had_participant_person", new = "pers_id")
+
+com_addressee = parl_question_work_had_participation_unnest |> 
+  dplyr::select(participation_id, identifier, had_participant_organization) |> 
+  tidyr::unnest(had_participant_organization) |> 
+  dplyr::filter(grepl(pattern = "COM", had_participant_organization) ) 
+unique(com_addressee$identifier[
+  !unique(com_addressee$identifier) %in% unique(parl_questions$identifier)]
+)
+
+
+parl_question_work_had_participation_person = parl_question_work_had_participation_person |> 
+  dplyr::left_join(
+    y = parl_question_work_had_participation[, list(id, identifier, document_date)],
+    by = "identifier"
+  ) |> 
+  dplyr::left_join(
+    y = meps_start_end,
+    by = "pers_id"
+  ) |> 
+  dplyr::filter(
+    document_date >= date_start
+    & date_start <= date_end
+  )
+
+
+parl_question_title <- lapply(
+  X = list_tmp,
+  FUN = function(i_question) {
+    if ( "title_dcterms" %in% names(i_question) ) {
+      i_question[, c("id", "identifier", "title_dcterms")] |> 
+        tidyr::unnest(title_dcterms)
+    }
+  }
+) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE) |> 
+  dplyr::select(id, identifier, en)
+
+
+# # Drop data.frame-column
+# parl_question_work_had_participation[, workHadParticipation := NULL]
+# # Merge
+# parl_question_work_had_participation <- parl_question_work_had_participation[
+#   parl_question_work_had_participation_unnest,
+#   on = "identifier"
+# ]
+# # Remove object
+# rm(parl_question_work_had_participation_unnest)
+```
+
+```{r}
+#| include: false
+
+### inverse_answers_to ---------------------------------------------------------
+parl_question_inverse_answers_to <- lapply(
+  X = list_tmp,
+  FUN = function(i_question) {
+    if ( "inverse_answers_to" %in% names(i_question) ) {
+      i_question[, c("id", "inverse_answers_to")] #
+    }
+  }
+) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+parl_question_inverse_answers_to = parl_question_inverse_answers_to[
+  grepl(pattern = "E-10-|E-9-|P-10-|P-9-", x = id, perl = TRUE)
+]
+
+document_date_answer <- lapply(
+  X = parl_question_inverse_answers_to$inverse_answers_to,
+  FUN = function(i_answer) {
+    if ("document_date" %in% names(i_answer))
+      i_answer[, c("id", "document_date")]
+  }) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+document_date_answer[, `:=`(
+  answer_id = id,
+  id = gsub("-ASW", replacement = "", x = id, fixed = TRUE)
+) ]
+```
+
+```{r}
+dt_tmp = parl_question_work_had_participation_person |> 
+  dplyr::filter(identifier %in% unique(com_addressee$identifier) ) |> 
+  dplyr::left_join(
+    y = document_date_answer,
+    by = "id"
+  ) |> 
+  dplyr::mutate(
+    document_date.x = as.IDate(document_date.x),
+    document_date.y = as.IDate(document_date.y),
+    time_diff = document_date.y - document_date.x
+  )
+
+renew_questions = dt_tmp |> 
+  filter(polgroup_id %in% renew_polgroup_ids) |> 
+  arrange(desc(time_diff)) |> 
+  select(time_diff, identifier) |> 
+  distinct() |> 
+  left_join(
+    y = parl_question_title,
+    by = "identifier"
+  ) |> 
+  mutate(type = ifelse(test = grepl(pattern = "P-", x = identifier),
+                       yes = "priority", no = "not priority"))
+# Total number of questions by Renew MEPs
+n_renew_questions = nrow(renew_questions)
+n_na_renew_questions = sum( is.na(renew_questions$time_diff) )
+
+renew_questions = renew_questions |> 
+  mutate(
+    is_e_above_42 = ifelse(
+      test = (time_diff > 42 & type == "not priority"),
+      yes = "yes", no = "no"),
+    is_p_above_21 = ifelse(
+      test = (time_diff > 21 & type == "priority"),
+      yes = "yes", no = "no"),
+  ) 
+```
+
+Over the 9th and 10th mandate, we could identify `r n_renew_questions` written questions that involved a Renew MEP **and** were addressed to the Commission.
+Out of these, `r n_na_renew_questions` do not currently have a reply date (time of writing: `r Sys.Date()`).
+It is unclear whether this is due to missing data or because these questions still have no reply from the Commission. 
+
+Below we report the 10 most delayed replies by type of questions (i.e. priority or not).
+```{r}
+renew_questions |> 
+  slice_max(order_by = time_diff, n = 10, by = type, na_rm = TRUE) |> 
+  select(type, en, identifier, time_diff) |>
+  knitr::kable()
+```
+
+Because we are not sure what the missing values stand for, we opt to just tally up the number of questions where the reply time exceeded the statutory limits.
+```{r}
+cbind(
+  renew_questions[
+    type == "not priority", 
+    list(`Is written question above 42 days?` = .N), 
+    by = is_e_above_42
+  ][order(is_e_above_42)],
+  renew_questions[
+    type == "priority", 
+    list(`Is priority written question above 21 days?` = .N), 
+    by = is_p_above_21
+  ][order(is_p_above_21)]
+) |> 
+  rename(
+    `no/yes/NA` = is_e_above_42
+  ) |> 
+  select(-is_p_above_21) |> 
+  knitr::kable()
+```
+
+
+
+## Comparing EPP, Renew, and S&D
+```{r}
+dt_plot = dt_tmp |> 
+  filter(polgroup_id %in% c(renew_polgroup_ids,
+                            5153, 7018, # EPP
+                            5154, 7038) # SD
+  ) |> 
+  mutate(
+    type = ifelse(test = grepl(pattern = "P-", x = identifier),
+                  yes = "priority", no = "not priority"),
+    polgroups = case_when(
+      polgroup_id %in% renew_polgroup_ids ~ "Renew",
+      polgroup_id %in% c(5153, 7018) ~ "EPP",
+      polgroup_id %in% c(5154, 7038) ~ "S&D"
+    ) ) |> 
+  select(polgroups, type, time_diff, identifier) |> 
+  distinct() 
+
+# dt_plot |> 
+#   summarise(median(time_diff, na.rm = TRUE), .by = polgroups)
+
+dt_plot |> 
+  ggplot(aes(x = polgroups, y = time_diff, , fill = polgroups)) +
+  geom_jitter(alpha = 0.2) +
+  geom_boxplot(outliers = FALSE) +
+  theme_minimal()
+
+dt_plot |> 
+  filter(time_diff < 300) |> 
+  ggplot(aes(x = polgroups, y = time_diff, , fill = polgroups)) +
+  geom_jitter(alpha = 0.2) +
+  geom_boxplot(outliers = FALSE) +
+  theme_minimal()
+
+dt_plot |> 
+  filter(time_diff < 300) |> 
+  ggplot(aes(x = type, y = time_diff, fill = polgroups)) +
+  geom_boxplot(outliers = FALSE) +
+  theme_minimal()
+```
+
+```{r}
+#| eval: false
+
+library(coin)
+dt_plot_short = dt_plot[
+  !is.na(time_diff)
+  & polgroups %in% c("Renew", "EPP")
+][, 
+  polgroups := as.factor(polgroups)]
+median_test(time_diff ~ polgroups, data = dt_plot_short)
+
+dt_plot_short = dt_plot[
+  !is.na(time_diff)
+  & type == "priority"
+  & polgroups %in% c("Renew", "EPP")
+][, 
+  polgroups := as.factor(polgroups)]
+median_test(time_diff ~ polgroups, data = dt_plot_short)
+
+dt_plot_short = dt_plot[
+  !is.na(time_diff)
+  & type == "not priority"
+  & polgroups %in% c("Renew", "EPP")
+][, 
+  polgroups := as.factor(polgroups)]
+median_test(time_diff ~ polgroups, data = dt_plot_short)
+```
+
+
+
+```{r}
+#| eval: false
+
+document_date_answer_creator <- lapply(
+  X = parl_question_inverse_answers_to$inverse_answers_to,
+  FUN = function(i_answer) {
+    if ("document_date" %in% names(i_answer))
+      i_answer[, c("id", "document_date")]
+  }) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+parl_question_inverse_answers_to <- parl_question_inverse_answers_to |>
+  tidyr::unnest_wider(inverse_answers_to, names_sep = "_") |>
+  dplyr::select(id, inverse_answers_to_id, inverse_answers_to_document_date,
+                inverse_answers_to_creator) |>
+  tidyr::unnest(inverse_answers_to_creator) |>
+  data.table::as.data.table()
+
+
+### work_had_participation -----------------------------------------------------
+parl_question_work_had_participation <- lapply(
+  X = list_tmp,
+  FUN = function(i_question) {
+    if ( "workHadParticipation" %in% names(i_question) ) {
+      i_question[, c("id", "identifier", "document_date", "workHadParticipation")] #
+    }
+  }
+) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+# Unnest data.frame-column ----------------------------------------------------#
+parl_question_work_had_participation_unnest <- data.table::rbindlist(
+  l = parl_question_work_had_participation$workHadParticipation,
+  use.names = TRUE, fill = TRUE)
+# Rename ID
+data.table::setnames(x = parl_question_work_had_participation_unnest,
+                     old = "id", new = "participation_id")
+# Get ID
+parl_question_work_had_participation_unnest[, `:=`(
+  identifier = gsub(pattern = "(^.*)([A-Z].\\d{1,2}.\\d{4}.\\d{6})(.*$)",
+                    replacement = "\\2", x = participation_id )
+)]
+# Drop data.frame-column
+parl_question_work_had_participation[, workHadParticipation := NULL]
+# Merge
+parl_question_work_had_participation <- parl_question_work_had_participation[
+  parl_question_work_had_participation_unnest,
+  on = "identifier"
+]
+# Remove object
+rm(parl_question_work_had_participation_unnest)
+
+
+#------------------------------------------------------------------------------#
+### Test time difference -------------------------------------------------------
+dt_tmp = unique(parl_question_work_had_participation[, list(id, document_date)]) |>
+  full_join(
+    y = parl_question_inverse_answers_to |>
+      dplyr::select(id, inverse_answers_to_document_date) |>
+      tidyr::unnest_longer(inverse_answers_to_document_date) |>
+      dplyr::filter(!is.na(inverse_answers_to_document_date)) |>
+      dplyr::distinct(),
+    by = "id"
+  )
+dt_tmp[, .N, by = id][order(N)]
+
+dt_tmp[, `:=`(
+  inverse_answers_to_document_date = data.table::as.IDate(inverse_answers_to_document_date),
+  document_date = data.table::as.IDate(document_date)
+)]
+dt_tmp[, time_diff := inverse_answers_to_document_date - document_date]
+summary(dt_tmp$time_diff)
+
+questions_priority <- unique(parl_questions$id[
+  parl_questions$work_type == "def/ep-document-types/QUESTION_WRITTEN_PRIORITY"])
+questions_no_priority <- unique(parl_questions$id[
+  parl_questions$work_type == "def/ep-document-types/QUESTION_WRITTEN"])
+addressee_iscom <- unique(parl_question_work_had_participation$id[
+  grepl(pattern = "_COM",
+        x = parl_question_work_had_participation$participation_id)])
+
+no_priority_10 <- unique(dt_tmp[
+  document_date >= as.IDate("2024-07-01")
+  & id %in% questions_no_priority
+  & id %in% addressee_iscom
+][,
+  is_above21 := ifelse(test = time_diff > 42L, yes = 1L, no = 0L)
+])
+sum(no_priority_10$is_above21, na.rm = TRUE) # 1481
+
+priority_10 <- unique(dt_tmp[
+  document_date >= as.IDate("2024-07-01")
+  & id %in% questions_priority
+  & id %in% addressee_iscom
+][,
+  is_above21 := ifelse(test = time_diff > 42L, yes = 1L, no = 0L)
+])
+sum(no_priority_10$is_above21, na.rm = TRUE) # 1481
+```
+
+```{r}
+no_reply = dt_tmp[
+  is.na(x = document_date.y)
+]
+```
+
+
+## Missing Replies
+Below we examine random cases of missing reply dates:
+
+* `P-9-2019-002142`, [ How can the EU contribute to tackling drug-related crime in North Brabant?](https://www.europarl.europa.eu/RegData/questions/ecrites/2019/002142/P8_QP(2019)002142_EN.pdf) is the oldest question without a reply data in the database.
+it was recorded on `2024-07-16`.
+We could not find a reply either on the EP Public Register, or on Eur-Lex.
+* The second oldest is `P-9-2019-002153`, [Notification procedure regarding legislation on glyphosate in Austria](https://www.europarl.europa.eu/RegData/questions/ecrites/2019/003747/P9_QP(2019)003747_EN.pdf).
+Albeit this does not have a reply date in the API, we were able to find an answer in the [EP Public Register](https://www.europarl.europa.eu/RegData/questions/reponses_qe/2019/003747/P9_RE(2019)003747_EN.pdf).
+* Third oldest is `P-9-2019-002154`, [EMFF projects relating to seals in Finland](https://www.europarl.europa.eu/RegData/questions/ecrites/2019/002154/P8_QP(2019)002154_EN.pdf).
+For this again we could not find any reply on either website mentioned above. 
+* In 2020, we picked `P-9-2020-007107`, [Assessment of the Italian Government’s bonus policy](https://www.europarl.europa.eu/RegData/questions/ecrites/2020/007107/P9_QP(2020)007107_EN.pdf).
+Again, we could not find any reply to this question. 
+* Picking another random priority question, `P-9-2021-001944` (Progress in the international investigation into Moldova’s USD 1 billion bank theft), we have no reply date in the API, but we do find a reply on the [EP Public Register](https://www.europarl.europa.eu/RegData/questions/reponses_qe/2021/001944/P9_RE(2021)001944_EN.pdf). 

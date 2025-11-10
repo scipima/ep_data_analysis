@@ -1,0 +1,93 @@
+---
+date: "`r Sys.Date()`"
+format: 
+  pdf:
+    colorlinks: true
+    geometry:
+      - top=10mm
+      - bottom=20mm
+      - left=10mm
+      - right=10mm
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+params:
+  country_iso3c: "country_iso3c"
+  national_party: "national_party"
+---
+
+# Parties' Attendance and Alignment - (`r paste(params$country_iso3c, params$national_party, sep= " - ")`)
+
+## Attendance and Alignment
+```{r qmdparams}
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "here", "lubridate",
+                        "janitor", "quarto", "stringr", "tidyr") )
+
+
+#------------------------------------------------------------------------------#
+# Read in reference grid
+attendance_align = data.table::fread(here::here(
+  "analyses", "attendance_align", "attendance_align.csv") )
+# params <- data.frame(
+#   country_iso3c = "IRL",
+#   national_party = "Independent - Ciaran MULLOOLY"
+# ) # uncomment to test
+
+
+# Print table ------------------------------------------------------------------
+if (params$country_iso3c == "IRL" 
+    && grepl(pattern = "Independent - ", x = params$national_party,
+             fixed = TRUE) ) {
+  
+  # Extract strings for Irish Independents
+  params_mep_name = stringr::str_remove(string = params$national_party,
+                                        pattern = "^.*\\s-\\s")
+  
+  # Subset
+  attendance_align_tbl = attendance_align |> 
+    dplyr::filter(
+      country_iso3c == params$country_iso3c
+      & national_party == "Ind."
+      & mep_name == params_mep_name
+    ) |> 
+    dplyr::select(mep_name, avg_align, sum_rcv, sum_days_rcv, present, excused)   
+  
+} else {
+  attendance_align_tbl = attendance_align |> 
+    dplyr::filter(
+      country_iso3c == params$country_iso3c
+      & national_party == params$national_party
+    ) |> 
+    dplyr::select(mep_name, avg_align, sum_rcv, sum_days_rcv, present, excused) 
+}
+
+# Calculate fields
+tot_rcv_days = unique(attendance_align$tot_rcv_days)
+tot_attendance_days = na.omit(unique(attendance_align$tot_attendance_days))
+
+names(attendance_align_tbl) = c(
+  "MEP", "Alignment (%)", "N. RCVs", 
+  paste0("N. Sessions Voted (out of ",
+         tot_rcv_days, ")"),
+  paste0("N. Attending Days (out of ", 
+         tot_attendance_days, ")"),
+  "Excused"
+) 
+
+attendance_align_tbl |> 
+  knitr::kable(align = "c")
+```
+
+
+## Data dictionary
+
+* `Alignment`: share of times in which the MEP has voted together with the Group's majority (in percent).
+* `N. RCVs`: number of RCVs where the MEP voted.
+* `N. Sessions Voted`: number of days in which the MEP voted at least once.
+* `N. Attending Days`: number of days in which the MEP signed the Attendance Lists.
+* `Excused`: number of days in which the MEP was excused in the Attendance Lists.

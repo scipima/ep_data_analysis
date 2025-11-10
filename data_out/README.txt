@@ -1,0 +1,1 @@
+This folder stores all the processed output data.

@@ -1,0 +1,669 @@
+---
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+#| echo: false
+#| include: false
+
+# Clear ENV
+# rm(list = ls())
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "here", "janitor", "knitr", 
+                        "lubridate", "readxl", "tidyr") )
+
+# hard code today's date
+if ( !exists("today_date") ) {
+  today_date <- gsub(pattern = "-",
+                     replacement = "", x = as.character( Sys.Date() ) )
+  today_ymd <- Sys.Date()
+  # today_date <- "20250212" # test
+  # today_ymd <- "2025-02-12" # test
+  today_date_print <- paste(lubridate::day(today_ymd), 
+                            lubridate::month(today_ymd, label = TRUE, abbr = FALSE),
+                            lubridate::year(today_ymd) )
+}
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Data ------------------------------------------------------------------------
+### Plenary Docs & Committees --------------------------------------------------
+plenary_docs_committee <- data.table::fread(file = here::here(
+  "data_out", "docs_pl", "plenary_docs_committee.csv"), 
+  select = c("committee_lab", "doc_id"), na.strings = c(NA_character_, "") ) 
+
+
+### RCV ------------------------------------------------------------------------
+if ( !exists("rcv_today") ) {
+  rcv_today <- data.table::fread(file = here::here(
+    "data_out", "daily", 
+    paste0("rcv_today_", today_date, ".csv") ), 
+    na.strings = c(NA_character_, "")  ) |> 
+    join_meps_countries() |> 
+    join_meps_names() |> 
+    join_polit_labs()
+  rcv_today[, result_fct := factor(result, levels = -3L : 1L, 
+                                   labels =  c("absent", "no_vote", "against", 
+                                               "abstain", "for") ) ]
+}
+
+vote_labs <- setNames(
+  object = c("Absent", "Did not vote", "Against", "Abstain", "For"),
+  nm = c("absent", "no_vote", "against", "abstain", "for") )
+
+
+### Votes ----------------------------------------------------------------------
+if ( !exists("votes_today") ) {
+  votes_today <- data.table::fread(file = here::here(
+    "data_out", "daily", paste0("votes_today_", today_date, ".csv") ), 
+    na.strings = c(NA_character_, "")  ) 
+}
+
+# Catch inconsistencies in data stream ----------------------------------------#
+if ( "vote_label_en" %in% names(votes_today) ) {
+  data.table::setnames(x = votes_today,
+                       old = "vote_label_en", new = "vote_label")
+} else if ( "vote_label_fr" %in% names(votes_today) ) {
+  data.table::setnames(x = votes_today,
+                       old = "vote_label_fr", new = "vote_label")
+} else if ( "vote_label_mul" %in% names(votes_today) ) {
+  
+  # Extract multilingual vector
+  vote_label_mul <- votes_today$vote_label_mul
+  
+  # List of split vectors
+  vote_labels_list = stringr::str_split(string = vote_label_mul,
+                                        pattern = "\\s-\\s")
+  
+  # Delimiter counts
+  delim_count = stringi::stri_count(str = vote_label_mul,
+                                    regex = "\\s-\\s")
+  delim_first = delim_count/2
+  # idx = 2L
+  
+  # Empty repository
+  vote_labels_en <- vector(mode = "list", length = length(vote_label_mul))
+  
+  for (i_row in seq_along(vote_label_mul)) {
+    
+    # Extract string vector
+    full_label = vote_labels_list[[ i_row ]]
+    
+    # Store ENG title
+    vote_labels_en[[i_row]] <- paste0(
+      full_label[ (delim_first[ i_row ] + 1) : delim_count[ i_row ] ],
+      collapse = " - ")
+  }
+  
+  # Append vector to original data
+  votes_today <- cbind(votes_today, vote_label = unlist(vote_labels_en) )
+  
+} else {
+  stop("You have no vote title! Check again.")
+}
+
+
+# Filter just to final votes
+cols_tokeep <- c("doc_id", "rcv_id", "vote_label", "referenceText_en",
+                 "referenceText_fr", "activity_label_mul", "activity_label_fr",
+                 "activity_label_en", "number_of_attendees", "number_of_votes_favor",
+                 "number_of_votes_abstention", "number_of_votes_against")
+final_votes <- votes_today |> 
+  dplyr::filter(
+    is_final == 1
+    & decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+  ) |> 
+  dplyr::select( any_of(cols_tokeep) ) 
+
+if ( !"number_of_attendees" %in% names(votes_today) ) {
+  final_votes$number_of_attendees <- NA
+}
+
+
+# Convert NA to 0
+cols_outcome <- c("number_of_votes_favor", "number_of_votes_abstention",
+                  "number_of_votes_against")
+final_votes[, c(cols_outcome) := lapply(
+  X = .SD, 
+  FUN = function(x) {ifelse(test = is.na(x), 0L, x) } ),
+  .SDcols =  cols_outcome]
+
+# CHECK: Do we have a majority for each vote?
+final_votes[, n_max := apply(
+  X = .SD, MARGIN = 1,
+  FUN = function(x) { 
+    length( x[x == max(x)] )
+  } ),
+  .SDcols =  cols_outcome]
+
+if ( any(final_votes$n_max > 1L) ) {
+  stop("One or more votes does not have a majority!")
+}
+
+# Get the max col
+final_votes[, vote_outcome_int := max.col(.SD), 
+            .SDcols = cols_outcome]
+# Rename
+final_votes[vote_outcome_int == 1L, vote_outcome := "for"]
+final_votes[vote_outcome_int == 3L, vote_outcome := "against"]
+final_votes[vote_outcome_int == 2L, vote_outcome := "abstain"]
+# Calculate N. attendees
+final_votes[, 
+            votes_sum := rowSums(.SD),
+            .SDcols = c("number_of_votes_favor", "number_of_votes_abstention",
+                        "number_of_votes_against")
+]
+# If attendees missing, then insert calculated fields
+final_votes[, `:=`(
+  number_of_attendees = ifelse(
+    test = is.na(number_of_attendees),
+    yes = votes_sum, no = number_of_attendees)
+)
+]
+# Drop cols
+final_votes[, c("votes_sum", "n_max", "vote_outcome_int") := NULL] # Remove tmp col
+
+# Fix the string of vote title - there cannot be any starts otherwise the Markdown interpret them as italics or bold
+final_votes[, vote_label := gsub(pattern = "\\s\\*{1,3}I",
+                                 replacement = "", x = vote_label)]
+
+
+### Include Committees ---------------------------------------------------------
+cmt_length <- plenary_docs_committee$committee_lab[ 
+  plenary_docs_committee$doc_id %in% final_votes$doc_id ] 
+if ( length(cmt_length) > 0L ) {
+  rcvid_docid_cmt <- final_votes |> 
+    dplyr::select(rcv_id, doc_id) |> 
+    dplyr::left_join(
+      y = plenary_docs_committee,
+      by = "doc_id") |> 
+    dplyr::filter(!is.na(committee_lab)) |> 
+    dplyr::arrange(rcv_id, committee_lab) |> 
+    dplyr::group_by(rcv_id, doc_id) |> 
+    dplyr::summarise(committee_lab = paste0( committee_lab, collapse = "-") ) |> 
+    dplyr::ungroup()
+  
+  final_votes <- final_votes |> 
+    dplyr::left_join(
+      y = rcvid_docid_cmt,
+      by = c("rcv_id", "doc_id")
+    )
+}
+rm(cmt_length, rcvid_docid_cmt)
+if ( !"committee_lab" %in% names(final_votes) ) {
+  final_votes[, committee_lab := NA]
+} 
+
+#------------------------------------------------------------------------------#
+### rcv_tally_bygroup_wide -----------------------------------------------------
+if ( !exists("rcv_tally_bygroup_wide") ) {
+  rcv_tally_bygroup_wide <- readxl::read_excel(here::here(
+    "data_out", "aggregates", "daily", "xlsx",
+    paste0("rcv_tally_", today_date, ".xlsx") ), 
+    sheet = "rcv_tally_bygroup_wide") |> 
+    # Filter to just final votes
+    dplyr::filter(rcv_id %in% final_votes$rcv_id) |> 
+    data.table::as.data.table() 
+}
+
+if ( any( is.na(rcv_tally_bygroup_wide$political_group) ) ) {
+  warning("You have missing values in Political Groups - Unlikely!")
+} 
+
+# Get majority ----------------------------------------------------------------#
+cols_outcome <- c("absent", "no_vote", "against", "abstain", "for")
+rcv_tally_bygroup_wide[, mjrt_int := max.col(.SD), 
+                       .SDcols =  cols_outcome]
+rcv_tally_bygroup_wide[, mjrt_labs := factor(mjrt_int, 
+                                             levels = 1:length(cols_outcome), 
+                                             labels = cols_outcome) ] 
+
+
+# CHECK: Do we have a majority for each vote? ---------------------------------#
+rcv_tally_bygroup_wide[, n_max := apply(
+  X = .SD, MARGIN = 1,
+  FUN = function(x) { 
+    length( x[x == max(x)] )
+  } ),
+  .SDcols =  cols_outcome]
+# Overwrite `mjrt_labs` if TIE
+rcv_tally_bygroup_wide[, mjrt_labs := data.table::fifelse(
+  test = n_max > 1L, yes = NA, no = mjrt_labs)]
+rcv_tally_bygroup_wide[, c("mjrt_int", "n_max") := NULL] # Remove tmp col
+
+# All Political Groups in English
+# unique(rcv_tally_bygroup_wide$political_group)
+rcv_tally_bygroup_wide[
+  political_group == "Verts/ALE", 
+  political_group := "Greens/EFA"
+]
+rcv_tally_bygroup_wide[
+  political_group == "PPE", 
+  political_group := "EPP"
+]
+rcv_tally_bygroup_wide[
+  political_group == "Renew", 
+  political_group := "Renew Europe"
+]
+
+
+#------------------------------------------------------------------------------#
+### rcv_tally_bynatparty_wide --------------------------------------------------
+if ( !exists("rcv_tally_bynatparty_wide") ) {
+  rcv_tally_bynatparty_wide <- readxl::read_excel(here::here(
+    "data_out", "aggregates", "daily", "xlsx",
+    paste0("rcv_tally_", today_date, ".xlsx") ), 
+    sheet = "rcv_tally_bynatparty_wide") |> 
+    dplyr::filter(rcv_id %in% final_votes$rcv_id) |> 
+    data.table::as.data.table() 
+}
+
+# Get majority ----------------------------------------------------------------#
+# Get the max col
+rcv_tally_bynatparty_wide[, mjrt_int := max.col(.SD), 
+                          .SDcols =  cols_outcome]
+# Rename
+rcv_tally_bynatparty_wide[, mjrt_labs := factor(mjrt_int, 
+                                                levels = 1:length(cols_outcome), 
+                                                labels = cols_outcome) ] 
+
+# CHECK: Do we have a majority for each vote? ---------------------------------#
+rcv_tally_bynatparty_wide[, n_max := apply(
+  X = .SD, MARGIN = 1,
+  FUN = function(x) { 
+    length( x[x == max(x)] )
+  } ),
+  .SDcols =  cols_outcome]
+# Overwrite `mjrt_labs` if TIE
+rcv_tally_bynatparty_wide[, mjrt_labs := data.table::fifelse(
+  test = n_max > 1L, NA, mjrt_labs)]
+rcv_tally_bynatparty_wide[, c("mjrt_int", "n_max") := NULL] # Remove tmp col
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+get_vote <- function(rcv_id = NULL, political_group = "Renew Europe", vote = "for") {
+  as.data.frame(rcv_tally_bygroup_wide)[
+    rcv_tally_bygroup_wide$political_group == "Renew Europe"
+    & rcv_tally_bygroup_wide$rcv_id == i_rcvid, 
+    vote]
+}
+```
+
+
+![](PrimaryLogo_RGB-Cyan.png){fig.pos="H"}
+
+
+## Automated Voting Analysis of `{r} today_date_print`
+```{r}
+#| echo: false
+#| results: 'asis'
+
+#------------------------------------------------------------------------------#
+# REF: https://stackoverflow.com/questions/74988246/generate-paragraphs-inside-a-loop-in-quarto; https://stackoverflow.com/questions/79213462/how-to-loop-through-a-dataframe-to-create-a-table-of-contents-in-quarto; https://stackoverflow.com/questions/78073272/r-and-quarto-do-not-generate-headers-inside-for-loop; https://www.andrewheiss.com/blog/2024/11/04/render-generated-r-chunks-quarto/
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+# Disclaimer ------------------------------------------------------------------#
+cat("_DISCLAIMER_: This summary was generated using automated data extraction and computational analysis based on publicly available information from the European Parliament website with no human check. Please keep in mind that this document is the sole property of the Renew Europe Group and should not be disseminated to other people or organisations.\n\n_DEFINITIONS_: _Absent_ refers to an MEP who did not vote on any RCVs during the session; _Did not vote_ refers to an MEP who did not vote on this specific RCV.\n\n")
+
+cat("{{< pagebreak >}}\n\n")
+```
+
+
+```{r}
+#| echo: false
+#| results: 'asis'
+
+
+#------------------------------------------------------------------------------#
+for (i_row in seq_len( nrow(final_votes) ) ) {
+  
+  # Section header ------------------------------------------------------------#
+  if ( is.na(final_votes$committee_lab[i_row]) ) {
+    cat("### __", 
+        final_votes$vote_label[i_row],
+        " (",
+        final_votes$doc_id[i_row],
+        ")__.\n\n", 
+        sep = "")   
+  } else {
+    cat("### __", 
+        final_votes$vote_label[i_row],
+        " (",
+        final_votes$doc_id[i_row],
+        "; ",
+        final_votes$committee_lab[i_row],
+        ")__.\n\n", 
+        sep = "") 
+  }
+  
+  # Attendees --------------------------------------------------#
+  cat(final_votes$number_of_attendees[i_row],
+      " Members of the European Parliament participated in the final vote.\n\n", 
+      sep = "")
+  
+  # Outcome -------------------------------------------------------------------#
+  house_mjrt <- final_votes$vote_outcome[i_row]
+  if (house_mjrt == "for") {
+    cat("The European Parliament voted __in favour__, ", sep = "") 
+  } else if (house_mjrt == "against") {
+    cat("The European Parliament voted __against__, ", sep = "")
+  } else {
+    cat("The European Parliament __abstained__, ", sep = "")
+  }
+  cat("with the results as follows:\n\n * __For__: ",
+      final_votes$number_of_votes_favor[i_row],
+      ";\n * __Against__: ",
+      final_votes$number_of_votes_against[i_row],
+      ";\n * __Abstentions__: ", 
+      final_votes$number_of_votes_abstention[i_row],
+      "\n\n", 
+      sep = "")
+  
+  
+  # Is Renew in the winning coalition? ----------------------------------------#
+  i_rcvid <- final_votes$rcv_id[i_row]
+  renew_mjrt <- as.character(rcv_tally_bygroup_wide$mjrt_labs[
+    rcv_tally_bygroup_wide$political_group == "Renew Europe"
+    & rcv_tally_bygroup_wide$rcv_id == i_rcvid])
+  
+  if ( is.na(renew_mjrt) ) {
+    cat("The Renew Europe Group __did not express a majority__. ")
+  } else if (house_mjrt == renew_mjrt) {
+    cat("The Renew Europe Group was __part of the winning majority__ ", 
+        sep = "")
+  } else {
+    cat("The Renew Europe Group was __not part of the winning majority__ ", 
+        sep = "")
+  }
+  
+  # Renew's cohesion ----------------------------------------------------------#
+  cat("Renew Europe's __cohesion rate__ was ",
+      rcv_tally_bygroup_wide$cohesion[
+        rcv_tally_bygroup_wide$political_group == "Renew Europe"
+        & rcv_tally_bygroup_wide$rcv_id == i_rcvid],
+      "%. ", 
+      sep = "")
+  
+  # Group tally  --------------------------------------------------------------#
+  cat(
+    "The Group vote breakdown was:\n\n * __For__: ",
+    get_vote(rcv_id = i_rcvid),
+    ";\n * __Against__: ",
+    get_vote(rcv_id = i_rcvid, vote = "against"),
+    ";\n * __Abstentions__: ",
+    get_vote(rcv_id = i_rcvid, vote = "abstain"),
+    ";\n * __Did not vote__: ",
+    get_vote(rcv_id = i_rcvid, vote = "no_vote"),
+    ";\n * __Absent__: ",
+    get_vote(rcv_id = i_rcvid, vote = "absent"),
+    "\n\n",
+    sep = "")
+  
+  if ( is.na(renew_mjrt) ) {
+    # Paste together MEPs and their Parties
+    rcv_today[,
+              mep_party := paste(mep_name, 
+                                 " (", 
+                                 country_iso3c, 
+                                 " - ", 
+                                 national_party, 
+                                 ")", 
+                                 sep = "")
+    ][order(mep_name)]
+    
+    # Get the vote tally for Renew in this RCV
+    votes_tally <- table(rcv_today$result_fct[ 
+      rcv_today$rcv_id %in% i_rcvid 
+      & rcv_today$polgroup_id %in% 7035]
+    )
+    # Get just the labels
+    votes_tally <- names(votes_tally[votes_tally != 0])
+    votes_tally_labs <- vote_labs[ names(vote_labs) %in% votes_tally ]
+    
+    # Print out the MEPs by vote choice
+    cat("The detailed breakdown of the vote is as follows:\n\n", sep = "")
+    
+    # Loop over the actual votes
+    for (i_result in seq_along(votes_tally)) {
+      cat("* __",
+          votes_tally_labs[ i_result ],
+          "__: ",
+          paste0(rcv_today$mep_party[
+            rcv_today$rcv_id == i_rcvid
+            & rcv_today$polgroup_id == 7035
+            & rcv_today$result_fct == votes_tally[ i_result ]
+          ], collapse = "; "),
+          "\n\n",
+          sep = "")
+    }
+    # Remove loop objects
+    rm(votes_tally, votes_tally_labs, i_result)
+  }
+  
+  
+  # Vote Coalition ------------------------------------------------------------#
+  if ( !is.na(renew_mjrt) ) {
+    renew_coalition <- rcv_tally_bygroup_wide$political_group[
+      rcv_tally_bygroup_wide$political_group != "Renew Europe"
+      & rcv_tally_bygroup_wide$mjrt_labs %in% renew_mjrt 
+      & rcv_tally_bygroup_wide$rcv_id == i_rcvid]
+  }
+  
+  if ( !is.na(renew_mjrt) && length(renew_coalition > 1L) ) {
+    cat("Renew Europe voted alongside: __",
+        paste0(renew_coalition, collapse = ", "),
+        "__.\n\n",
+        sep = "")  
+  } else if ( !is.na(renew_mjrt) && length(renew_coalition == 1L) ) {
+    cat("The Group that voted together with Renew Europe was: __",
+        renew_coalition,
+        "__.\n\n",
+        sep = "") 
+  } else if ( !is.na(renew_mjrt) && length(renew_coalition == 0L) ) {
+    cat("No other Group voted together with Renew Europe.\n\n",
+        sep = "")
+  }      
+  
+  
+  # Cohesion rates of the other Groups ----------------------------------------#
+  groups_cohesion <- rcv_tally_bygroup_wide |> 
+    dplyr::filter(rcv_id == i_rcvid & political_group != "Renew Europe") |> 
+    dplyr::select(political_group, cohesion) |> 
+    dplyr::arrange(desc(cohesion), political_group) |> 
+    dplyr::mutate(
+      group_cohesion = paste(
+        political_group, " (", cohesion, "%)", sep = ""
+      )
+    ) |> 
+    dplyr::pull(group_cohesion)
+  
+  cat("__Cohesion rates of other Groups__: ",
+      paste0(groups_cohesion, collapse = "; "),
+      ".\n\n",
+      sep = "")
+  
+  # Print out Groups that did not have a majority -----------------------------#
+  groups_mjrt <- rcv_tally_bygroup_wide$political_group[
+    is.na(rcv_tally_bygroup_wide$mjrt_labs) 
+    & rcv_tally_bygroup_wide$political_group != "Renew Europe"
+    & rcv_tally_bygroup_wide$rcv_id == i_rcvid]
+  if ( length(groups_mjrt) > 1L ) {
+    cat("These Groups did not express a majority: ",
+        paste0(groups_mjrt, collapse = ", "),
+        ".\n\n",
+        sep = "") 
+  } else if ( length(groups_mjrt) == 1L ) {
+    cat("This Group did not express a majority: ",
+        groups_mjrt,
+        ".\n\n",
+        sep = "")
+  }
+  
+  
+  # Get list of divergent parties ---------------------------------------------#
+  # renew_divergent_parties <- rcv_tally_bynatparty_wide$national_party[
+  #   !rcv_tally_bynatparty_wide$mjrt_labs %in% renew_mjrt
+  #   & !is.na(rcv_tally_bynatparty_wide$mjrt_labs)
+  #   & rcv_tally_bynatparty_wide$political_group == "Renew Europe"
+  #   & rcv_tally_bynatparty_wide$rcv_id == i_rcvid]
+  
+  # Conditionally print list of divergent parties
+  # if ( !is.na(renew_mjrt) && length(renew_divergent_parties) > 1L ) {
+  #   cat("The parties whose majorities did not follow the Group's majority were: ",
+  #       paste0(
+  #         renew_divergent_parties,
+  #         collapse = ", "),
+  #       ".\n\n",
+  #       sep = "")
+  # } else if ( !is.na(renew_mjrt) && length(renew_divergent_parties) == 1L ) {
+  #   cat("The party whose majority did not follow the Group's majority was: ",
+  #       renew_divergent_parties,
+  #       ".\n\n",
+  #       sep = "")
+  # } else {
+  #   cat("\n\n")
+  # }
+  
+  
+  # Get list of divergent MEPS ------------------------------------------------#
+  # Get the vote tally for Renew in this RCV
+  votes_tally <- table(rcv_today$result_fct[ 
+    rcv_today$rcv_id %in% i_rcvid 
+    & rcv_today$polgroup_id %in% 7035]
+  )
+  # Get just the labels, in decreasing order
+  votes_tally <- names(votes_tally[votes_tally != 0])
+  votes_tally <- votes_tally[ !votes_tally %in% renew_mjrt ]
+  
+  # Are there divergent MEPs and Renew has a majority? If not, skip the entire loop
+  if ( !is.na(renew_mjrt) && length(votes_tally) > 0L ) {
+    # Paste together MEPs and their Parties
+    dt_tmp <- rcv_today[
+      rcv_id == i_rcvid
+      & polgroup_id == 7035L,
+    ][, mep_party := paste(mep_name, 
+                           " (", 
+                           country_iso3c, 
+                           " - ", 
+                           national_party, 
+                           ")", 
+                           sep = "")
+    ][order(mep_name)]
+    
+    
+    # Amongst divergent MEPs, are there any who did not vote with the majority?
+    no_mjrt <- votes_tally[votes_tally %in% c("against", "abstain", "for")]
+    
+    if ( length(no_mjrt) > 0L ) {
+      
+      no_mjrt_labs <- vote_labs[ names(vote_labs) %in% no_mjrt ]
+      
+      # Print out the MEPs by vote choice
+      cat("__Renew Europe MEPs not following the Group's majority__:\n\n", 
+          sep = "")
+      
+      # Loop over the actual votes
+      for (i_result in seq_along(no_mjrt) ) {
+        cat("* __",
+            no_mjrt_labs[ i_result ],
+            "__: ",
+            paste0(dt_tmp$mep_party[
+              dt_tmp$rcv_id == i_rcvid
+              & dt_tmp$polgroup_id == 7035
+              & dt_tmp$result_fct == no_mjrt[ i_result ]
+            ], collapse = "; "),
+            "\n\n",
+            sep = "")
+      }
+      # Remove loop objects
+      rm(i_result, no_mjrt, no_mjrt_labs) 
+    }
+    
+    
+    # Amongst divergent MEPs, are there any who did not take part?
+    not_part <- votes_tally[votes_tally %in% c("no_vote", "absent")]
+    not_part <- not_part[ 
+      order( 
+        match(x = not_part, 
+              table = c("no_vote", "absent") ) 
+      ) ]
+    
+    if ( length(not_part) > 0L ) {
+      
+      not_part_labs <- vote_labs[ names(vote_labs) %in% not_part ]
+      not_part_labs <- not_part_labs[ 
+        order( 
+          match(x = not_part_labs, 
+                table = c("Did not vote", "Absent") ) 
+        ) ]
+      
+      # Print out the MEPs by vote choice
+      cat("__Renew Europe MEPs not participating in this vote__:\n\n", sep = "")
+      
+      # Loop over the actual votes
+      for (i_result in seq_along(not_part) ) {
+        cat("* __",
+            not_part_labs[ i_result ],
+            "__: ",
+            paste0(dt_tmp$mep_party[
+              dt_tmp$rcv_id == i_rcvid
+              & dt_tmp$polgroup_id == 7035
+              & dt_tmp$result_fct == not_part[ i_result ]
+            ], collapse = "; "),
+            "\n\n",
+            sep = "")
+      }
+      # Remove loop objects
+      rm(i_result, not_part, not_part_labs)
+    }
+    # Remove loop objects
+    rm(votes_tally) 
+  }
+  
+  
+  # Get list of parties with no majorities ------------------------------------#
+  # renew_nomjrt_parties <- rcv_tally_bynatparty_wide$national_party[
+  #   is.na(rcv_tally_bynatparty_wide$mjrt_labs)
+  #   & rcv_tally_bynatparty_wide$political_group == "Renew Europe"
+  #   & rcv_tally_bynatparty_wide$rcv_id == i_rcvid]
+  
+  # Conditionally print list of parties with no majorities
+  # if ( !is.na(renew_mjrt) && length(renew_nomjrt_parties) > 1L ) {
+  #   cat("These parties did not express a majority: ",
+  #       paste0(
+  #         renew_nomjrt_parties,
+  #         collapse = ", "),
+  #       ".\n\n",
+  #       sep = "")
+  # } else if ( !is.na(renew_mjrt) && length(renew_nomjrt_parties) == 1L ) {
+  #   cat("This party did not express a majority: ",
+  #       renew_nomjrt_parties,
+  #       ".\n\n",
+  #       sep = "")
+  # } else {
+  #   cat("\n\n")
+  # }
+  
+  
+  # Section break -------------------------------------------------------------#
+  if (i_row < nrow(final_votes) ) {
+    cat("{{< pagebreak >}}\n\n") }
+}
+```

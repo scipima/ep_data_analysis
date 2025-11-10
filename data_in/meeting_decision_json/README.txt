@@ -1,0 +1,1 @@
+This folder stores all the unaltered incoming .json files for Meeting Decisions from Plenary.
