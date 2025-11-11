@@ -20,6 +20,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -47,3 +48,58 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Renv folder created by GitHub Actions
+/renv/*
+
+# data_in
+#/data_in/*/*.xml
+
+# Ignore data_out folder ...
+/data_out/*.csv
+/data_out/*/*.csv
+/data_out/*/*.xlsx
+/data_out/*/*.rds
+/data_out/*/*/*.csv
+/data_out/*/*/*/*.csv
+/data_out/*/*/*/*.xlsx
+/data_out/docs_pl/all_plenary_docs_api.txt
+/data_out/docs_pl/all_plenary_docs_doceo_links.txt
+
+# ... Except for these files -----------------------------------------
+## MEPs
+!/data_out/meps/meps_dates_ids_10.csv
+!/data_out/meps/meps_current.csv
+!/data_out/meps/meps_mandate_10.csv
+!/data_out/meps/meps_ids_list.rds
+
+## Meetings data (to check MEPs data)
+!/data_out/meetings/pl_meetings_10.csv
+!/data_out/meetings/pl_meetings_all.csv
+
+## Attendance data (to check MEPs data)
+!/data_out/attendance/pl_attendance_10.csv
+!/data_out/attendance/pl_attendance_all.csv
+
+!/data_out/bodies/body_id_full_10.csv
+!/data_out/bodies/political_groups_10.csv
+!/data_out/bodies/national_parties_10.csv
+!/data_out/bodies/committee_long.csv
+!/data_out/bodies/committee_wide.csv
+!/data_out/bodies/bodies_ids_list.rds
+
+!/data_out/procedures/procedures.csv
+!/data_out/procedures/procedures_created_a_realization_of.csv
+
+
+# vote json
+data_in/meeting_decision_json/*.json
+data_in/plenary_docs_api_json/*
+
+# Analyses
+/analyses/*/*.html
+/analyses/*/*.pdf
+/analyses/*/*/*.pdf
+
+# Figures
+/figures/*
