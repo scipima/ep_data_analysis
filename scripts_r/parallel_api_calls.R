@@ -16,6 +16,7 @@
 #' @param show_progress Logical, whether to show progress bar (default: TRUE)
 #' @param extract_data Logical, whether to extract "data" field from JSON response (default: TRUE)
 #' @param daily_run Logical, whether this is a daily run (affects error handling, default: !exists("today_date"))
+#' @param force_sequential Logical, whether to force sequential processing even if multiple cores are available (default: FALSE)
 #' 
 #' @return List with two elements:
 #'   - responses: List of successful API responses
@@ -26,6 +27,9 @@
 #' result <- parallel_api_calls(urls)
 #' successful_responses <- result$responses[!result$failed_calls]
 #' 
+#' # Force sequential processing
+#' result_seq <- parallel_api_calls(urls, force_sequential = TRUE)
+#' 
 parallel_api_calls <- function(
     urls,
     user_agent = "renew_parlwork-prd-2.0.0",
@@ -35,7 +39,8 @@ parallel_api_calls <- function(
     max_retries = 5,
     show_progress = TRUE,
     extract_data = TRUE,
-    daily_run = !exists("today_date", envir = .GlobalEnv)
+    daily_run = !exists("today_date", envir = .GlobalEnv),
+    force_sequential = FALSE
 ) {
   
   # Load required packages
@@ -64,9 +69,13 @@ on.exit({
 
   # Set up parallel processing
   available_cores <- parallel::detectCores()
-  if (is.na(available_cores) || available_cores <= 1) {
+  if (is.na(available_cores) || available_cores <= 1 || force_sequential) {
     max_workers <- 1
-    cat("Parallel processing not available or only 1 core detected. Running sequentially.\n")
+    if (force_sequential) {
+      cat("Sequential processing forced for", length(urls), "API calls\n")
+    } else {
+      cat("Parallel processing not available or only 1 core detected. Running sequentially.\n")
+    }
     plan(sequential)
   } else {
     max_workers <- min(available_cores - 1, length(urls))

@@ -132,6 +132,7 @@ last_doc <- as.integer(
 
 # Get new Docs IDs ------------------------------------------------------------#
 if ( file.exists(here::here("data_out", "docs_pl", "pl_docs.csv") ) ) {
+  # Get the NEW DOC IDs that were not present last time your run this
   pl_docs_in <- data.table::fread(
     file = here::here("data_out", "docs_pl", "pl_docs.csv"))
   # Get the IDs of the ones already on disk (as a vector)
@@ -141,6 +142,15 @@ if ( file.exists(here::here("data_out", "docs_pl", "pl_docs.csv") ) ) {
   doc_ids_missing <- doc_ids[
     !doc_ids %in% doc_ids_in
   ]
+
+  # Check what DOC IDs are missing in the saved list
+  if ( file.exists(here::here("data_out", "docs_pl", "pl_docs_list.rds") ) ) {
+    pl_docs_list <- readr::read_rds(file = here::here(
+      "data_out", "docs_pl", "pl_docs_list.rds") )
+    docs_inlist = unlist(sapply(pl_docs_list, function(i_list) i_list[["identifier"]]))
+    doc_ids_missing_inlist = doc_ids[ !doc_ids %in% docs_inlist ]
+    doc_ids_missing = c(doc_ids_missing, doc_ids_missing_inlist)
+  }
 } else {
   # write to disk for the first execution ever
   # !!DO NOT WRITE TO DISK THIS FILE BEFORE!!
@@ -170,7 +180,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
   cat("Processing",
       length(api_urls),
       "document chunks - using parallel processing\n"
-    )
+  )
 
   results <- parallel_api_calls(
     urls = api_urls,
@@ -181,7 +191,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
     extract_data = TRUE
   )
 
-  # DEBUG: Analyze results immediately
+  # DEBUG: Analyze results immediately ----------------------------------------#
   cat("\n=== DEBUGGING RESULTS ===\n")
   cat("Total API URLs:", length(api_urls), "\n")
   cat("Total responses:", length(results$responses), "\n")
@@ -249,16 +259,40 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
     cat("Single missing document chunk - using sequential processing\n")
     results <- parallel_api_calls(
       urls = api_urls,
+      capacity = 495,
+      fill_time_s = 300,
       show_progress = TRUE,
-      extract_data = TRUE
+      extract_data = TRUE,
+      force_sequential = TRUE
     )
   }
+
+  # DEBUG: Analyze results immediately ----------------------------------------#
+  cat("\n=== DEBUGGING RESULTS ===\n")
+  cat("Total responses:", length(results$responses), "\n")
+  cat("Failed calls:", sum(results$failed_calls), "\n")
+  cat("NULL responses:", sum(sapply(results$responses, is.null)), "\n")
+
+  # Find which responses are NULL
+  null_indices <- which(sapply(results$responses, is.null))
+  if (length(null_indices) > 0) {
+    cat("NULL response indices:", paste(null_indices, collapse = ", "), "\n")
+    cat("Corresponding failed_calls status:\n")
+    for (idx in head(null_indices, 5)) {  # Show first 5 NULL responses
+      cat("  Response", idx, "- failed:", results$failed_calls[idx], "\n")
+      cat("  Corresponding URL:", substr(api_urls[idx], 1, 150), "...\n")
+    }
+  }
+  cat("=========================\n")
+
 
   list_tmp <- results$responses[!results$failed_calls]
 
   # If there are no new files, just read in what you have in the bank ---------#
-  pl_docs_list <- readr::read_rds(file = here::here(
-    "data_out", "docs_pl", "pl_docs_list.rds") )
+  if ( !exists("pl_docs_list") ) {
+    pl_docs_list <- readr::read_rds(file = here::here(
+      "data_out", "docs_pl", "pl_docs_list.rds") )
+  }
   # Append the old and new list
   pl_docs_list <- c(pl_docs_list, list_tmp)
   # Overwrite tmp file --------------------------------------------------------#
