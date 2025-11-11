@@ -14,15 +14,15 @@ library(data.table)
 
 ## Texts tabled: read csv & append it all together -----------------------------
 docs_csv <- c(
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2025_26_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2024_67_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2023_86_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2025_35_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2024_74_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2023_87_en.csv",
   "https://data.europarl.europa.eu/distribution/plenary-documents_2022_53_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2021_47_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2020_30_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2019_29_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2018_33_en.csv",
-  "https://data.europarl.europa.eu/distribution/plenary-documents_2017_20_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2021_51_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2020_31_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2019_33_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2018_41_en.csv",
+  "https://data.europarl.europa.eu/distribution/plenary-documents_2017_22_en.csv",
   "https://data.europarl.europa.eu/distribution/plenary-documents_2016_7_en.csv")
 
 # read all .csv at once
@@ -31,6 +31,7 @@ docs_list <- lapply(X = docs_csv, data.table::fread)
 plenary_docs <- data.table::rbindlist(l = docs_list, use.names = T, fill = T)
 
 #------------------------------------------------------------------------------#
+# Clean env
 rm(docs_list, docs_csv) ; gc()
 
 # Extract the year feature

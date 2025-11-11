@@ -154,7 +154,7 @@ if ( file.exists(here::here("data_out", "docs_pl", "pl_docs.csv") ) ) {
 if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
 
   # Build URLs for document chunks --------------------------------------------#
-  chunk_size <- 10L  # Reduced from 50 to avoid timeouts
+  chunk_size <- 50L  # Reduced to avoid timeouts
   doc_ids_chunks <- split(x = doc_ids, ceiling(seq_along(doc_ids) / chunk_size))
 
   # Build API URLs for each chunk
@@ -222,7 +222,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
   #### If not, download the missing files --------------------------------------
 
   # Build URLs for missing document chunks ------------------------------------#
-  chunk_size <- 20L  # Reduced from 50 to avoid timeouts
+  chunk_size <- 50L  # Reduced from 50 to avoid timeouts
   doc_ids_chunks <- split(x = doc_ids_missing, ceiling(seq_along(doc_ids_missing) / chunk_size))
 
   # Build API URLs for each chunk
@@ -240,7 +240,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
     cat("Processing", length(api_urls), "missing document chunks - using parallel processing\n")
     results <- parallel_api_calls(
       urls = api_urls,
-      capacity = 120, # More conservative rate for incremental updates (1 every 2.5 seconds)
+      capacity = 495,
       fill_time_s = 300,
       show_progress = TRUE,
       extract_data = TRUE
@@ -249,7 +249,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
     cat("Single missing document chunk - using sequential processing\n")
     results <- parallel_api_calls(
       urls = api_urls,
-      show_progress = FALSE,
+      show_progress = TRUE,
       extract_data = TRUE
     )
   }
