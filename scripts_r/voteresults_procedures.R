@@ -3,8 +3,8 @@
 ###--------------------------------------------------------------------------###
 
 #------------------------------------------------------------------------------#
-#' This script is intended to be run AFTER the `scripts_r/api_meetings_voteresults.R`.
-#' It collects additional pieces of information regarding the Votes  Results.
+#' This script is intended to run AFTER the `scripts_r/api_meetings_voteresults.R`.
+#' It collects additional pieces of information regarding the Votes Results.
 #------------------------------------------------------------------------------#
 
 # Load parallel API function --------------------------------------------------#
@@ -12,16 +12,16 @@ source(file = here::here("scripts_r", "parallel_api_calls.R"))
 
 # Read data conditional on mandate --------------------------------------------#
 if ( exists("today_date")) {
-    votes_inverse_consists_of = data.table::fread(file = here::here(
-        "data_out", "votes", "votes_inverse_consists_of_today.csv") )
+  votes_inverse_consists_of = data.table::fread(file = here::here(
+    "data_out", "votes", "votes_inverse_consists_of_today.csv") )
 } else if ( !exists("today_date")
             && mandate_starts == as.character("2019-07-01") ) {
-    votes_inverse_consists_of = data.table::fread(file = here::here(
-        "data_out", "votes", "votes_inverse_consists_of_all.csv") )
+  votes_inverse_consists_of = data.table::fread(file = here::here(
+    "data_out", "votes", "votes_inverse_consists_of_all.csv") )
 } else if ( !exists("today_date")
             && mandate_starts == as.character("2024-07-14") ) {
-    votes_inverse_consists_of = data.table::fread(file = here::here(
-        "data_out", "votes", "votes_inverse_consists_of_10.csv") ) }
+  votes_inverse_consists_of = data.table::fread(file = here::here(
+    "data_out", "votes", "votes_inverse_consists_of_10.csv") ) }
 
 
 #------------------------------------------------------------------------------#
@@ -31,7 +31,7 @@ process_ids <- sort(unique(gsub(pattern = "eli/dl/proc/", replacement = "",
                                 x = (votes_inverse_consists_of$process_id))))
 
 # Build URLs for procedure chunks
-chunk_size <- 50L
+chunk_size <- 10L # Some of these procedures are heavy, use small chunks otherwise the call will fail due to timeout
 process_ids_chunks <- split(x = process_ids, ceiling(seq_along(process_ids) / chunk_size))
 
 # Build API URLs for each chunk
@@ -50,8 +50,9 @@ if (use_parallel) {
   cat("Multiple procedure API calls detected - using parallel processing\n")
   results <- parallel_api_calls(
     urls = api_urls,
-    capacity = 220, # Conservative rate: ~55 calls per minute (matching original)
+    capacity = 495,
     fill_time_s = 60,
+    timeout_s = 600,
     show_progress = TRUE,
     extract_data = TRUE
   )
@@ -59,10 +60,12 @@ if (use_parallel) {
   cat("Single API call or daily run detected - using sequential processing\n")
   results <- parallel_api_calls(
     urls = api_urls,
-    capacity = 220,
+    capacity = 495,
     fill_time_s = 60,
-    show_progress = FALSE,
-    extract_data = TRUE
+    timeout_s = 600,
+    show_progress = TRUE,
+    extract_data = TRUE,
+    force_sequential = TRUE
   )
 }
 
@@ -77,43 +80,43 @@ if (length(list_tmp) == 0) {
 ### Extract Committees ---------------------------------------------------------
 procedures_cmt = vector(mode = "list", length = length(list_tmp))
 for (i_df in seq_along(list_tmp) ) {
-    print(i_df)
-    df_tmp = list_tmp[[i_df]]
-    if ( "had_participation" %in% names(df_tmp)) {
+  print(i_df)
+  df_tmp = list_tmp[[i_df]]
+  if ( "had_participation" %in% names(df_tmp) ) {
     df_tmp = df_tmp[sapply(X = df_tmp$had_participation, FUN = is.data.frame), ]
     procedures_cmt[[i_df]] = data.table::rbindlist(
-        l = setNames(object = df_tmp$had_participation,
-                     nm = df_tmp$id),
-        use.names = TRUE, fill = TRUE, idcol = "process_id") |>
-        dplyr::filter(
-            participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
-        ) |>
-        dplyr::select(process_id,
-                      committee_lab = had_participant_organization) |>
-        tidyr::unnest(committee_lab) |>
-        dplyr::mutate(
-            committee_lab = gsub(pattern = "org/", replacement = "",
-                                 x = committee_lab, fixed = TRUE)
-        ) |>
-        dplyr::arrange(process_id)
-    }
-    rm(df_tmp)
+      l = setNames(object = df_tmp$had_participation,
+                   nm = df_tmp$id),
+      use.names = TRUE, fill = TRUE, idcol = "process_id") |>
+      dplyr::filter(
+        participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
+      ) |>
+      dplyr::select(process_id,
+                    committee_lab = had_participant_organization) |>
+      tidyr::unnest(committee_lab) |>
+      dplyr::mutate(
+        committee_lab = gsub(pattern = "org/", replacement = "",
+                             x = committee_lab, fixed = TRUE)
+      ) |>
+      dplyr::arrange(process_id)
+  }
+  rm(df_tmp)
 }
 
 # Append
 procedures_cmt = data.table::rbindlist(l = procedures_cmt,
                                        use.names = TRUE, fill = TRUE) |>
-    dplyr::distinct() |>
-    dplyr::arrange(process_id)
+  dplyr::distinct() |>
+  dplyr::arrange(process_id)
 
 if ( !exists("today_date")
      && mandate_starts == as.character("2019-07-01") ) {
-    data.table::fwrite(x = procedures_cmt, file = here::here(
-        "data_out", "procedures", "procedures_cmt_all.csv") )
+  data.table::fwrite(x = procedures_cmt, file = here::here(
+    "data_out", "procedures", "procedures_cmt_all.csv") )
 } else if ( !exists("today_date")
             && mandate_starts == as.character("2024-07-14") ) {
-    data.table::fwrite(x = procedures_cmt, file = here::here(
-        "data_out", "procedures", "procedures_cmt_10.csv") ) }
+  data.table::fwrite(x = procedures_cmt, file = here::here(
+    "data_out", "procedures", "procedures_cmt_10.csv") ) }
 
 
 #------------------------------------------------------------------------------#

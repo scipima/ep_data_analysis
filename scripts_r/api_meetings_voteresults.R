@@ -105,7 +105,6 @@ if (use_parallel) {
   resp_list <- results$responses
 }
 
-
 # store tmp list if code breaks down the line ---------------------------------#
 if ( !exists("today_date")
      && mandate_starts == as.character("2024-07-14") ) {
@@ -116,6 +115,7 @@ if ( !exists("today_date")
   readr::write_rds(x = resp_list, file = here::here(
     "data_out", "votes", "meetings_voteresults_10.rds") )
 }
+
 
 #------------------------------------------------------------------------------#
 ### activity_order: Extract Vote ID and Number ---------------------------------
@@ -163,7 +163,7 @@ if ( exists("today_date") ) {
 
 
 #------------------------------------------------------------------------------#
-### Extract votes and their titles ---------------------------------------------
+### Titles ---------------------------------------------------------------------
 cols_languages_end <- c("_el", "_bg", "_de", "_hu", "_cs", "_ro", "_et", "_nl",
                         "_fi", "_mt", "_sl", "_sv", "_pt", "_it", "_lt", "_es",
                         "_da", "_pl", "_sk", "_lv", "_hr", "_ga")
@@ -214,7 +214,8 @@ if ( exists("today_date")) {
 } else if ( !exists("today_date")
             && mandate_starts == as.character("2024-07-14") ) {
   data.table::fwrite(x = votes_labels, file = here::here(
-    "data_out", "votes", "votes_labels_10.csv") ) }
+    "data_out", "votes", "votes_labels_10.csv") )
+}
 
 
 #------------------------------------------------------------------------------#
@@ -224,7 +225,7 @@ votes_based_on_a_realization_of <- unnest_nested_list(
   group_cols = c("id", "activity_id"),
   unnest_col = "based_on_a_realization_of"
 )
-data.table::setnames(x = voteids_rcvids,
+data.table::setnames(x = votes_based_on_a_realization_of,
                      old = c("id", "activity_id"),
                      new = c("vot_evnt_id", "vot_id"))
 # Check
@@ -274,27 +275,26 @@ if ( nrow(votes_based_on_a_realization_of) > 0L ) {
 }
 
 
-
 #------------------------------------------------------------------------------#
 ### Votes and Vote Order -------------------------------------------------------
-votes_recorded_in_a_realization_of <- lapply(
-  X = resp_list,
-  FUN = function(i_df) {
-    if ( "recorded_in_a_realization_of" %in% names(i_df)) {
-      i_df |>
-        dplyr::select(vote_id = activity_id, recorded_in_a_realization_of) |>
-        tidyr::unnest(recorded_in_a_realization_of)
-    } } ) |>
-  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+votes_recorded_in_a_realization_of = unnest_nested_list(
+  data_list = resp_list,
+  group_cols = c("id", "activity_id"),
+  unnest_col = "recorded_in_a_realization_of"
+) |>
+  unique()
+
 
 if ( nrow(votes_recorded_in_a_realization_of) > 0L ) {
-  votes_recorded_in_a_realization_of <- votes_recorded_in_a_realization_of |>
-    dplyr::mutate(vote_order = as.integer(
-      gsub(pattern = "^.*VOT.ITM.", replacement = "",
-           x = recorded_in_a_realization_of) ) ) |>
-    dplyr::arrange(vote_order)
+  votes_recorded_in_a_realization_of[, `:=`(
+    vote_order = as.integer(gsub(pattern = "^.*VOT.ITM.", replacement = "",
+                                 x = recorded_in_a_realization_of) ) )
+    ]
+  data.table::setnames(x = votes_recorded_in_a_realization_of,
+                       old = c("id", "activity_id"),
+                       new = c("vot_evnt_id", "vot_id"))
 
-  # Write data conditional on mandate -------------------------------------------#
+  # Write data conditional on mandate -----------------------------------------#
   if ( exists("today_date")) {
     data.table::fwrite(x = votes_recorded_in_a_realization_of, file = here::here(
       "data_out", "votes", "votes_recorded_in_a_realization_of_today.csv") )
@@ -311,10 +311,8 @@ if ( nrow(votes_recorded_in_a_realization_of) > 0L ) {
 
 #------------------------------------------------------------------------------#
 ### Votes and Procedures -------------------------------------------------------
-# Drop NULL items
-resp_list = resp_list[!sapply(X = resp_list, is.null)]
 
-inverse_consists_of = vector(mode = "list", length = length(resp_list))
+votes_inverse_consists_of = vector(mode = "list", length = length(resp_list))
 for (i_vot in seq_along(resp_list) ) {
   if ("inverse_consists_of" %in% names(resp_list[[i_vot]]) ) {
     df_tmp = resp_list[[i_vot]][, c("id", "inverse_consists_of")]
@@ -323,25 +321,25 @@ for (i_vot in seq_along(resp_list) ) {
       use.names = TRUE, fill = TRUE, idcol = "event_vot_itm_id")
     dt_tmp = dt_tmp[ grepl(pattern = "eli/dl/proc/", x = id, fixed = TRUE),
                      list(process_id = id, event_vot_itm_id) ]
-    inverse_consists_of[[i_vot]] = dt_tmp
+    votes_inverse_consists_of[[i_vot]] = dt_tmp
   }
 }
-inverse_consists_of = data.table::rbindlist(inverse_consists_of,
+votes_inverse_consists_of = data.table::rbindlist(votes_inverse_consists_of,
                                             use.names = TRUE, fill = TRUE)
 
-if ( nrow(inverse_consists_of) > 0L ) {
+if ( nrow(votes_inverse_consists_of) > 0L ) {
 
-  # Write data conditional on mandate -------------------------------------------#
+  # Write data conditional on mandate -----------------------------------------#
   if ( exists("today_date")) {
-    data.table::fwrite(x = inverse_consists_of, file = here::here(
+    data.table::fwrite(x = votes_inverse_consists_of, file = here::here(
       "data_out", "votes", "votes_inverse_consists_of_today.csv") )
   } else if ( !exists("today_date")
               && mandate_starts == as.character("2019-07-01") ) {
-    data.table::fwrite(x = inverse_consists_of, file = here::here(
+    data.table::fwrite(x = votes_inverse_consists_of, file = here::here(
       "data_out", "votes", "votes_inverse_consists_of_all.csv") )
   } else if ( !exists("today_date")
               && mandate_starts == as.character("2024-07-14") ) {
-    data.table::fwrite(x = inverse_consists_of, file = here::here(
+    data.table::fwrite(x = votes_inverse_consists_of, file = here::here(
       "data_out", "votes", "votes_inverse_consists_of_10.csv") ) }
 
   source(file = here::here("scripts_r", "voteresults_procedures.R"), echo = TRUE)
