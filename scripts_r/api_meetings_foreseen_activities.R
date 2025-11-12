@@ -250,12 +250,12 @@ if ("structured_content_en" %in% names(votes_foreseen)) {
 #' We take the unique because it may happens that a procedure is repeated twice in a voting week.
 #' For instance, `2025/0526(COD)` was voted as a urgent procedure on 2025-10-21, and again on 2025-10-23.
 process_ids = unique(
-  sort(gsub(pattern = "eli/dl/proc/", replacement = "", 
+  sort(gsub(pattern = "eli/dl/proc/", replacement = "",
             x = unlist(votes_foreseen$inverse_was_scheduled_in) ) )
 )
 
-# Split the vector in chunks of size 50 each
-chunk_size <- 20L
+# Some of these procedures are heavy, use small chunks otherwise the call will fail due to timeout
+chunk_size <- 10L
 process_ids_chunks <- split(
   x = process_ids, ceiling(seq_along(process_ids) / chunk_size)
 )
@@ -295,7 +295,7 @@ if ( httr2::resp_status(resp) == 200L ) {
 
 # Extract data ----------------------------------------------------------------#
 votes_procedures <- lapply(X = process_ids_list,
-                           FUN = as.data.table) |> 
+                           FUN = as.data.table) |>
   data.table::rbindlist(use.names = TRUE, fill = TRUE)
 
 # Remove objects
@@ -325,7 +325,7 @@ procedures_cmt_tmp = data.table::rbindlist(
     tidyr::nest(
         committee = committee_lab
     ) |>
-  dplyr::arrange(process_id) |> 
+  dplyr::arrange(process_id) |>
   dplyr::distinct()
 
 
@@ -343,12 +343,12 @@ cmts_fromstring <- votes_foreseen |>
     dplyr::mutate(
         committee_lab = stringr::str_remove_all(string = committee_lab,
                                                 pattern = 'resource="org/')
-  ) |> 
+  ) |>
   dplyr::distinct()
 
 procedures_cmt <- procedures_cmt_tmp |>
     tidyr::unnest(col = committee) |>
-  distinct() |> 
+  distinct() |>
     dplyr::full_join(
         y = cmts_fromstring,
         by = c("process_id" = "inverse_was_scheduled_in",
@@ -392,7 +392,7 @@ by = process_id]
 # Unnest the list of persons to get individual MEP IDs
 shadows_unnested <- shadows_latest_term[, list(
     pers_id = unlist(had_participant_person)),
-  by = list(process_id)] |> 
+  by = list(process_id)] |>
   unique()
 
 # Clean the person ID and convert to integer
@@ -460,7 +460,7 @@ procedures_rapporteur_tmp <- procedures_rapporteur_tmp[, list(
 ][, `:=`(
     pers_id = as.integer(gsub(pattern = "person/", replacement = "",
                               x = pers_id, fixed = TRUE) )
-)] |> 
+)] |>
   unique()
 
 # From blurb
@@ -476,7 +476,7 @@ rapporteur_fromstring <- votes_foreseen |>
                          keep_empty = FALSE) |>
   dplyr::mutate(rapporteur_id = as.integer(rapporteur_id)) |>
   # Sometimes MEPs table multiple Resolutions for the same Procedure ID, thus appearing multiple times
-  dplyr::distinct() 
+  dplyr::distinct()
 
 # Merge
 procedures_rapporteur <- data.table::merge.data.table(
@@ -517,7 +517,7 @@ docid_tmp[, activity_date := as.Date(activity_date)]
 docid_tmp = docid_tmp[
     had_activity_type == "def/ep-activities/TABLING_PLENARY",
     list(based_on_a_realization_of = as.character(unlist(based_on_a_realization_of))),
-  by = list(process_id, activity_date)] |> 
+  by = list(process_id, activity_date)] |>
   unique()
 
 #' WATCH OUT! You cannot filter out Amendments at this stage.
@@ -547,7 +547,7 @@ inverse_was_scheduled_in = votes_foreseen[, list(
     inverse_was_scheduled_in = as.character(unlist(inverse_was_scheduled_in))
 ),
 by = id
-] |> 
+] |>
   unique()
 # Col 2
 based_on_a_realization_of = votes_foreseen[, list(
@@ -556,7 +556,7 @@ based_on_a_realization_of = votes_foreseen[, list(
     based_on_a_realization_of = as.character(unlist(based_on_a_realization_of))
 ),
 by = id
-] |> 
+] |>
   unique()
 # Merge them back together ----------------------------------------------------#
 based_on_a_realization_of = based_on_a_realization_of[
@@ -677,7 +677,7 @@ rm(procedures_cmt_tmp, docid_tmp, procedures_rapporteur_tmp)
 ## Merge all tables ------------------------------------------------------------
 final_dt <- votes_foreseen |>
     tidyr::unnest(cols = inverse_was_scheduled_in, keep_empty = TRUE) |>
-  dplyr::distinct() |> 
+  dplyr::distinct() |>
     dplyr::left_join(
         y = procedures_process_id,
         by = c("inverse_was_scheduled_in" = "id") ) |>

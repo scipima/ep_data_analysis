@@ -78,27 +78,52 @@ if (length(list_tmp) == 0) {
 
 #------------------------------------------------------------------------------#
 ### Extract Committees ---------------------------------------------------------
+# procedures_cmt = unnest_nested_df(
+#   data_list = list_tmp,
+#   group_col = "id",
+#   unnest_col = "had_participation"
+# )
+
+# Helper function to safely extract from list, replacing NULL with NA
+safe_extract <- function(list_data, field_name) {
+  sapply(list_data, function(x) {
+    value <- x[[field_name]]
+    if (is.null(value)) NA_character_ else value
+  })
+}
+
 procedures_cmt = vector(mode = "list", length = length(list_tmp))
 for (i_df in seq_along(list_tmp) ) {
   print(i_df)
   df_tmp = list_tmp[[i_df]]
   if ( "had_participation" %in% names(df_tmp) ) {
-    df_tmp = df_tmp[sapply(X = df_tmp$had_participation, FUN = is.data.frame), ]
-    procedures_cmt[[i_df]] = data.table::rbindlist(
-      l = setNames(object = df_tmp$had_participation,
-                   nm = df_tmp$id),
-      use.names = TRUE, fill = TRUE, idcol = "process_id") |>
-      dplyr::filter(
-        participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
-      ) |>
-      dplyr::select(process_id,
-                    committee_lab = had_participant_organization) |>
-      tidyr::unnest(committee_lab) |>
-      dplyr::mutate(
-        committee_lab = gsub(pattern = "org/", replacement = "",
-                             x = committee_lab, fixed = TRUE)
-      ) |>
-      dplyr::arrange(process_id)
+    # df_tmp = df_tmp[sapply(X = df_tmp$had_participation, FUN = is.data.frame), ]
+
+    # procedures_cmt[[i_df]] = df_tmp$had_participation
+    had_participation = df_tmp$had_participation
+    id = safe_extract(had_participation, "id")
+    had_participant_organization = safe_extract(had_participation, 
+                                                "had_participant_organization")
+    participation_role = safe_extract(had_participation, 
+                                     "participation_role")
+
+    procedures_cmt[[i_df]] = data.frame(id, had_participant_organization, participation_role)
+
+    # procedures_cmt[[i_df]] = data.table::rbindlist(
+    #   l = setNames(object = df_tmp$had_participation,
+    #                nm = df_tmp$id),
+    #   use.names = TRUE, fill = TRUE, idcol = "process_id") |>
+    #   dplyr::filter(
+    #     participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
+    #   ) |>
+    #   dplyr::select(process_id,
+    #                 committee_lab = had_participant_organization) |>
+    #   tidyr::unnest(committee_lab) |>
+    #   dplyr::mutate(
+    #     committee_lab = gsub(pattern = "org/", replacement = "",
+    #                          x = committee_lab, fixed = TRUE)
+    #   ) |>
+    #   dplyr::arrange(process_id)
   }
   rm(df_tmp)
 }
