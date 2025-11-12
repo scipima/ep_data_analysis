@@ -28,14 +28,14 @@ source(file = here::here("scripts_r", "repo_setup.R") )
 ## Parameters ------------------------------------------------------------------
 # Plenary dates
 if ( !exists("pl_date") ) {
-    pl_date <- gsub(pattern = "-", replacement = "", x = Sys.Date() )
-    #pl_date <- "20251020" # test
+  pl_date <- gsub(pattern = "-", replacement = "", x = Sys.Date() )
+  # pl_date <- "20250403" # test
 }
 print(pl_date)
 
 if ( !exists("pl_date_ymd") ) {
-    pl_date_ymd <- as.character( Sys.Date() )
-    #pl_date_ymd <- "2025-10-20" # test
+  pl_date_ymd <- as.character( Sys.Date() )
+  # pl_date_ymd <- "2025-04-03" # test
 }
 print(pl_date_ymd)
 
@@ -148,7 +148,7 @@ if ("was_purpose_of" %in% names(foreseen_activities) ){
     tidyr::unnest(was_purpose_of, names_sep = "_") |>
     tidyr::unnest(was_purpose_of_activity_label) |>
     dplyr::select( any_of( c("id", "fr", "en") ) )
-
+  
   if ("fr" %in% names(was_purpose_of) ) {
     is_urgent = was_purpose_of |>
       dplyr::mutate(is_urgent = ifelse(
@@ -250,7 +250,7 @@ if ("structured_content_en" %in% names(votes_foreseen)) {
 #' We take the unique because it may happens that a procedure is repeated twice in a voting week.
 #' For instance, `2025/0526(COD)` was voted as a urgent procedure on 2025-10-21, and again on 2025-10-23.
 process_ids = unique(
-  sort(gsub(pattern = "eli/dl/proc/", replacement = "",
+  sort(gsub(pattern = "eli/dl/proc/", replacement = "", 
             x = unlist(votes_foreseen$inverse_was_scheduled_in) ) )
 )
 
@@ -265,14 +265,14 @@ process_ids_list <- vector(mode = "list", length = length(process_ids_chunks))
 # loop to get all decisions
 for (i_param in seq_along(process_ids_list) ) {
   print(i_param)
-
+  
   # Build REQUEST
   req = httr2::request(
     paste0("https://data.europarl.europa.eu/api/v2/procedures/",
            paste0(process_ids_chunks[[i_param]], collapse = ","),
            "?format=application%2Fld%2Bjson") ) |>
     httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0")
-
+  
   # Add time-out and ignore error before performing request
   resp = req |>
     httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0") |>
@@ -281,11 +281,11 @@ for (i_param in seq_along(process_ids_list) ) {
     httr2::req_retry(max_tries = 5, # retry a bunch of times in case of failures
                      backoff = ~ 2 ^ .x + runif(n = 1, min = -0.5, max = 0.5) ) |>
     httr2::req_perform()
-
+  
   # If not an error, download and make available in ENV
   if ( httr2::resp_status(resp) == 200L ) {
     resp_body = resp |>
-      httr2::resp_body_json(simplifyDataFrame = TRUE)
+      httr2::resp_body_json(simplifyDataFrame = TRUE) 
     process_ids_list[[i_param]] = resp_body$data
   } else {
     cat("\nWARNING: API call to PROCEDURE ID endpoint failed for chunk", i_param,
@@ -295,7 +295,7 @@ for (i_param in seq_along(process_ids_list) ) {
 
 # Extract data ----------------------------------------------------------------#
 votes_procedures <- lapply(X = process_ids_list,
-                           FUN = as.data.table) |>
+                           FUN = as.data.table) |> 
   data.table::rbindlist(use.names = TRUE, fill = TRUE)
 
 # Remove objects
@@ -325,7 +325,7 @@ procedures_cmt_tmp = data.table::rbindlist(
   tidyr::nest(
     committee = committee_lab
   ) |>
-  dplyr::arrange(process_id) |>
+  dplyr::arrange(process_id) |> 
   dplyr::distinct()
 
 
@@ -343,12 +343,12 @@ cmts_fromstring <- votes_foreseen |>
   dplyr::mutate(
     committee_lab = stringr::str_remove_all(string = committee_lab,
                                             pattern = 'resource="org/')
-  ) |>
+  ) |> 
   dplyr::distinct()
 
 procedures_cmt <- procedures_cmt_tmp |>
   tidyr::unnest(col = committee) |>
-  distinct() |>
+  distinct() |> 
   dplyr::full_join(
     y = cmts_fromstring,
     by = c("process_id" = "inverse_was_scheduled_in",
@@ -367,7 +367,7 @@ rm(cmts_fromstring)
 procedures_renew_shadow = data.table::rbindlist(
   l = setNames(object = votes_procedures$had_participation[row_idx],
                nm = votes_procedures$id[row_idx]),
-  use.names = TRUE, fill = TRUE, idcol = "process_id")
+  use.names = TRUE, fill = TRUE, idcol = "process_id") 
 # Extract EP Mandate
 procedures_renew_shadow[, `:=`(
   parliamentary_term = as.integer(
@@ -392,7 +392,7 @@ by = process_id]
 # Unnest the list of persons to get individual MEP IDs
 shadows_unnested <- shadows_latest_term[, list(
   pers_id = unlist(had_participant_person)),
-  by = list(process_id)] |>
+  by = list(process_id)] |> 
   unique()
 
 # Clean the person ID and convert to integer
@@ -460,7 +460,7 @@ procedures_rapporteur_tmp <- procedures_rapporteur_tmp[, list(
 ][, `:=`(
   pers_id = as.integer(gsub(pattern = "person/", replacement = "",
                             x = pers_id, fixed = TRUE) )
-)] |>
+)] |> 
   unique()
 
 # From blurb
@@ -476,7 +476,7 @@ rapporteur_fromstring <- votes_foreseen |>
                        keep_empty = FALSE) |>
   dplyr::mutate(rapporteur_id = as.integer(rapporteur_id)) |>
   # Sometimes MEPs table multiple Resolutions for the same Procedure ID, thus appearing multiple times
-  dplyr::distinct()
+  dplyr::distinct() 
 
 # Merge
 procedures_rapporteur <- data.table::merge.data.table(
@@ -517,7 +517,7 @@ docid_tmp[, activity_date := as.Date(activity_date)]
 docid_tmp = docid_tmp[
   had_activity_type == "def/ep-activities/TABLING_PLENARY",
   list(based_on_a_realization_of = as.character(unlist(based_on_a_realization_of))),
-  by = list(process_id, activity_date)] |>
+  by = list(process_id, activity_date)] |> 
   unique()
 
 #' WATCH OUT! You cannot filter out Amendments at this stage.
@@ -547,7 +547,7 @@ inverse_was_scheduled_in = votes_foreseen[, list(
   inverse_was_scheduled_in = as.character(unlist(inverse_was_scheduled_in))
 ),
 by = id
-] |>
+] |> 
   unique()
 # Col 2
 based_on_a_realization_of = votes_foreseen[, list(
@@ -556,7 +556,7 @@ based_on_a_realization_of = votes_foreseen[, list(
   based_on_a_realization_of = as.character(unlist(based_on_a_realization_of))
 ),
 by = id
-] |>
+] |> 
   unique()
 # Merge them back together ----------------------------------------------------#
 based_on_a_realization_of = based_on_a_realization_of[
@@ -677,7 +677,7 @@ rm(procedures_cmt_tmp, docid_tmp, procedures_rapporteur_tmp)
 ## Merge all tables ------------------------------------------------------------
 final_dt <- votes_foreseen |>
   tidyr::unnest(cols = inverse_was_scheduled_in, keep_empty = TRUE) |>
-  dplyr::distinct() |>
+  dplyr::distinct() |> 
   dplyr::left_join(
     y = procedures_process_id,
     by = c("inverse_was_scheduled_in" = "id") ) |>
@@ -705,8 +705,6 @@ final_dt <- votes_foreseen |>
     .by = activity_date) |>
   dplyr::arrange(activity_date, activity_order_day)
 
-# fixing structure to be like the Python version
-final_dt$committee<- lapply(final_dt$committee, function (x) unlist(cbind(flatten((x)))))
 
 # Store as .rds ---------------------------------------------------------------#
 dir.create(path = here::here("data_out", "meetings", "meetings_foreseen_rds"),
@@ -751,6 +749,7 @@ final_dt |>
 
 #------------------------------------------------------------------------------#
 # Clean up before exiting -----------------------------------------------------#
+
 # Run time
 script_ends <- Sys.time()
 script_lapsed = script_ends - script_starts
