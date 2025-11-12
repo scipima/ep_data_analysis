@@ -11,6 +11,11 @@ pacman::p_load(char = c(
     "data.table", "dplyr", "here", "lubridate", "janitor", "jsonlite", "readr",
     "stringi", "tidyr", "tidyselect") )
 
+# Load parallel API function --------------------------------------------------#
+source(file = here::here("scripts_r", "parallel_api_calls.R"))
+
+# Repo setup
+source(file = here::here("scripts_r", "repo_setup.R") )
 
 #------------------------------------------------------------------------------#
 ## Parameters ------------------------------------------------------------------
@@ -210,7 +215,7 @@ if ( nrow(decided_on_a_realization_of) > 0L ) {
     decided_on_a_realization_of[, type := ifelse(
         test = grepl(pattern = "[A-Z]{1,2}.\\d{1,2}.\\d{4}.\\d{4}",
                      x = identifier),
-        yes = "doc", no = "vote_id"
+        yes = "doc", no = "vot_id"
     )]
 
     # Fix docs' labels --------------------------------------------------------#
@@ -264,7 +269,7 @@ inverse_consists_of <- lapply(
             i_df[, c("notation_votingId", "inverse_consists_of")] |>
                 tidyr::unnest(inverse_consists_of) } } ) |>
     data.table::rbindlist(use.names = TRUE, fill = TRUE)
-inverse_consists_of[, vote_id := gsub(pattern = "eli/dl/event/", replacement = "",
+inverse_consists_of[, vot_id := gsub(pattern = "eli/dl/event/", replacement = "",
                                       x = inverse_consists_of, fixed = TRUE)]
 inverse_consists_of[, inverse_consists_of := NULL]
 # Write data conditional on mandate -------------------------------------------#

@@ -186,7 +186,7 @@ votes_labels <- lapply(
   janitor::clean_names()
 
 # Clean cols
-votes_labels[, vote_id := as.character(gsub(
+votes_labels[, vot_id := as.character(gsub(
   pattern = "(MTG.PL.\\d{4}.\\d{2}.\\d{2}.VOT.ITM.\\d{5,}).*",
   replacement = "\\1", x = activity_id, perl=TRUE) ) ]
 

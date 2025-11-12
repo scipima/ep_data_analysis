@@ -7,6 +7,12 @@
 #' It collects additional pieces of information regarding the Votes Results.
 #------------------------------------------------------------------------------#
 
+
+#------------------------------------------------------------------------------#
+cat("\n=====\nStart of processing Procedures identified via Meetings/Vote_Results.\n=====\n")
+
+
+#------------------------------------------------------------------------------#
 # Load parallel API function --------------------------------------------------#
 source(file = here::here("scripts_r", "parallel_api_calls.R"))
 
@@ -78,62 +84,35 @@ if (length(list_tmp) == 0) {
 
 #------------------------------------------------------------------------------#
 ### Extract Committees ---------------------------------------------------------
-# procedures_cmt = unnest_nested_df(
-#   data_list = list_tmp,
-#   group_col = "id",
-#   unnest_col = "had_participation"
-# )
+# Extract data ----------------------------------------------------------------#
+procedures_dt <- lapply(X = list_tmp,
+                           FUN = data.table::as.data.table) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
 
-# Helper function to safely extract from list, replacing NULL with NA
-safe_extract <- function(list_data, field_name) {
-  sapply(list_data, function(x) {
-    value <- x[[field_name]]
-    if (is.null(value)) NA_character_ else value
-  })
-}
 
-procedures_cmt = vector(mode = "list", length = length(list_tmp))
-for (i_df in seq_along(list_tmp) ) {
-  print(i_df)
-  df_tmp = list_tmp[[i_df]]
-  if ( "had_participation" %in% names(df_tmp) ) {
-    # df_tmp = df_tmp[sapply(X = df_tmp$had_participation, FUN = is.data.frame), ]
+#------------------------------------------------------------------------------#
+## Clean Data ------------------------------------------------------------------
+### Extract Committees ---------------------------------------------------------
+# Check that all cells are indeed DFs
+row_idx = sapply(X = procedures_dt$had_participation, FUN = is.data.frame)
+# Unnest
+procedures_cmt = data.table::rbindlist(
+  l = setNames(object = procedures_dt$had_participation[row_idx],
+               nm = procedures_dt$id[row_idx]),
+  use.names = TRUE, fill = TRUE, idcol = "process_id") |>
+  dplyr::filter(
+    participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
+  ) |>
+  dplyr::select(process_id,
+                committee_lab = had_participant_organization) |>
+  tidyr::unnest(committee_lab) |>
+  dplyr::mutate(
+    committee_lab = gsub(pattern = "org/", replacement = "",
+                         x = committee_lab, fixed = TRUE)
+  ) |>
+  dplyr::distinct()
 
-    # procedures_cmt[[i_df]] = df_tmp$had_participation
-    had_participation = df_tmp$had_participation
-    id = safe_extract(had_participation, "id")
-    had_participant_organization = safe_extract(had_participation, 
-                                                "had_participant_organization")
-    participation_role = safe_extract(had_participation, 
-                                     "participation_role")
-
-    procedures_cmt[[i_df]] = data.frame(id, had_participant_organization, participation_role)
-
-    # procedures_cmt[[i_df]] = data.table::rbindlist(
-    #   l = setNames(object = df_tmp$had_participation,
-    #                nm = df_tmp$id),
-    #   use.names = TRUE, fill = TRUE, idcol = "process_id") |>
-    #   dplyr::filter(
-    #     participation_role %in% c("def/ep-roles/COMMITTEE_LEAD")
-    #   ) |>
-    #   dplyr::select(process_id,
-    #                 committee_lab = had_participant_organization) |>
-    #   tidyr::unnest(committee_lab) |>
-    #   dplyr::mutate(
-    #     committee_lab = gsub(pattern = "org/", replacement = "",
-    #                          x = committee_lab, fixed = TRUE)
-    #   ) |>
-    #   dplyr::arrange(process_id)
-  }
-  rm(df_tmp)
-}
-
-# Append
-procedures_cmt = data.table::rbindlist(l = procedures_cmt,
-                                       use.names = TRUE, fill = TRUE) |>
-  dplyr::distinct() |>
-  dplyr::arrange(process_id)
-
+# Save to disk
 if ( !exists("today_date")
      && mandate_starts == as.character("2019-07-01") ) {
   data.table::fwrite(x = procedures_cmt, file = here::here(
@@ -146,94 +125,74 @@ if ( !exists("today_date")
 
 #------------------------------------------------------------------------------#
 ### Extract Doc_IDs ------------------------------------------------------------
-# procedures_docid_tmp = data.table::rbindlist(
-#     l = setNames(object = votes_procedures$consists_of,
-#                  nm = votes_procedures$id),
-#     use.names = TRUE, fill = TRUE, idcol = "process_id") |>
-#     dplyr::mutate(activity_date = as.Date(activity_date)) |>
-#     dplyr::filter(
-#         had_activity_type == "def/ep-activities/TABLING_PLENARY"
-#     ) |>
-#     dplyr::select(process_id, activity_date, based_on_a_realization_of) |>
-#     tidyr::unnest(based_on_a_realization_of, names_sep = "_") |>
-#     dplyr::mutate(identifier = ifelse(
-#         test = !grepl(pattern = "-AM-",
-#                       x = based_on_a_realization_of,
-#                       fixed = TRUE),
-#         yes = gsub(pattern = "eli/dl/doc/", replacement = "",
-#                    x = based_on_a_realization_of),
-#         no = NA
-#     )) |>
-#     data.table::as.data.table()
+procedures_docid = data.table::rbindlist(
+  l = setNames(object = procedures_dt$consists_of,
+               nm = procedures_dt$id),
+  use.names = TRUE, fill = TRUE, idcol = "process_id")
+procedures_docid[, activity_date := as.Date(activity_date)]
 
-# based_on_a_realization_of <- votes_foreseen |>
-#     dplyr::select(inverse_was_scheduled_in, based_on_a_realization_of) |>
-#     tidyr::unnest_longer(
-#         col = c(inverse_was_scheduled_in, based_on_a_realization_of),
-#         indices_include = TRUE) |>
-#     dplyr::mutate(is_c_doc = ifelse(
-#         test = grepl(pattern = "/C-", x = based_on_a_realization_of, fixed = TRUE),
-#         yes = 1L, no = 0L),
-#         is_multiple = ifelse(
-#             test = max(based_on_a_realization_of_id) > 1L,
-#             yes = 1L, no = 0L),
-#         .by = inverse_was_scheduled_in) |>
-#     dplyr::filter(
-#         ! (is_c_doc == 1L & is_multiple == 1L)
-#         & !grepl(pattern = "O-\\d{1,2}-", x = based_on_a_realization_of, perl = TRUE)
-#     ) |>
-#     dplyr::select(inverse_was_scheduled_in, based_on_a_realization_of)
+# Unnest
+procedures_docid = procedures_docid[
+  had_activity_type == "def/ep-activities/TABLING_PLENARY",
+  list(based_on_a_realization_of = as.character(unlist(based_on_a_realization_of))),
+  by = list(process_id, activity_date)] |>
+  unique()
 
+#' WATCH OUT! You cannot filter out Amendments at this stage.
+#' Indeed, many Resolutions only show up as Amendments.
 
-# DEFENSIVE: Last minute data, or URGENT PROCEDURES, may not be fully populated.
-# Thus, we import part of the data from other sources.
-# procedures_doc_id <- procedures_docid_tmp |>
-#     dplyr::full_join(
-#         y = based_on_a_realization_of,
-#         by = c("process_id" = "inverse_was_scheduled_in")
-#     ) |>
-#     dplyr::mutate(identifier = ifelse(
-#         test = is.na(identifier),
-#         yes = gsub(pattern = "eli/dl/doc/", replacement = "",
-#                    x = based_on_a_realization_of.y),
-#         no = identifier)
-#     ) |>
-#     data.table::as.data.table()
+# Create a DOC identifier just for non-AM
+procedures_docid[, `:=`(
+  identifier = gsub(pattern = "eli/dl/doc/|-AM-.*", replacement = "",
+                    x = based_on_a_realization_of, perl = TRUE)
+)]
+# Subset cols & get rid of amendments
+procedures_docid = unique(procedures_docid[, list(process_id, activity_date, identifier)])
 
+#------------------------------------------------------------------------------#
+#' Now the Amendments will be discarded as a consequence of taking the unique combinations of these columns.
+#------------------------------------------------------------------------------#
 
 # Fix docs' labels ------------------------------------------------------------#
 # create temporary duplicate col for string processing
-# procedures_doc_id[, identifier2 := identifier]
-# # invert the orders of the groups for A-, B-, C- files
-# procedures_doc_id[
-#     grepl(pattern = "^[ABC]{1}.\\d{1,2}.", x = identifier2),
-#     doc_id := gsub(
-#         pattern = "(^[ABC]{1}.\\d{1,2}.)(\\d{4}).(\\d{4})",
-#         replacement = "\\1\\3-\\2", x = identifier2, perl = T) ]
-# # treat RC separately
-# procedures_doc_id[
-#     grepl(pattern = "^RC.\\d{1,2}", x = identifier2),
-#     doc_id := gsub(
-#         pattern = "(^RC.\\d{1,2}.)(\\d{4}).(\\d{4})",
-#         replacement = "\\1\\3-\\2", x = identifier2, perl = T) ]
-# procedures_doc_id[, doc_id := gsub(pattern = "^RC", replacement = "RC-B",
-#                                    x = doc_id, perl = T)]
-# # delete - between doc_id LETTER and MANDATE NUMBER
-# procedures_doc_id[, doc_id := gsub(pattern = "([A-Z]{1}).(\\d{1,2})",
-#                                    replacement = "\\1\\2", x = doc_id, perl = T)]
-# # slash at the end
-# procedures_doc_id[, doc_id := gsub(pattern = "(?<=.\\d{4}).",
-#                                    replacement = "/", x = doc_id, perl = T)]
-# # Delete cols
-# procedures_doc_id[, c("based_on_a_realization_of.x", "based_on_a_realization_of.y",
-#                       "identifier", "identifier2") := NULL]
-# # sapply(procedures_doc_id, function(x) sum(is.na(x))) # check
+procedures_docid[, identifier2 := identifier]
+# invert the orders of the groups for A-, B-, C- files
+procedures_docid[
+  grepl(pattern = "^[ABC]{1}.\\d{1,2}.", x = identifier2),
+  doc_id := gsub(
+    pattern = "(^[ABC]{1}.\\d{1,2}.)(\\d{4}).(\\d{4})",
+    replacement = "\\1\\3-\\2", x = identifier2, perl = T) ]
+# treat RC separately
+procedures_docid[
+  grepl(pattern = "^RC.\\d{1,2}", x = identifier2),
+  doc_id := gsub(
+    pattern = "(^RC.\\d{1,2}.)(\\d{4}).(\\d{4})",
+    replacement = "\\1\\3-\\2", x = identifier2, perl = T) ]
+procedures_docid[, doc_id := gsub(pattern = "^RC", replacement = "RC-B",
+                                   x = doc_id, perl = T)]
+# delete - between doc_id LETTER and MANDATE NUMBER
+procedures_docid[, doc_id := gsub(pattern = "([A-Z]{1}).(\\d{1,2})",
+                                   replacement = "\\1\\2", x = doc_id, perl = T)]
+# slash at the end
+procedures_docid[, doc_id := gsub(pattern = "(?<=.\\d{4}).",
+                                   replacement = "/", x = doc_id, perl = T)]
+# sapply(procedures_docid, function(x) sum(is.na(x))) # check
 
-# Clean and filter data
-# procedures_doc_id <- procedures_doc_id |>
-#     dplyr::filter(!is.na(doc_id)) |>
-#     dplyr::mutate(nchar_doc = nchar(doc_id)) |>
-#     dplyr::arrange(process_id, -nchar_doc) |>
-#     dplyr::select(-c(nchar_doc, activity_date) ) |>
-#     dplyr::distinct() |>
-#     tidyr::nest(doc_id = doc_id)
+# Delete cols
+procedures_docid[, identifier2 := NULL]
+
+# Drop NAs in DOC ID
+procedures_docid <- procedures_docid[!is.na(doc_id)]
+
+# Save to disk
+if ( !exists("today_date")
+     && mandate_starts == as.character("2019-07-01") ) {
+  data.table::fwrite(x = procedures_docid, file = here::here(
+    "data_out", "procedures", "procedures_docid_all.csv") )
+} else if ( !exists("today_date")
+            && mandate_starts == as.character("2024-07-14") ) {
+  data.table::fwrite(x = procedures_docid, file = here::here(
+    "data_out", "procedures", "procedures_docid_10.csv") ) }
+
+##----------------------------------------------------------------------------##
+cat("\n=====\nEnd of processing Procedures identified via Meetings/Vote_Results.\n=====\n")

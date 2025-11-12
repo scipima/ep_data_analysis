@@ -164,7 +164,7 @@ if ( file.exists(here::here("data_out", "docs_pl", "pl_docs.csv") ) ) {
 if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
 
   # Build URLs for document chunks --------------------------------------------#
-  chunk_size <- 50L  # Reduced to avoid timeouts
+  chunk_size <- 20L  # Reduced to avoid timeouts
   doc_ids_chunks <- split(x = doc_ids, ceiling(seq_along(doc_ids) / chunk_size))
 
   # Build API URLs for each chunk
@@ -252,6 +252,7 @@ if ( last_doc > 30L | is.na(last_doc) | !exists("doc_ids_missing") ) {
       urls = api_urls,
       capacity = 495,
       fill_time_s = 300,
+      timeout_s = 360,
       show_progress = TRUE,
       extract_data = TRUE
     )

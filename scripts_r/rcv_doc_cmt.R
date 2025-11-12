@@ -136,7 +136,7 @@ if ( !exists("today_date")
             && mandate_starts == as.character("2024-07-14") ) {
     votes_inverse_consists_of = data.table::fread(file = here::here(
         "data_out", "votes", "votes_inverse_consists_of_10.csv") ) }
-votes_inverse_consists_of[, vote_id := gsub(
+votes_inverse_consists_of[, vot_id := gsub(
     pattern = "eli/dl/event/", replacement = "", x = event_vot_itm_id)]
 
 #------------------------------------------------------------------------------#
@@ -148,11 +148,11 @@ rcvid_cmts <- rcvid_docid |>
     # BREAK THE CODE HERE AND TRACK DOWN NAs IN DOCIDs
     dplyr::full_join(
         y = votes_based_on_a_realization_of,
-        by = c("vote_id", "doc_id") ) |>
+        by = c("vot_id", "doc_id") ) |>
     # BREAK THE CODE HERE AND TRACK DOWN NAs IN `DOCIDs `basedonarealizationof``
     dplyr::full_join(
         y = votes_inverse_consists_of,
-        by = c("vote_id") ) |>
+        by = c("vot_id") ) |>
     # BREAK THE CODE HERE AND TRACK DOWN NAs IN `DOCIDs `processid`
     dplyr::full_join(
         y = procedures_cmt,
@@ -183,7 +183,7 @@ rcvid_docid <- rcvid_docid |>
         by = c("rcv_id" = "notation_votingId") ) |>
     dplyr::left_join(
         y = votes_based_on_a_realization_of,
-        by = c("vote_id", "doc_id") ) |>
+        by = c("vot_id", "doc_id") ) |>
     dplyr::distinct(rcv_id, doc_id ) |>
     na.omit()
 # Write data conditional on mandate ----------------------------------------#

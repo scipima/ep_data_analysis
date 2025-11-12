@@ -81,7 +81,9 @@ data.table::fwrite(x = pl_docs, file = here::here(
 ### Adopts --------------------------------------------------------------------
 #' Connection between Plenary Docs and Committee Doc being adopted.
 
-docs_adopts <- unnest_nested_list(group_cols = "id", unnest_col = "adopts")
+docs_adopts <- unnest_nested_list(data_list = pl_docs_list,
+                                  group_cols = "id",
+                                  unnest_col = "adopts")
 docs_adopts[, adopts := gsub(pattern = "eli/dl/doc/", replacement = "",
                              x = adopts)]
 # write to disk ---------------------------------------------------------------#
@@ -93,7 +95,9 @@ data.table::fwrite(x = docs_adopts, file = here::here(
 
 #' Not clear what this field is referring to.
 
-docs_based_on <- unnest_nested_list(unnest_col = "based_on")
+docs_based_on <- unnest_nested_list(data_list = pl_docs_list,
+                                    group_cols = "id",
+                                    unnest_col = "based_on")
 docs_based_on[, based_on := gsub(pattern = "eli/dl/doc/", replacement = "",
                                  x = based_on)]
 
@@ -110,7 +114,9 @@ data.table::fwrite(x = docs_based_on, file = here::here(
 #' To tease it out, we pull the data on Committees, and match the values in the `creator` col against the Committee labs.
 #' All values that are left out are assigned to political groups.
 
-docs_creator <- unnest_nested_list(unnest_col = "creator")
+docs_creator <- unnest_nested_list(data_list = pl_docs_list,
+                                   group_cols = "id",
+                                   unnest_col = "creator")
 
 # Read in Committee data ------------------------------------------------------#
 if ( file.exists(here::here("data_out", "bodies", "committee_long.csv")) ) {
@@ -160,7 +166,10 @@ data.table::fwrite(x = docs_creator, file = here::here(
 
 #' This seems to relate the PL Docs to either previous voting items, or others things that are harder to decipher
 
-docs_inverse_based_on_a_realization_of <- unnest_nested_list(unnest_col = "inverse_based_on_a_realization_of")
+docs_inverse_based_on_a_realization_of <- unnest_nested_list(
+  data_list = pl_docs_list,
+  group_cols = "id",
+  unnest_col = "inverse_based_on_a_realization_of")
 # write to disk ---------------------------------------------------------------#
 data.table::fwrite(x = docs_inverse_based_on_a_realization_of, file = here::here(
   "data_out", "docs_pl", "pl_docs_inverse_based_on_a_realization_of.csv"))
@@ -183,7 +192,10 @@ data.table::fwrite(x = docs_inverse_based_on_a_realization_of, file = here::here
 #' Connects the procedural number of Plenary Docs with procedure identifiers.
 #' Unfortunately there are some Plenary Docs that are connected with multiple procedures.
 
-docs_inverse_created_a_realization_of <- unnest_nested_list(unnest_col = "inverse_created_a_realization_of")
+docs_inverse_created_a_realization_of <- unnest_nested_list(
+  data_list = pl_docs_list,
+  group_cols = "id",
+  unnest_col = "inverse_created_a_realization_of")
 
 # check
 # p=docs_inverse_created_a_realization_of[, .N, by = id][order(N)]
@@ -254,7 +266,9 @@ data.table::fwrite(x = docs_inverse_created_a_realization_of, file = here::here(
 
 #' This gathers all the EUROVOC identifiers related to Plenary Docs
 
-docs_is_about <- unnest_nested_list(unnest_col = "is_about")
+docs_is_about <- unnest_nested_list(data_list = pl_docs_list,
+                                    group_cols = "id",
+                                    unnest_col = "is_about")
 docs_is_about[, is_about := gsub(
   pattern = "http://eurovoc.europa.eu/", replacement = "", x = is_about)]
 
@@ -281,13 +295,17 @@ eurovoc_ids <- unique(docs_is_about$is_about)
 
 
 ### isAboutDirectoryCode ------------------------------------------------------
-docs_isAboutDirectoryCode <- unnest_nested_list(unnest_col = "isAboutDirectoryCode")
+docs_isAboutDirectoryCode <- unnest_nested_list(data_list = pl_docs_list,
+                                                group_cols = "id",
+                                                unnest_col = "isAboutDirectoryCode")
 
 
 ### isAboutSubjectMatter -------------------------------------------------------
 #' This could be a substitute of EUROVOC, but it is not clear where to retrieve a dictionary of these labels.
 
-docs_isAboutSubjectMatter <- unnest_nested_list(unnest_col = "isAboutSubjectMatter")
+docs_isAboutSubjectMatter <- unnest_nested_list(data_list = pl_docs_list,
+                                                group_cols = "id",
+                                                unnest_col = "isAboutSubjectMatter")
 
 
 ### Participation -------------------------------------------------------------
@@ -299,6 +317,8 @@ docs_isAboutSubjectMatter <- unnest_nested_list(unnest_col = "isAboutSubjectMatt
 
 # Apply the general functions
 docs_workHadParticipation <- unnest_nested_df(
+  data_list = pl_docs_list,
+  group_col = "id",
   unnest_col = "workHadParticipation"
 )
 
@@ -444,15 +464,15 @@ docs_committee <- data.table::merge.data.table(
 
 # Merge with pl_docs to get more metadata
 docs_committee = pl_docs[, c("id", "identifier", "doc_id")
-        ][
-          docs_committee,
-          on = "id"
+][
+  docs_committee,
+  on = "id"
 ]
 # Check what you're missing out
 sort(unique(
   pl_docs$id[
     !pl_docs$id %in% docs_committee$id
-]))
+  ]))
 
 
 # checks
