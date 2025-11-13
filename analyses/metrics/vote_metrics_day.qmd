@@ -367,20 +367,37 @@ if ( file.exists(here::here(
   cat("\n## EPP Breaches of the Coalition Agreement\n\nThe table below lists the votes where the EPP majority voted differently from both S&D and Renew, and together with either (A) ECR and PfE, or (B) ECR, ESN, and PfE.\n")
   
   # Process and print table
-  votes_today |> 
+  epp_breaches = votes_today |> 
     dplyr::filter(
       decision_method == "VOTE_ELECTRONIC_ROLLCALL"
       & (is_pfe_ecr == 1 | is_pfe_ecr_esn == 1)
-    ) |> 
+    ) |>
     dplyr::mutate(
       `(A) EPP + ECR + PfE` = ifelse(is_pfe_ecr == 1L, "Yes", "No"),
       `(B) EPP + ECR + ESN + PfE` = ifelse(is_pfe_ecr_esn == 1L, "Yes", "No"),
     ) |> 
     dplyr::select(
       Dossier = vote_label, `RCV Label` = activity_label_mul, 
-      `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`) |> 
+      `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`) 
+  
+  epp_breaches |> 
     knitr::kable(align = "c")
 }
+
+# epp_breaches = votes_today |> 
+#   dplyr::filter(
+#     decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+#     & (is_pfe_ecr == 1 | is_pfe_ecr_esn == 1)
+#   ) |>
+#   dplyr::mutate(
+#     `(A) EPP + ECR + PfE` = ifelse(is_pfe_ecr == 1L, "Yes", "No"),
+#     `(B) EPP + ECR + ESN + PfE` = ifelse(is_pfe_ecr_esn == 1L, "Yes", "No"),
+#   ) |> 
+#   left_join(
+#     rcv_tally_20251113, by = "rcv_id"
+#   )
+# readr::write_csv(epp_breaches, here::here("data_out", "equality_strategy.csv"))
+
 ```
 
 
