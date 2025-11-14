@@ -21,6 +21,7 @@ country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id
 6,DEU,Germany,6561,NI,7026,PdF,Partei des Fortschritts
 22,POL,Poland,6561,NI,7029,KKP,Konfederacja Korony Polskiej
 18,LUX,Luxembourg,6561,NI,7031,ADR,Alternativ Demokratesch Reformpartei
+22,POL,Poland,7018,PPE,,,
 21,NLD,Netherlands,7018,PPE,6639,NSC,Nieuw Sociaal Contract
 23,PRT,Portugal,7018,PPE,6640,AD,Aliança Democrática
 19,LVA,Latvia,7018,PPE,6649,JV,Jaunā Vienotība
