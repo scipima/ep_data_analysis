@@ -2,11 +2,12 @@
 name: get_procedures
 
 # Event - What starts this workflow?
+on: workflow_dispatch
 # on: [push, workflow_dispatch]
-on:
-  schedule:
+# on:
+  # schedule:
   # At 02:00, from MON to FRI
-    - cron: "0 2 * * 1-5"
+  #  - cron: "0 2 * * 1-5"
 
 # Jobs - What the Action should do? 
 jobs:
