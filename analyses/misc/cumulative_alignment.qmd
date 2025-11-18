@@ -213,7 +213,15 @@ plot_test = cumulative_affinity[
 plot_test |> 
   ggplot(aes(x = rcv_id_int, y = cum_same, 
              colour = factor(pers_id), group = factor(pers_id))) +
-  geom_point()
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  # scale_fill_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
 
 # cumulative_affinity[
 #   mjrt_polgroup_id == 7035
@@ -235,6 +243,14 @@ cumulative_affinity[
 ] |> 
   ggplot(aes(x = rcv_id_int, y = cum_same, 
              colour = factor(mjrt_polgroup_id), group = factor(mjrt_polgroup_id))) +
-  geom_point()
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  # scale_fill_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
 ```
 
