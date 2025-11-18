@@ -6,6 +6,8 @@
 ## Libraries -------------------------------------------------------------------
 library(data.table)
 
+# today_date <- "20250618" # test
+
 
 # source functions ------------------------------------------------------------#
 source(file = here::here("scripts_r", "get_majority.R") )
