@@ -1,0 +1,409 @@
+---
+title: "EP Political Groups' Cohesion Rates"
+author:
+  - Marco SCIPIONI
+date: "`r Sys.Date()`"
+format: 
+ docx:
+   toc: true
+   toc-depth: 3
+   toc-title: Contents
+   number-sections: true
+   colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Intro
+```{r}
+#| include: false
+
+script_starts <- Sys.time()
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "stringr", "tidyr", "tidyselect",
+                        "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- "2024-07-14"
+
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots ----------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10, base_family = "roboto") )
+
+#------------------------------------------------------------------------------#
+# vote colours ----------------------------------------------------------------#
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+```
+
+The objective of this short note is to investigate legislative trends during the EP's current mandate.
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+
+## Data and Methods
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+# RCV
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), na.strings = c(NA_character_, "") )
+
+# Recode
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+# left join
+# dim(meps_rcv_mandate)
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+# dim(meps_rcv_mandate)
+meps_rcv_mandate[, result_fct := as.factor(result_fct)]
+
+# VOTES
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"), 
+  # select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+  #            "number_of_votes_abstention", "number_of_votes_against",
+  #            "number_of_votes_favor"),
+  na.strings = c(NA_character_, "") 
+)
+
+meps_current = data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(pl_votes)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+
+#------------------------------------------------------------------------------#
+# Parameters -------------------------------------------------------------------
+renew_polgroup_id <- 7035L
+
+renew_current_meps = unique(meps_current$pers_id[
+  meps_current$polgroup_id == renew_polgroup_id
+])
+```
+
+We include in our analysis all voting data relative to roll-call votes (RCVs) since `r mandate_starts`.
+To provide some context, we currently have `r length(unique(meps_rcv_mandate$rcv_id))` RCVs in our database.
+It is important to appreciate that what we have is only a subset of the all legislation being adopted. 
+Indeed, the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - but RCVs are the only ones where we able to trace votes to individual MEPs - that is, they are so-called *nominal* votes. 
+Since the start of the current mandate, RCVs were approximately `r round(n_rcv/n_votes*100, digits=1)`% of the total votes.
+
+
+### Committees
+```{r}
+#------------------------------------------------------------------------------#
+# List of RCV IDs and Committees
+rcvid_cmts <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+# Number of RCVs
+# length( unique(meps_rcv_mandate$rcv_id) )
+# Number of RCVs by Committee (check for Joint Committee)
+# rcvid_cmts[, .N, by = rcv_id][order(N)]
+
+# what are the RCVs without DOC ID?
+rcv_missing_doc <- unique(meps_rcv_mandate$rcv_id)[
+  !unique(meps_rcv_mandate$rcv_id) %in% unique(rcvid_cmts$rcv_id)]
+
+# These should be ordre du jour, election of commission, etc.
+# pl_votes[rcv_id %in% rcv_missing_doc]
+```
+
+
+
+## Cohesion Rates
+The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
+
+$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
+
+To develop an intuition for how this metric works, please consider the 6 simplified scenarios in the table below.
+In each row, a party of different size (namely, 2, 3, and 4 MEPs) has a different distribution of votes internally. 
+The rightmost column provides the cohesion rate for each of these cases.
+```{r}
+knitr::kable(
+  tibble::tibble(
+    `Number of MEPs` = c(2, 2, 3, 3, 4, 4),
+    `Vote: For` = c(2, 1, 2, 1, 2, 3),
+    `Vote: Against` = c("-", 1, 1, 1, 1, 1),
+    `Vote: Abstain` = c("-", "-", "-", 1, 1, "-"), 
+    Cohesion = c(100, 25, 50, 0, 25, 62.5),
+    # `Is split?` = c("No", "Yes", "No", "Yes", "Yes", "No")
+  ), 
+  align = "c")
+```
+
+As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
+However, experts have highlighted other forms of vote are actually at the MEPs' disposal, i.e. being present in the House but not showing up for specific votes (`no_vote`), or being absent on the voting day (`absent`).
+We do not count those in this note, but can be included if needs be.
+Further, and to be clear, here we do not make use of data coming from the Attendance Registers, but these can be included if needs be.
+
+
+### Overall cohesion rates
+```{r}
+#| fig-width: 8
+#| fig-height: 3
+
+###--------------------------------------------------------------------------###
+# Read in function
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result,
+                                        levels = -3L : 1L,
+                                        labels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Check
+# table(meps_rcv_mandate$result, meps_rcv_mandate$result_fct, exclude = NULL)
+
+# Calculate Cohesion
+cohesion_dt <- meps_rcv_mandate[
+  result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max( tabulate(result_fct) ),
+    tot_votes = sum( tabulate(result_fct) ) ), 
+  keyby = list(rcv_id, polgroup_id) ] |> 
+  join_polit_labs()
+
+cohesion_dt[, .(avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
+            by = list(political_group)][order(-avg)] |> 
+  dplyr::mutate(political_group = fct_reorder(.f = political_group, .x = avg)) |> 
+  ggplot(aes(x=political_group, y = avg, fill = political_group)) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  geom_text(aes(label = avg), size = 3, nudge_y = 3) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by EP Political Groups",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+# ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg.pdf"), 
+#        device = "pdf", dpi = 300, height = 8, width = 12)
+```
+
+
+### Cohesion Rates by Final
+```{r}
+#| fig-width: 8
+#| fig-height: 5
+
+#------------------------------------------------------------------------------#
+# Final Votes data ------------------------------------------------------------#
+votes_final_all <- data.table::fread( here::here(
+  "data_out", "votes", "votes_final_10.csv") )
+
+# Merge RCV with Finals -------------------------------------------------------#
+meps_rcv_mandate <- votes_final_all[meps_rcv_mandate, on = "rcv_id"]
+
+# Colours ---------------------------------------------------------------------#
+cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
+
+# Calculate final votes -------------------------------------------------------#
+cohesion_final_dt <- meps_rcv_mandate[
+  result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max(tabulate(result_fct)),
+    tot_votes = sum(tabulate(result_fct) ) ),
+  keyby = list(rcv_id, polgroup_id, is_final) ] |> 
+  join_polit_labs()
+
+# Plot -------------------------------------------------------------------------
+# REF: https://stackoverflow.com/questions/40211451/geom-text-how-to-position-the-text-on-bar-as-i-want
+cohesion_final_avg <- cohesion_final_dt[, list(
+  avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
+  by = list(political_group, is_final)][order(avg)]
+
+# Extract rank vector for plot
+plot_rank <- cohesion_final_avg$political_group[
+  cohesion_final_avg$is_final == 1L]
+
+cohesion_final_avg |> 
+  dplyr::mutate(
+    is_final = ifelse(test = is_final == 1L,
+                      yes = "Final", no = "Not Final"), 
+    is_final = factor(is_final, levels = c("Final", "Not Final") ) ) |> 
+  ggplot(aes(x = factor(political_group, levels = plot_rank), y = avg) ) +
+  geom_col(aes(fill = is_final, group = is_final),
+           colour = "black", linewidth = 0.1, position = "dodge") +
+  geom_text(aes(label = avg, group = is_final), size = 3,
+            hjust = -0.1, position = position_dodge(width = 1), inherit.aes = TRUE) +
+  scale_fill_manual(values = cols_final) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by EP Political Groups",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold") )
+# ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg.pdf"), 
+#        device = "pdf", dpi = 300, height = 8, width = 12)
+```
+
+
+### Cohesion Rates by Committee
+```{r}
+#| fig-width: 8
+#| fig-height: 13
+
+#------------------------------------------------------------------------------#
+cohesion_bycommittee <- rcvid_cmts[
+  cohesion_dt,
+  on = "rcv_id", nomatch = NULL
+] 
+
+cohesion_bycommittee[
+  !is.na(committee_lab),
+  list(avg_cohesion = mean(cohesion) ),
+  by = list(political_group, committee_lab)] |> 
+  dplyr::mutate(political_group_rw = reorder_within(
+    political_group, avg_cohesion, committee_lab) ) |>
+  ggplot(aes(x=political_group_rw, y = avg_cohesion, fill = political_group)) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
+  coord_flip() +
+  labs(x="", y="Average Cohesion Rates (%)", fill="",
+       title = "Cohesion Rates by Committees",
+       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
+  scale_x_reordered() +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+# ggsave(filename = here::here("figures", "cohesion_bycommittee.pdf"),
+#        device = "pdf", dpi = 300, height = 8, width = 12)
+```
+
+
+### Cumulative Cohesion Rates
+```{r}
+#| fig-width: 8
+#| fig-height: 9.5
+
+#------------------------------------------------------------------------------#
+rcvid_date <- unique(
+  pl_votes[, list(date = activity_date, rcv_id)]
+)
+last_pl_month = lubridate::month( max(pl_votes$activity_date), 
+                                  label = TRUE, abbr = TRUE)
+last_pl_year = data.table::year( max(pl_votes$activity_date) )
+month_year = paste(last_pl_month, last_pl_year, sep = " ")
+
+
+# All Political Groups --------------------------------------------------------#
+cohesion_allpolgroups <- rcvid_date[
+  meps_rcv_mandate, 
+  on = "rcv_id", nomatch = NULL
+][result >= -1L, # only official votes
+  list(cohesion_rate = cohesion_hn(result_fct)),
+  keyby = list(date, rcv_id, polgroup_id)
+][!is.na(cohesion_rate), 
+  `:=`(
+    cum_cohesion = dplyr::cummean(cohesion_rate)
+  ),
+  by = list(polgroup_id)
+] |> 
+  join_polit_labs()
+
+cohesion_allpolgroups[
+  political_group != "NI"
+][
+  order(date, rcv_id)
+][
+  , `:=`(
+    rcv_id = as.factor(rcv_id),
+    political_group = factor(political_group, 
+                             levels = c("Renew", "PPE", "S&D", "Verts/ALE",
+                                        "ECR", "The Left", "PfE", "ESN") ) 
+  )
+] |>
+  ggplot(aes(x = rcv_id, y = cum_cohesion, group = political_group,
+             colour = political_group, fill = political_group) ) +
+  geom_point(alpha = 0.1, show.legend = FALSE) +
+  geom_smooth(show.legend = FALSE) +
+  facet_wrap(~political_group, nrow=4) + # change this to 2 if printing pdf
+  scale_x_discrete(
+    breaks = c(as.character(min(cohesion_allpolgroups$rcv_id)),
+               as.character(max(cohesion_allpolgroups$rcv_id))),
+    labels = c("7/2024", month_year) ) +
+  labs(x="Time", y="Cumulative Average Cohesion Rate") +
+  scale_colour_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(hjust=c(0,1)),
+    panel.spacing.x = unit(5, "mm")
+  )
+# ggsave(filename = here::here("figures", "cumulative_cohesion_allgroups.pdf"),
+#        device = "pdf", dpi = 300, height = 7, width = 12.5)
+```
+
+
+## Reproducibility
+```{r reproducibility}
+sessionInfo()
+
+script_ends <- Sys.time()
+print(script_ends - script_starts) # running time
+```
