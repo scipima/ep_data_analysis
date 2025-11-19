@@ -368,6 +368,7 @@ org/6996,Organization,6996,CJ41,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/2360,Organization,2360,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Culture and Education,Committee on Culture and Education,time-period/20070131-20090713,2009-07-13,2007-01-31
 org/3764,Organization,3764,DROI,def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB,,,Human Rights,Subcommittee on Human Rights,time-period/20120119-20140630,2014-06-30,2012-01-19
 org/5000,Organization,5000,CJ14,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4969_org/4964,AGRI_ENVI,Joint ENVI - AGRI,Procedure with joint meetings  - ENVI and AGRI,time-period/20170119-20190701,2019-07-01,2017-01-19
+org/4999,Organization,4999,CJ15,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4960_org/4957,BUDG_AFET,Joint AFET – BUDG,Procedure with joint meetings - AFET and BUDG,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/5090,Organization,5090,IMCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Internal Market and Consumer Protection,Committee on the Internal Market and Consumer Protection,time-period/20190702-20220119,2022-01-19,2019-07-02
 org/BSE2,Organization,BSE2,BSE2,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,Temporary committee (BSE),Temporary committee instructed to monitor the action taken on the recommendations made concerning BSE (bovine spongiform encephalopathy),,,
 org/1250,Organization,1250,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights and Gender Equality,Committee on Women's Rights and Gender Equality,time-period/20040720-20070114,2007-01-14,2004-07-20
@@ -630,7 +631,6 @@ org/2365,Organization,2365,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/2430,Organization,2430,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Culture and Education,Committee on Culture and Education,time-period/20070115-20070130,2007-01-30,2007-01-15
 org/101,Organization,101,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/6472,Organization,6472,CJ45,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6358_org/6367,ENVI_IMCO,Joint ENVI - IMCO,Joint committee procedure - ENVI and IMCO,time-period/20230711-20240715,2024-07-15,2023-07-11
-org/4999,Organization,4999,CJ15,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4957_org/4960,AFET_BUDG,Joint AFET – BUDG,Procedure with joint meetings - AFET and BUDG,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/6993,Organization,6993,CJ38,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6564_org/6562,INTA_AFET,Joint AFET - INTA,Joint committee procedure - AFET and INTA,time-period/20240716,,2024-07-16
 org/7000,Organization,7000,CJ45,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6574_org/6579,ENVI_IMCO,Joint ENVI - IMCO,Joint committee procedure - ENVI and IMCO,time-period/20240716-20250119,2025-01-19,2024-07-16
 org/TRANSIT,Organization,TRANSIT,TRANSIT,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,Inquiry into the Community Transit System,Temporary committee of inquiry into the Community Transit System,,,
