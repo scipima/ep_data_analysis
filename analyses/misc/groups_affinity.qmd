@@ -1,0 +1,708 @@
+---
+title: "Groups' Affinity and Coalition Behaviour"
+date: "`r Sys.Date()`"
+format:
+  docx:
+   toc: true
+   toc-depth: 3
+   toc-title: Contents
+   number-sections: true
+   colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Key points
+
+* The *overall alignment with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.3%.
+* Over time, we observe a decreasing trend for ECR's affinity with Renew, whereas *trends have been consistently below 30% for over one year for both PfE and ESN*. 
+* In the case of the *JOINT MOTION FOR A RESOLUTION on renewing the EU-Africa partnership: building common priorities ahead of the Angola Summit*, the overall affinity with extreme right Groups was at or below 20%, and with **PfE** specifically it was 15%.
+
+
+## Intro
+```{r}
+#| include: false
+
+script_starts <- Sys.time()
+
+###--------------------------------------------------------------------------###
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
+                        "lubridate", "janitor", "stringr", "tidyr", "tidyselect",
+                        "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- "2024-07-14"
+
+
+###--------------------------------------------------------------------------###
+## Functions -------------------------------------------------------------------
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+# Load join functions ---------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+
+#------------------------------------------------------------------------------#
+## Graphics --------------------------------------------------------------------
+# set theme globally for ggplots ----------------------------------------------#
+# https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+theme_set(theme_minimal(base_size = 10, base_family = "roboto") )
+
+#------------------------------------------------------------------------------#
+# vote colours ----------------------------------------------------------------#
+vote_colours <- c(For = '#00AEEF',
+                  Against = '#BE3455',
+                  Abstain = "#969696",
+                  `Did not vote` = '#5D5CA4',
+                  Absent = '#F47920')
+
+# political groups colours ----------------------------------------------------#
+polgroup_cols = c(`S&D` = "#EE3652",
+                  ECR = "#0D88C3",
+                  PfE = "#1A3153",
+                  PPE = "#3C5979",
+                  Renew = "#FFCC70",
+                  `Verts/ALE` = "#19A24A",
+                  `The Left` = "#733542",
+                  ESN = "#000000",
+                  NI = "#979797")
+```
+
+The objective of this short note is to investigate legislative trends during the EP's current mandate, particularly regarding the Renew's alignment with extreme right Groups.
+
+**Please keep in mind** that this document is the *sole property of the Renew Group* and *should not be disseminated to other people or organisations*.
+
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+# Subset to just 9th mandate
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"), na.strings = c(NA_character_, "") )
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"), 
+  # select = c("activity_date", "rcv_id", "mandate", "number_of_attendees", 
+  #            "number_of_votes_abstention", "number_of_votes_against",
+  #            "number_of_votes_favor"),
+  na.strings = c(NA_character_, "") 
+)
+
+meps_current = data.table::fread(here::here(
+  "data_out", "meps", "meps_current.csv") )
+
+#------------------------------------------------------------------------------#
+# get length objects
+n_votes <- nrow(pl_votes)
+n_rcv <- length( unique( meps_rcv_mandate$rcv_id ) )
+
+
+#------------------------------------------------------------------------------#
+# Parameters -------------------------------------------------------------------
+renew_polgroup_id <- 7035L
+
+renew_current_meps = unique(meps_current$pers_id[
+  meps_current$polgroup_id == renew_polgroup_id
+])
+```
+
+
+## Affinity
+### Renew: Overall Affinity
+```{r}
+#------------------------------------------------------------------------------#
+# Recode
+vote_dict <- data.table::fread(here::here("data_out", "votes", "vote_dict.csv") )
+# left join
+# dim(meps_rcv_mandate)
+meps_rcv_mandate <- vote_dict[meps_rcv_mandate, on = "result"]
+# dim(meps_rcv_mandate)
+meps_rcv_mandate[, result_fct := as.factor(result_fct)]
+
+#------------------------------------------------------------------------------#
+# Get House majority - only official results
+house_mjrt <- get_house_majority(data_in = meps_rcv_mandate[result >= -1L])
+# Get the Groups' majority by rcv_id - only official results
+polgroups_mjrt <- get_polgroup_majority(data_in = meps_rcv_mandate[result >= -1L])
+# Just Renew Mjrt
+renew_mjrt <- polgroups_mjrt[polgroup_id == renew_polgroup_id]
+
+#------------------------------------------------------------------------------#
+# Merge
+renew_polgroups_mjrt <- merge(
+  x = renew_mjrt[, list(rcv_id, result, who_won)],
+  y = polgroups_mjrt,
+  by = c("rcv_id"), all = FALSE)
+renew_polgroups_mjrt[, is_same := as.integer( result.x == result.y ) ]
+renew_polgroups_mjrt <- renew_polgroups_mjrt[ !is.na(is_same) ] |> 
+  join_polit_labs()
+# sapply(renew_polgroups_mjrt, function(x) sum(is.na(x))) # check
+
+# Because of ties within Groups (i.e. absence of a majority), we may lose some votes. 
+# How many lost RCVs due to ties?
+# sum(!unique(meps_rcv_mandate$rcv_id) %in% unique(renew_polgroups_mjrt$rcv_id))
+```
+
+We first calculate the overall affinity of all other Groups to Renew, unfiltered.
+Affinity is defined as the rate with which either the *majorities within Groups/national parties* vote in the same way, or *MEPS* vote in the same way. 
+Here we use only EP official types of votes.^[Because of ties within Groups (i.e. absence of a majority), we may lose some votes. Indeed, we made the choice of discarding the votes where an EP Political Group/National Party did not express a majority.]
+
+To illustrate how the metric works with a toy example, imagine we have four EPP MEPs, and we want to check their affinity with Renew's majority in the context of three RCVs.
+```{r}
+toy_example <- tibble::tibble(
+  `RCV Number` = rep(x = 1:3, times=4),
+  `Renew Majority` = rep(x = c("For", "Against", "Abstain"), times=4),
+  `EPP MEP` = rep(x = c("Mario", "Luigi", "Peach", "Bowser"), each = 3),
+  `EPP MEP's vote` = c("For", "Against", "Abstain",
+                       "For", "Against", "Against",
+                       "Against", "Against", "Against",
+                       "Against", "For", "Against") ) |> 
+  dplyr::mutate(`Match?` = ifelse(
+    test = `Renew Majority` == `EPP MEP's vote`, yes = 1L, no = 0L) )
+
+knitr::kable(toy_example, align = "c")
+```
+
+Given this table, the resulting metrics for these EPP MEPs would be as follows
+```{r}
+toy_example |> 
+  dplyr::group_by(`EPP MEP`) |> 
+  dplyr::summarise(Affinity = round( mean(`Match?`) * 100, digits = 1) ) |> 
+  dplyr::ungroup() |> 
+  dplyr::arrange(desc(Affinity) ) |> 
+  knitr::kable(align = "c")
+```
+
+Coming back to the actual data for this mandate, what's the overall picture?
+```{r}
+#| fig-width: 8
+#| fig-height: 3
+
+# get the mean
+renew_polgroups_mjrt[!is.na(is_same),
+                     list(affinity = mean(is_same)),
+                     by = list(political_group)] |> 
+  # drop renew identity
+  dplyr::filter(political_group != "Renew") |> 
+  dplyr::mutate(political_group = fct_reorder(political_group, affinity)) |> 
+  ggplot(aes(x=political_group, y = affinity, fill = political_group)) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  geom_text(aes(label = round(affinity*100, digits = 1)), size = 3, nudge_y = 0.03) +
+  coord_flip() +
+  labs(
+    x="", y="Affinity with Renew (%)", fill="",
+    title = str_wrap(
+      "How often does the majority within other Political Group happen to vote alongside Renew's majority?",
+      width = 88),
+    caption = paste0(
+      "Source: EP. Notes: data is relative to RCVs in Plenary. Refreshed on: ",
+      Sys.Date() ) ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+```
+
+Thus, the *overall alignment with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.3%.
+
+
+```{r}
+#------------------------------------------------------------------------------#
+### Committees
+
+# List of RCV IDs and Committees
+rcvid_cmts <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+# Number of RCVs
+# length( unique(meps_rcv_mandate$rcv_id) )
+# Number of RCVs by Committee (check for Joint Committee)
+# rcvid_cmts[, .N, by = rcv_id][order(N)]
+
+# what are the RCVs without DOC ID?
+rcv_missing_doc <- unique(meps_rcv_mandate$rcv_id)[
+  !unique(meps_rcv_mandate$rcv_id) %in% unique(rcvid_cmts$rcv_id)]
+
+# These should be ordre du jour, election of commission, etc.
+# pl_votes[rcv_id %in% rcv_missing_doc]
+```
+
+<!-- In this sub-section, we break down the aggregate trends witnessed above by Committees. -->
+<!-- Please be aware that, because *many Resolutions are not associated with a Committee*, and *no Joint Resolution is associated with a Committee*, only a subset of votes are analysed here.  -->
+<!-- More precisely, while there are `r n_rcv` RCVs in this mandate, only `r n_rcv - length(rcv_missing_doc)` of those can be traced back to a Committee (`r round( ( ( n_rcv - length(rcv_missing_doc) ) / n_rcv ) * 100, digits=1)`%).  -->
+<!-- Further, because an individual report may be associated with multiple Committees (i.e. in the *Joint Committees*), we decided to count these vote in every Committee where they appear, thus resulting to some degree in double counting.  -->
+```{r}
+#| eval: false
+#| fig-width: 8
+#| fig-height: 13
+
+#------------------------------------------------------------------------------#
+renew_polgroups_mjrt_cmt <- renew_polgroups_mjrt[
+  rcvid_cmts,
+  on = "rcv_id", nomatch = NULL
+]
+# renew_polgroups_mjrt_cmt[, .N, by = "rcv_id"][order(N)]
+
+# Plot ------------------------------------------------------------------------#
+renew_polgroups_mjrt_cmt[
+  !is.na(is_same) # Get rid of NAs
+  & !is.na(committee_lab) # just Standing Committees
+  & polgroup_id != 7035L, # Get rid of Renew identity
+  # Calculate the mean --------------------------------------------------------#
+  list(n_votes = .N,
+       affinity = mean(is_same) ),
+  # Grouped by Political Group and Committee ----------------------------------#
+  by = list(political_group, committee_lab) ] |> 
+  # dplyr::filter(political_group != "Renew") |> 
+  dplyr::mutate(political_group_rw = reorder_within(
+    x = political_group, by = affinity, within = committee_lab) ) |> 
+  ggplot(aes(x=political_group_rw, y = affinity, # alpha = n_votes, 
+             fill = political_group) ) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
+  coord_flip() +
+  labs(
+    x="", y="Affinity with Renew (%)", fill="",
+    title = str_wrap(
+      "How often does the majority within other Political Group happen to vote alongside Renew's majority, by Committee?",
+      width = 88),
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
+  scale_x_reordered() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold", size = 12),
+        legend.position = "none",
+        strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))  
+```
+
+
+### Renew: Cumulative Affinity
+If we want to appreciate the evolution over time of Renew's affinity with the extreme right, we can calculate the [cumulative affinity](https://en.wikipedia.org/wiki/Moving_average#Cumulative_average).
+In a nutshell, this is just the metric above but smoothed over time.
+By definition, this is relative jumpy at the beginning of the time series (as the sample size is extremely low), but then becomes steadier over the course of the period of observation.
+```{r}
+#| fig-width: 8
+#| fig-height: 9.5
+
+# Affinity --------------------------------------------------------------------#
+rcvid_date <- unique(
+  pl_votes[, list(date = activity_date, rcv_id)]
+)
+last_pl_month = lubridate::month( max(pl_votes$activity_date), 
+                                  label = TRUE, abbr = TRUE)
+last_pl_year = data.table::year( max(pl_votes$activity_date) )
+month_year = paste(last_pl_month, last_pl_year, sep = " ")
+
+is_same = renew_mjrt[
+  polgroups_mjrt[polgroup_id != renew_polgroup_id],
+  on = "rcv_id"
+][
+  , `:=`(
+    is_same = as.integer(result == i.result)
+  )
+][
+  !is.na(is_same)
+]
+# unique(is_same$rcv_id[is.na(is_same$polgroup_id)])
+
+is_same_date = is_same[
+  rcvid_date,
+  on = "rcv_id", nomatch = NULL
+]
+data.table::setkeyv(x = is_same_date,
+                    cols = c("date", "rcv_id", "polgroup_id"))
+
+is_same_date[, 
+             `:=`(
+               cum_same = dplyr::cummean(is_same)
+             ),
+             by = list(i.polgroup_id)
+] 
+
+last_value = is_same_date |> 
+  dplyr::slice_tail(n = 1, by = i.polgroup_id) |> 
+  dplyr::select(date, rcv_id, is_same, cum_same,
+                polgroup_id = i.polgroup_id) |> 
+  join_polit_labs() |> 
+  dplyr::filter(political_group != "NI") |> 
+  dplyr::mutate(
+    rcv_id = as.factor(rcv_id),
+    political_group = factor(political_group, 
+                             levels = c("Renew", "PPE", "S&D", "Verts/ALE",
+                                        "ECR", "The Left", "PfE", "ESN") ) 
+  ) 
+
+
+is_same_date |> 
+  dplyr::select(date, rcv_id, is_same, cum_same,
+                polgroup_id = i.polgroup_id) |> 
+  join_polit_labs()  |> 
+  dplyr::filter(political_group != "NI") |> 
+  dplyr::arrange(date, rcv_id) |> 
+  dplyr::mutate(
+    rcv_id = as.factor(rcv_id),
+    political_group = factor(political_group, 
+                             levels = c("Renew", "PPE", "S&D", "Verts/ALE",
+                                        "ECR", "The Left", "PfE", "ESN") ) 
+  ) |>
+  ggplot(aes(x = rcv_id, y = cum_same, group = political_group,
+             colour = political_group, fill = political_group) ) +
+  geom_point(alpha = 0.1, show.legend = FALSE) +
+  geom_smooth(show.legend = FALSE) +
+  geom_text(
+    data = last_value, 
+    aes(x = rcv_id, y = cum_same, label = round(cum_same*100, 1)),
+    colour="black", hjust = 1.2, vjust = -0.8) +
+  facet_wrap(~political_group, nrow=4) + # change this 2 if printing pdf
+  scale_x_discrete(
+    breaks = c(as.character(min(is_same$rcv_id)),
+               as.character(max(is_same$rcv_id))),
+    labels = c("July 2024", month_year) ) +
+  labs(x="Time", y="Cumulative Average Similarity") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_colour_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(hjust=c(0,1)),
+    panel.spacing.x = unit(5, "mm")
+  )
+# ggsave(filename = here::here("figures", "cumulative_affinity_allgroups.pdf"),
+#        device = "pdf", dpi = 300, height = 7, width = 12.5)
+```
+
+The plot above clearly shows a decreasing trend for ECR's affinity with Renew, whereas trends have been consistently below 30% for over one year for both PfE and ESN. 
+
+
+### EPP: Overall Affinity
+```{r}
+epp_polgroup_id = 7018L
+
+# Just EPP Mjrt
+epp_mjrt <- polgroups_mjrt[polgroup_id == epp_polgroup_id]
+
+#------------------------------------------------------------------------------#
+# Merge
+epp_polgroups_mjrt <- merge(
+  x = epp_mjrt[, list(rcv_id, result, who_won)],
+  y = polgroups_mjrt,
+  by = c("rcv_id"), all = FALSE)
+epp_polgroups_mjrt[, is_same := as.integer( result.x == result.y ) ]
+epp_polgroups_mjrt <- epp_polgroups_mjrt[ !is.na(is_same) ] |> 
+  join_polit_labs()
+# sapply(epp_polgroups_mjrt, function(x) sum(is.na(x))) # check
+
+# Because of ties within Groups (i.e. absence of a majority), we may lose some votes. 
+# How many lost RCVs due to ties?
+# sum(!unique(meps_rcv_mandate$rcv_id) %in% unique(epp_polgroups_mjrt$rcv_id))
+```
+
+Coming back to the actual data for this mandate, what's the overall picture?
+```{r}
+#| fig-width: 8
+#| fig-height: 3
+
+# get the mean
+epp_polgroups_mjrt[!is.na(is_same),
+                   list(affinity = mean(is_same)),
+                   by = list(political_group)] |> 
+  # drop renew identity
+  dplyr::filter(political_group != "PPE") |> 
+  dplyr::mutate(political_group = fct_reorder(political_group, affinity)) |> 
+  ggplot(aes(x=political_group, y = affinity, fill = political_group)) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  geom_text(aes(label = round(affinity*100, digits = 1)), 
+            size = 3, nudge_y = 0.03) +
+  coord_flip() +
+  labs(
+    x="", y="Affinity with Renew (%)", fill="",
+    title = str_wrap(
+      "How often does the majority within other Political Group happen to vote alongside EPP's majority?",
+      width = 88),
+    caption = paste0(
+      "Source: EP. Notes: data is relative to RCVs in Plenary. Refreshed on: ",
+      Sys.Date() ) ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        # strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+```
+
+Thus, the *EPP's alignment with __ECR__* is 53.1%, and with **PfE** is 38.3%.
+```{r}
+#------------------------------------------------------------------------------#
+### Committees
+
+# List of RCV IDs and Committees
+rcvid_cmts <- data.table::fread(here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv") )
+rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
+
+# Number of RCVs
+# length( unique(meps_rcv_mandate$rcv_id) )
+# Number of RCVs by Committee (check for Joint Committee)
+# rcvid_cmts[, .N, by = rcv_id][order(N)]
+
+# what are the RCVs without DOC ID?
+rcv_missing_doc <- unique(meps_rcv_mandate$rcv_id)[
+  !unique(meps_rcv_mandate$rcv_id) %in% unique(rcvid_cmts$rcv_id)]
+
+# These should be ordre du jour, election of commission, etc.
+# pl_votes[rcv_id %in% rcv_missing_doc]
+```
+
+<!-- In this sub-section, we break down the aggregate trends witnessed above by Committees. -->
+<!-- Please be aware that, because *many Resolutions are not associated with a Committee*, and *no Joint Resolution is associated with a Committee*, only a subset of votes are analysed here.  -->
+<!-- More precisely, while there are `r n_rcv` RCVs in this mandate, only `r n_rcv - length(rcv_missing_doc)` of those can be traced back to a Committee (`r round( ( ( n_rcv - length(rcv_missing_doc) ) / n_rcv ) * 100, digits=1)`%).  -->
+<!-- Further, because an individual report may be associated with multiple Committees (i.e. in the *Joint Committees*), we decided to count these vote in every Committee where they appear, thus resulting to some degree in double counting.  -->
+```{r}
+#| eval: false
+#| fig-width: 8
+#| fig-height: 13
+
+#------------------------------------------------------------------------------#
+epp_polgroups_mjrt_cmt <- epp_polgroups_mjrt[
+  rcvid_cmts,
+  on = "rcv_id", nomatch = NULL
+]
+# epp_polgroups_mjrt_cmt[, .N, by = "rcv_id"][order(N)]
+
+# Plot ------------------------------------------------------------------------#
+epp_polgroups_mjrt_cmt[
+  !is.na(is_same) # Get rid of NAs
+  & !is.na(committee_lab) # just Standing Committees
+  & polgroup_id != 7035L, # Get rid of Renew identity
+  # Calculate the mean --------------------------------------------------------#
+  list(n_votes = .N,
+       affinity = mean(is_same) ),
+  # Grouped by Political Group and Committee ----------------------------------#
+  by = list(political_group, committee_lab) ] |> 
+  # dplyr::filter(political_group != "Renew") |> 
+  dplyr::mutate(political_group_rw = reorder_within(
+    x = political_group, by = affinity, within = committee_lab) ) |> 
+  ggplot(aes(x=political_group_rw, y = affinity, # alpha = n_votes, 
+             fill = political_group) ) +
+  geom_col(colour = "black", linewidth = 0.1) +
+  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
+  coord_flip() +
+  labs(
+    x="", y="Affinity with Renew (%)", fill="",
+    title = str_wrap(
+      "How often does the majority within other Political Group happen to vote alongside Renew's majority, by Committee?",
+      width = 88),
+    caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
+  scale_x_reordered() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = polgroup_cols) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold", size = 12),
+        legend.position = "none",
+        strip.text.y.right = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))  
+```
+
+
+### EPP: Cumulative Affinity
+If we want to appreciate the evolution over time of Renew's affinity with the extreme right, we can calculate the [cumulative affinity](https://en.wikipedia.org/wiki/Moving_average#Cumulative_average).
+In a nutshell, this is just the metric above but smoothed over time.
+By definition, this is relative jumpy at the beginning of the time series (as the sample size is extremely low), but then becomes steadier over the course of the period of observation.
+```{r}
+#| fig-width: 8
+#| fig-height: 9.5
+
+# Affinity --------------------------------------------------------------------#
+rcvid_date <- unique(
+  pl_votes[, list(date = activity_date, rcv_id)]
+)
+last_pl_month = lubridate::month( max(pl_votes$activity_date), 
+                                  label = TRUE, abbr = TRUE)
+last_pl_year = data.table::year( max(pl_votes$activity_date) )
+month_year = paste(last_pl_month, last_pl_year, sep = " ")
+
+is_same = epp_mjrt[
+  polgroups_mjrt[polgroup_id != epp_polgroup_id],
+  on = "rcv_id"
+][
+  , `:=`(
+    is_same = as.integer(result == i.result)
+  )
+][
+  !is.na(is_same)
+]
+# unique(is_same$rcv_id[is.na(is_same$polgroup_id)])
+
+is_same_date = is_same[
+  rcvid_date,
+  on = "rcv_id", nomatch = NULL
+]
+data.table::setkeyv(x = is_same_date,
+                    cols = c("date", "rcv_id", "polgroup_id"))
+
+is_same_date[, 
+             `:=`(
+               cum_same = dplyr::cummean(is_same)
+             ),
+             by = list(i.polgroup_id)
+] 
+
+last_value = is_same_date |> 
+  dplyr::slice_tail(n = 1, by = i.polgroup_id) |> 
+  dplyr::select(date, rcv_id, is_same, cum_same,
+                polgroup_id = i.polgroup_id) |> 
+  join_polit_labs() |> 
+  dplyr::filter(political_group != "NI") |> 
+  dplyr::mutate(
+    rcv_id = as.factor(rcv_id),
+    political_group = factor(political_group, 
+                             levels = c("Renew", "PPE", "S&D", "Verts/ALE",
+                                        "ECR", "The Left", "PfE", "ESN") ) 
+  ) 
+
+
+is_same_date |> 
+  dplyr::select(date, rcv_id, is_same, cum_same,
+                polgroup_id = i.polgroup_id) |> 
+  join_polit_labs()  |> 
+  dplyr::filter(political_group != "NI") |> 
+  dplyr::arrange(date, rcv_id) |> 
+  dplyr::mutate(
+    rcv_id = as.factor(rcv_id),
+    political_group = factor(political_group, 
+                             levels = c("Renew", "PPE", "S&D", "Verts/ALE",
+                                        "ECR", "The Left", "PfE", "ESN") ) 
+  ) |>
+  ggplot(aes(x = rcv_id, y = cum_same, group = political_group,
+             colour = political_group, fill = political_group) ) +
+  geom_point(alpha = 0.1, show.legend = FALSE) +
+  geom_smooth(show.legend = FALSE) +
+  geom_text(
+    data = last_value, 
+    aes(x = rcv_id, y = cum_same, label = round(cum_same*100, 1)),
+    colour="black", hjust = 1.2, vjust = -0.8) +
+  facet_wrap(~political_group, nrow=4) + # change this 2 if printing pdf
+  scale_x_discrete(
+    breaks = c(as.character(min(is_same$rcv_id)),
+               as.character(max(is_same$rcv_id))),
+    labels = c("July 2024", month_year) ) +
+  labs(x="Time", y="Cumulative Average Similarity") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_colour_manual(values = polgroup_cols) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(hjust=c(0,1)),
+    panel.spacing.x = unit(5, "mm")
+  )
+# ggsave(filename = here::here("figures", "cumulative_affinity_allgroups.pdf"),
+#        device = "pdf", dpi = 300, height = 7, width = 12.5)
+```
+
+The plot above clearly shows a decreasing trend for ECR's affinity with Renew, whereas trends have been consistently below 30% for over one year for both PfE and ESN. 
+
+
+
+## EPP's Breaches of Coalition Agreement
+In the table below, we define:
+
+* `RCVs where the Coalition held (EPP+SD+Renew)` all the RCVs where the majorities within EPP, SD, and Renew voted together, *disregarding* what other Groups might have voted.
+* `RCVs where EPP voted with ECR+PfE, and against Renew+SD` are the RCVs where the EPP voted together with ECR and PfE, and against Renew and SD (we do not care what these latter 2 Groups might have voted, as long as it's not the same as EPP).
+* `RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD` are the RCVs where the EPP voted together with ECR, ESN, and PfE, and against Renew and SD (we do not care what these latter 2 Groups might have voted, as long as it's not the same as EPP).
+This is, by definition, a subset of the previous category.
+```{r}
+#------------------------------------------------------------------------------#
+# Get the Groups' majority by rcv_id ------------------------------------------#
+epp_mjrt[, c("polgroup_id", "who_won") := NULL]
+
+epp_groups <- epp_mjrt[
+  polgroups_mjrt[polgroup_id != 7018L],
+  on = "rcv_id", nomatch = NULL
+][, who_won := NULL] |>
+  join_polit_labs() |>
+  dplyr::select(-polgroup_id)
+
+
+#------------------------------------------------------------------------------#
+epp_coalitions <- epp_groups |>
+  tidyr::pivot_wider(names_from = political_group, values_from = i.result) |>
+  dplyr::mutate(
+    is_sd_renew = ifelse(
+      test = (result == Renew) & (result == `S&D`),
+      yes = 1L, no = 0L),
+    
+    is_pfe_ecr = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR),
+      yes = 1L, no = 0L),
+    is_pfe_ecr_esn = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR & result == ESN),
+      yes = 1L, no = 0L) ) |>
+  dplyr::rename(PPE = result) |>
+  data.table::as.data.table()
+
+
+#------------------------------------------------------------------------------#
+# Conditionally save output if any
+if ( sum(epp_coalitions$is_pfe_ecr, na.rm = TRUE) > 0 ) {
+  data.table::fwrite(x = epp_coalitions, file = here::here(
+    "data_out", "epp_coalitions.csv") )
+}
+
+epp_coalitions |> 
+  summarise(
+    `RCVs where the Coalition held (EPP+SD+Renew)`= sum(is_sd_renew, na.rm = TRUE),
+    `RCVs where EPP voted with ECR+PfE, and against Renew+SD` = sum(is_pfe_ecr, na.rm = TRUE),
+    `RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD` = sum(is_pfe_ecr_esn, na.rm = TRUE)) |> 
+  pivot_longer(cols = everything(), names_to = "Voting Coalitions", 
+               values_to = "N. RCVs") |> 
+  knitr::kable(align = "c")
+```
+
+
+{{< pagebreak >}}
+
+## Data and Reproducibility
+We include in our analysis all voting data relative to roll-call votes (RCVs) since `r mandate_starts`.
+To provide some context, we currently have `r length(unique(meps_rcv_mandate$rcv_id))` RCVs in our database.
+It is important to appreciate that what we have is only a subset of the all legislation being adopted. 
+Indeed, the EP recognises different forms of voting - such as *raise of hands*, or *electronic votes* - but RCVs are the only ones where we able to trace votes to individual MEPs - that is, they are so-called *nominal* votes. 
+Since the start of the current mandate, RCVs were approximately `r round(n_rcv/n_votes*100, digits=1)`% of the total votes.
+
+```{r reproducibility}
+sessionInfo()
+
+script_ends <- Sys.time()
+print(script_ends - script_starts) # running time
+```
