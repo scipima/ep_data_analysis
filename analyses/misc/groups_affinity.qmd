@@ -17,9 +17,11 @@ execute:
 
 ## Key points
 
-* The *overall alignment with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.3%.
+* The *overall alignment of Renew with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.8%. For **ESN**, this stands at 26.1%.
 * Over time, we observe a decreasing trend for ECR's affinity with Renew, whereas *trends have been consistently below 30% for over one year for both PfE and ESN*. 
 * In the case of the *JOINT MOTION FOR A RESOLUTION on renewing the EU-Africa partnership: building common priorities ahead of the Angola Summit*, the overall affinity with extreme right Groups was at or below 20%, and with **PfE** specifically it was 15%.
+* The *overall alignment of EPP with extreme right Groups* is also below 50%, and in the specific case of **PfE** currently stands at 38.3%. For **ESN**, this stands at 32.9%. Additionally, affinity with **ECR** stands at 53.1%.
+* Over time, we observe a decreasing trend for ECR's affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
 
 
 ## Intro
@@ -201,11 +203,11 @@ renew_polgroups_mjrt[!is.na(is_same),
                      by = list(political_group)] |> 
   # drop renew identity
   dplyr::filter(political_group != "Renew") |> 
-  dplyr::mutate(political_group = fct_reorder(political_group, affinity)) |> 
+  dplyr::mutate(political_group = fct_reorder(political_group, affinity, .desc = TRUE)) |> 
   ggplot(aes(x=political_group, y = affinity, fill = political_group)) +
   geom_col(colour = "black", linewidth = 0.1) +
   geom_text(aes(label = round(affinity*100, digits = 1)), size = 3, nudge_y = 0.03) +
-  coord_flip() +
+  #coord_flip() +
   labs(
     x="", y="Affinity with Renew (%)", fill="",
     title = str_wrap(
@@ -225,7 +227,7 @@ renew_polgroups_mjrt[!is.na(is_same),
         axis.text.y = element_text(face = "bold"))
 ```
 
-Thus, the *overall alignment with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.3%.
+Thus, the *overall alignment with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.8%. For **ESN**, this stands at 26.1%.
 
 
 ```{r}
@@ -434,12 +436,12 @@ epp_polgroups_mjrt[!is.na(is_same),
                    by = list(political_group)] |> 
   # drop renew identity
   dplyr::filter(political_group != "PPE") |> 
-  dplyr::mutate(political_group = fct_reorder(political_group, affinity)) |> 
+  dplyr::mutate(political_group = fct_reorder(political_group, affinity, .desc = TRUE)) |> 
   ggplot(aes(x=political_group, y = affinity, fill = political_group)) +
   geom_col(colour = "black", linewidth = 0.1) +
   geom_text(aes(label = round(affinity*100, digits = 1)), 
             size = 3, nudge_y = 0.03) +
-  coord_flip() +
+  #coord_flip() +
   labs(
     x="", y="Affinity with Renew (%)", fill="",
     title = str_wrap(
@@ -459,7 +461,7 @@ epp_polgroups_mjrt[!is.na(is_same),
         axis.text.y = element_text(face = "bold"))
 ```
 
-Thus, the *EPP's alignment with __ECR__* is 53.1%, and with **PfE** is 38.3%.
+Thus, the *EPP's alignment with __ECR__* is 53.1%, and with **PfE** is 38.3%. For **ESN**, this stands at 32.9%. Additionally, affinity with **ECR** stands at 53.1%.
 ```{r}
 #------------------------------------------------------------------------------#
 ### Committees
@@ -629,7 +631,7 @@ is_same_date |>
 #        device = "pdf", dpi = 300, height = 7, width = 12.5)
 ```
 
-The plot above clearly shows a decreasing trend for ECR's affinity with Renew, whereas trends have been consistently below 30% for over one year for both PfE and ESN. 
+The plot above shows that over time we observe a decreasing trend for ECR's affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
 
 
 
