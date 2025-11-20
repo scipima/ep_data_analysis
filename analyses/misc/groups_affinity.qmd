@@ -195,7 +195,7 @@ toy_example |>
 Coming back to the actual data for this mandate, what's the overall picture?
 ```{r}
 #| fig-width: 8
-#| fig-height: 3
+#| fig-height: 6
 
 # get the mean
 renew_polgroups_mjrt[!is.na(is_same),
@@ -428,7 +428,7 @@ epp_polgroups_mjrt <- epp_polgroups_mjrt[ !is.na(is_same) ] |>
 Coming back to the actual data for this mandate, what's the overall picture?
 ```{r}
 #| fig-width: 8
-#| fig-height: 3
+#| fig-height: 6
 
 # get the mean
 epp_polgroups_mjrt[!is.na(is_same),
@@ -462,79 +462,6 @@ epp_polgroups_mjrt[!is.na(is_same),
 ```
 
 Thus, the *EPP's alignment with __ECR__* is 53.1%, and with **PfE** is 38.3%. For **ESN**, this stands at 32.9%. Additionally, affinity with **ECR** stands at 53.1%.
-```{r}
-#------------------------------------------------------------------------------#
-### Committees
-
-# List of RCV IDs and Committees
-rcvid_cmts <- data.table::fread(here::here(
-  "data_out", "rcv", "rcvid_cmts_10.csv") )
-rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
-
-# Number of RCVs
-# length( unique(meps_rcv_mandate$rcv_id) )
-# Number of RCVs by Committee (check for Joint Committee)
-# rcvid_cmts[, .N, by = rcv_id][order(N)]
-
-# what are the RCVs without DOC ID?
-rcv_missing_doc <- unique(meps_rcv_mandate$rcv_id)[
-  !unique(meps_rcv_mandate$rcv_id) %in% unique(rcvid_cmts$rcv_id)]
-
-# These should be ordre du jour, election of commission, etc.
-# pl_votes[rcv_id %in% rcv_missing_doc]
-```
-
-<!-- In this sub-section, we break down the aggregate trends witnessed above by Committees. -->
-<!-- Please be aware that, because *many Resolutions are not associated with a Committee*, and *no Joint Resolution is associated with a Committee*, only a subset of votes are analysed here.  -->
-<!-- More precisely, while there are `r n_rcv` RCVs in this mandate, only `r n_rcv - length(rcv_missing_doc)` of those can be traced back to a Committee (`r round( ( ( n_rcv - length(rcv_missing_doc) ) / n_rcv ) * 100, digits=1)`%).  -->
-<!-- Further, because an individual report may be associated with multiple Committees (i.e. in the *Joint Committees*), we decided to count these vote in every Committee where they appear, thus resulting to some degree in double counting.  -->
-```{r}
-#| eval: false
-#| fig-width: 8
-#| fig-height: 13
-
-#------------------------------------------------------------------------------#
-epp_polgroups_mjrt_cmt <- epp_polgroups_mjrt[
-  rcvid_cmts,
-  on = "rcv_id", nomatch = NULL
-]
-# epp_polgroups_mjrt_cmt[, .N, by = "rcv_id"][order(N)]
-
-# Plot ------------------------------------------------------------------------#
-epp_polgroups_mjrt_cmt[
-  !is.na(is_same) # Get rid of NAs
-  & !is.na(committee_lab) # just Standing Committees
-  & polgroup_id != 7035L, # Get rid of Renew identity
-  # Calculate the mean --------------------------------------------------------#
-  list(n_votes = .N,
-       affinity = mean(is_same) ),
-  # Grouped by Political Group and Committee ----------------------------------#
-  by = list(political_group, committee_lab) ] |> 
-  # dplyr::filter(political_group != "Renew") |> 
-  dplyr::mutate(political_group_rw = reorder_within(
-    x = political_group, by = affinity, within = committee_lab) ) |> 
-  ggplot(aes(x=political_group_rw, y = affinity, # alpha = n_votes, 
-             fill = political_group) ) +
-  geom_col(colour = "black", linewidth = 0.1) +
-  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
-  coord_flip() +
-  labs(
-    x="", y="Affinity with Renew (%)", fill="",
-    title = str_wrap(
-      "How often does the majority within other Political Group happen to vote alongside Renew's majority, by Committee?",
-      width = 88),
-    caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +
-  scale_x_reordered() +
-  scale_y_continuous(labels = scales::percent) +
-  scale_fill_manual(values = polgroup_cols) +
-  guides(fill = guide_legend(nrow = 1)) +
-  theme_minimal() +
-  theme(plot.title.position = "plot",
-        plot.title = element_text(face = "bold", size = 12),
-        legend.position = "none",
-        strip.text.y.right = element_text(angle = 0, face = "bold"),
-        axis.text.y = element_text(face = "bold"))  
-```
 
 
 ### EPP: Cumulative Affinity
@@ -634,7 +561,6 @@ is_same_date |>
 The plot above shows that over time we observe a decreasing trend for ECR's affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
 
 
-
 ## EPP's Breaches of Coalition Agreement
 In the table below, we define:
 
@@ -690,6 +616,46 @@ epp_coalitions |>
   pivot_longer(cols = everything(), names_to = "Voting Coalitions", 
                values_to = "N. RCVs") |> 
   knitr::kable(align = "c")
+```
+
+The pl0t below portrays these patterns by Committee
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+
+
+epp_coalitions |> 
+  left_join(rcvid_cmts) |> 
+  select(rcv_id, is_sd_renew, is_pfe_ecr, is_pfe_ecr_esn, committee_lab) |> 
+  pivot_longer(-c(rcv_id, committee_lab)) |> 
+  filter(!is.na(committee_lab)) |> 
+  summarise(summ = sum(value), .by = c(committee_lab, name)) |> 
+  mutate(total = sum(summ, na.rm = TRUE), .by = c(name)) |> 
+  mutate(
+    share = summ / total,
+    is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
+    name = factor(name, 
+                  levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
+                  labels = c("RCVs where the Coalition held (EPP+SD+Renew)",
+                             "RCVs where EPP voted with ECR+PfE, and against Renew+SD", 
+                             "RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD"))
+    ) |> 
+  ggplot(aes(x = committee_lab, y = share, fill = factor(is_diverging))) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = summ), vjust = -.15, size = 4) +
+  scale_fill_manual(values = c(`1` = '#BE3455', `0` = "#969696") ) +
+  facet_wrap(~name, ncol=1) +
+  scale_y_continuous(limits = c(0, 0.35)) +
+  labs(x="", y="Share of RCVs (%)",
+       title = "Where does the EPP tend to break the coalition agreement?")+
+  theme(
+    plot.title = element_text(size = 18, face = "bold"),
+    plot.title.position = "plot",
+    strip.text.x = element_text(size = 8),
+    axis.text.x = element_text(size = 6)
+  )
+ggsave(filename = here::here("figures", "epp_breaches_bycmt.jpeg"),
+       device = "jpeg", dpi = 300, height = 7, width = 15)
 ```
 
 
