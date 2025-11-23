@@ -3,9 +3,6 @@ title: "Groups' Affinity and Coalition Behaviour"
 date: "`r Sys.Date()`"
 format:
   docx:
-   toc: true
-   toc-depth: 3
-   toc-title: Contents
    number-sections: true
    colorlinks: true
 editor_options: 
@@ -17,12 +14,11 @@ execute:
 
 ## Key points
 
-* The *overall alignment of Renew with extreme right Groups* is well below 50%, and in the specific case of **PfE** currently stands at 29.8%. For **ESN**, this stands at 26.1%.
+* The *overall alignment of Renew with extreme right Groups* is well below 50%: with **ECR** this is at 43.3%; with **PfE**, it is at 29.8%; finally, with **ESN**, this stands at 26.1%.
 * Over time, we observe a decreasing trend for ECR's affinity with Renew, whereas *trends have been consistently below 30% for over one year for both PfE and ESN*. 
-* In the case of the *JOINT MOTION FOR A RESOLUTION on renewing the EU-Africa partnership: building common priorities ahead of the Angola Summit*, the overall affinity with extreme right Groups was at or below 20%, and with **PfE** specifically it was 15%.
-* The *overall alignment of EPP with extreme right Groups* is also below 50%, and in the specific case of **PfE** currently stands at 38.3%. For **ESN**, this stands at 32.9%. Additionally, affinity with **ECR** stands at 53.1%.
-* Over time, we observe a decreasing trend for ECR's affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
-* **DEVE, FEMM, JURI, EMPL, and PETI** committees stand out as the committees where EPP most breaches the coalition agreement and votes with ECR, PfE, and ESN, rather than with Renew and S&D.
+* The *overall alignment of EPP with extreme right Groups* is as follows: with **ECR** this is at 53.1%; in the case of **PfE**, it currently stands at 38.3%; for **ESN**, it is at 32.9%
+* Over time, we observe a decreasing trend for **ECR**'s affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
+* **DEVE**, **FEMM**, **JURI**, **EMPL**, and **PETI** stand out as the Committees where EPP tends to disproportionally diverge from the **coalition agreement** and votes together with ECR, PfE, and ESN, rather than with Renew and S&D.
 
 
 ## Intro
@@ -69,11 +65,11 @@ theme_set(theme_minimal(base_size = 10, base_family = "roboto") )
 
 #------------------------------------------------------------------------------#
 # vote colours ----------------------------------------------------------------#
-vote_colours <- c(For = '#00AEEF',
-                  Against = '#BE3455',
-                  Abstain = "#969696",
-                  `Did not vote` = '#5D5CA4',
-                  Absent = '#F47920')
+vote_colours <- c(`for` = '#00AEEF',
+                  against = '#BE3455',
+                  abstain = "#969696",
+                  `no_vote` = '#5D5CA4',
+                  absent = '#F47920')
 
 # political groups colours ----------------------------------------------------#
 polgroup_cols = c(`S&D` = "#EE3652",
@@ -566,12 +562,16 @@ The plot above shows that over time we observe a decreasing trend for ECR's affi
 
 
 ## EPP's Breaches of Coalition Agreement
+### Overall Picture
 In the table below, we define:
 
 * `RCVs where the Coalition held (EPP+SD+Renew)` all the RCVs where the majorities within EPP, SD, and Renew voted together, *disregarding* what other Groups might have voted.
 * `RCVs where EPP voted with ECR+PfE, and against Renew+SD` are the RCVs where the EPP voted together with ECR and PfE, and against Renew and SD (we do not care what these latter 2 Groups might have voted, as long as it's not the same as EPP).
 * `RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD` are the RCVs where the EPP voted together with ECR, ESN, and PfE, and against Renew and SD (we do not care what these latter 2 Groups might have voted, as long as it's not the same as EPP).
 This is, by definition, a subset of the previous category.
+
+The table below show the tallies for each of these categories.
+Remember that, while the first and second rows are mutually exclusive, the third row is a subset of the second.
 ```{r}
 #------------------------------------------------------------------------------#
 # Get the Groups' majority by rcv_id ------------------------------------------#
@@ -607,10 +607,10 @@ epp_coalitions <- epp_groups |>
 
 #------------------------------------------------------------------------------#
 # Conditionally save output if any
-if ( sum(epp_coalitions$is_pfe_ecr, na.rm = TRUE) > 0 ) {
-  data.table::fwrite(x = epp_coalitions, file = here::here(
-    "data_out", "epp_coalitions.csv") )
-}
+# if ( sum(epp_coalitions$is_pfe_ecr, na.rm = TRUE) > 0 ) {
+#   data.table::fwrite(x = epp_coalitions, file = here::here(
+#     "data_out", "epp_coalitions.csv") )
+# }
 
 epp_coalitions |> 
   summarise(
@@ -622,7 +622,9 @@ epp_coalitions |>
   knitr::kable(align = "c")
 ```
 
-The pl0t below portrays these patterns by Committee
+
+### Breaches By Committee
+The plot below portrays these patterns by Committee
 ```{r}
 #| fig-width: 8
 #| fig-height: 8
@@ -637,13 +639,16 @@ epp_coalitions |>
   mutate(total = sum(summ, na.rm = TRUE), .by = c(name)) |> 
   mutate(
     share = summ / total,
-    is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
+    is_diverging = ifelse(
+      test = committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 
+      yes = 1, 
+      no = 0),
     name = factor(name, 
                   levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
                   labels = c("RCVs where the Coalition held (EPP+SD+Renew)",
                              "RCVs where EPP voted with ECR+PfE, and against Renew+SD", 
                              "RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD"))
-    ) |> 
+  ) |> 
   ggplot(aes(x = committee_lab, y = share, fill = factor(is_diverging))) +
   geom_col(show.legend = FALSE) +
   geom_text(aes(label = summ), vjust = -.15, size = 4) +
@@ -660,86 +665,254 @@ epp_coalitions |>
   )
 ggsave(filename = here::here("figures", "epp_breaches_bycmt.jpeg"),
        device = "jpeg", dpi = 300, height = 7, width = 15)
+
+##----------------------------------------------------------------------------##
+# ALTERNATIVE -----------------------------------------------------------------#
+# epp_coalitions |> 
+#   left_join(rcvid_cmts) |> 
+#   select(rcv_id, is_sd_renew, is_pfe_ecr, is_pfe_ecr_esn, committee_lab) |> 
+#   pivot_longer(-c(rcv_id, committee_lab)) |> 
+#   filter(!is.na(committee_lab)) |> 
+#   summarise(summ = sum(value), .by = c(committee_lab, name)) |> 
+#   mutate(total = sum(summ, na.rm = TRUE), .by = c(name)) |> 
+#   mutate(
+#     share = summ / total,
+#     is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
+#     name = factor(name, 
+#                   levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
+#                   labels = c("RCVs where the Coalition held (EPP+SD+Renew)",
+#                              "RCVs where EPP voted with ECR+PfE, and against Renew+SD", 
+#                              "RCVs where EPP voted with ECR+PfE+ESN, and against Renew+SD"))
+#     ) |> 
+#   ggplot(aes(x = name, y = share, fill = factor(is_diverging))) +
+#   geom_col(show.legend = FALSE) +
+#   geom_text(aes(label = summ), vjust = -.15, size = 4) +
+#   scale_fill_manual(values = c(`1` = '#BE3455', `0` = "#969696") ) +
+#   facet_wrap(~committee_lab) +
+#   scale_y_continuous(limits = c(0, 0.35)) +
+#   labs(x="", y="Share of RCVs (%)",
+#        title = "Where does the EPP tend to break the coalition agreement?")+
+#   theme(
+#     plot.title = element_text(size = 18, face = "bold"),
+#     plot.title.position = "plot",
+#     strip.text.x = element_text(size = 8),
+#     axis.text.x = element_text(size = 6)
+#   )
+##----------------------------------------------------------------------------##
 ```
 
 ```{r}
-list_epp_esn<- pl_votes[which(pl_votes$rcv_id %in% c(epp_coalitions$rcv_id[which(epp_coalitions$is_pfe_ecr_esn == 1)])),]
-list_epp_esn_final<- list_epp_esn[which(list_epp_esn$is_final == 1),]
+#| eval: false
 
-list_epp_esn_final<- base::merge(list_epp_esn_final,
-                           pl_documents, by = "doc_id")
-
-writexl::write_xlsx(list_epp_esn_final, path = here::here("data_out", "epp_breaches_final_info.xlsx"))
+# list_epp_esn<- pl_votes[
+#   which(pl_votes$rcv_id %in% c(epp_coalitions$rcv_id[
+#     which(epp_coalitions$is_pfe_ecr_esn == 1)])),
+# ]
+# list_epp_esn_final <- list_epp_esn[which(list_epp_esn$is_final == 1),]
+# 
+# list_epp_esn_final <- base::merge(x = list_epp_esn_final,
+#                                   y = pl_documents, 
+#                                   by = "doc_id")
+# 
+# writexl::write_xlsx(list_epp_esn_final, path = here::here("data_out", "epp_breaches_final_info.xlsx"))
 ```
 
-FEMM, JURI, EMPL, and DEVE are the committees where the divergence from the coalition is more proeminent, with the highest share of RCV's where EPP voted together with ECR+PfE (and ESN) and against Renew + S&D (in proportion of the total number of RCV's where the coalition was broken).
-
+FEMM, JURI, EMPL, and DEVE are the committees where the divergence from the coalition is more prominent, with the highest share of RCV's where EPP voted together with ECR+PfE (and ESN) and against Renew + S&D (in proportion of the total number of RCV's where the coalition was broken).
 
 ```{r}
+#| eval: false
 #| fig-width: 9
 #| fig-height: 9
-epp_coalitions |> 
-  left_join(rcvid_cmts) |> 
-  select(rcv_id, is_sd_renew, is_pfe_ecr_esn, committee_lab) |> 
-  pivot_longer(-c(rcv_id, committee_lab)) |> 
-  filter(!is.na(committee_lab)) |> 
-  summarise(summ = sum(value), .by = c(committee_lab, name)) |> 
-  mutate(
-    is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
-    name = factor(name, 
-                  levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
-                  labels = c("RCVs where the Coalition held\n(EPP+SD+Renew)",
-                             "RCVs where EPP voted with ECR+PfE\nand against Renew+SD", 
-                             "RCVs where EPP voted with\nECR+PfE+ESN and against Renew+SD"))
-    ) |> 
-  ggplot(aes(x = committee_lab, y = summ, fill = as.factor(name))) +
-  geom_bar(position="stack", stat="identity") +
-  scale_fill_viridis(discrete = T, option = "E") + 
-  labs(x="", y="Number of RCVs",
-       title = "Where does the EPP tend to break the coalition agreement?",
-       fill = NULL)+
-  theme(
-    plot.title = element_text(size = 18, face = "bold"),
-    plot.title.position = "plot",
-    strip.text.x = element_text(size = 8),
-    axis.text.x = element_text(size = 6)
-  ) 
-ggsave(filename = here::here("figures", "epp_breaches_bycmt_stacked.jpeg"),
-       device = "jpeg", dpi = 300, height = 7, width = 15)
 
+#------------------------------------------------------------------------------#
+# epp_coalitions |> 
+#   left_join(rcvid_cmts) |> 
+#   select(rcv_id, is_sd_renew, is_pfe_ecr_esn, committee_lab) |> 
+#   pivot_longer(-c(rcv_id, committee_lab)) |> 
+#   filter(!is.na(committee_lab)) |> 
+#   summarise(summ = sum(value), .by = c(committee_lab, name)) |> 
+#   mutate(
+#     is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
+#     name = factor(name, 
+#                   levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
+#                   labels = c("RCVs where the Coalition held\n(EPP+SD+Renew)",
+#                              "RCVs where EPP voted with ECR+PfE\nand against Renew+SD", 
+#                              "RCVs where EPP voted with\nECR+PfE+ESN and against Renew+SD"))
+#     ) |> 
+#   ggplot(aes(x = committee_lab, y = summ, fill = as.factor(name))) +
+#   geom_bar(position="stack", stat="identity") +
+#   scale_fill_viridis(discrete = T, option = "E") + 
+#   labs(x="", y="Number of RCVs",
+#        title = "Where does the EPP tend to break the coalition agreement?",
+#        fill = NULL)+
+#   theme(
+#     plot.title = element_text(size = 18, face = "bold"),
+#     plot.title.position = "plot",
+#     strip.text.x = element_text(size = 8),
+#     axis.text.x = element_text(size = 6)
+#   ) 
+# ggsave(filename = here::here("figures", "epp_breaches_bycmt_stacked.jpeg"),
+#        device = "jpeg", dpi = 300, height = 7, width = 15)
+```
+
+### Breaches By Final Vote
+```{r}
+#| fig-width: 8
+#| fig-height: 5
+
+#------------------------------------------------------------------------------#
+# Colours ---------------------------------------------------------------------#
+cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
+
+
+#------------------------------------------------------------------------------#
+is_pfe_ecr_esn_byfinal = epp_coalitions[
+  is_pfe_ecr == 1L | is_pfe_ecr_esn == 1L
+] |> 
+  left_join(y = pl_votes[, list(is_final, rcv_id,  doc_id, 
+                                inverse_consists_of = gsub(pattern = "eli/dl/event/",
+                                                           replacement = "", 
+                                                           x = inverse_consists_of, 
+                                                           fixed = TRUE))],
+            by = "rcv_id") |> 
+  left_join(y = fread(here::here("data_out", "votes", "votes_labels_10.csv")),
+            by = c("inverse_consists_of" = "activity_id")) |> 
+  select(-vote_label_fr, -vote_label_mul) |> 
+  mutate(is_final = factor(ifelse(test = is_final == 1L,
+                                  yes = "Final", no = "Not Final")))
+
+dt_plot = dplyr::bind_rows(
+  is_pfe_ecr_esn_byfinal |> 
+    filter(is_pfe_ecr == 1L) |> 
+    summarise(Count = n_distinct(rcv_id), 
+              what = "is_pfe_ecr",
+              .by = is_final),
+  is_pfe_ecr_esn_byfinal |> 
+    filter(is_pfe_ecr_esn == 1L) |> 
+    summarise(Count = n_distinct(rcv_id), 
+              what = "is_pfe_ecr_esn",
+              .by = is_final)) |> 
+  mutate(what = factor(
+    what, 
+    levels = c("is_pfe_ecr", "is_pfe_ecr_esn"),
+    labels = c("RCVs where EPP voted with ECR+PfE\nand against Renew+SD", 
+               "RCVs where EPP voted with\nECR+PfE+ESN and against Renew+SD")))
+dt_plot |> 
+  ggplot(aes(x = is_final, y = Count, fill = is_final)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = Count), vjust = -1) +
+  facet_wrap(~what) +
+  scale_fill_manual(values = cols_final) +
+  scale_y_continuous(limits = c(0 , max(dt_plot$Count) + 10)) +
+  labs(y = "N. RCVs", x = "",
+       title = "Tallies of RCVs by Final Votes and Coalition") +
+  theme(
+    plot.title = element_text(size = 10, face = "bold"),
+    plot.title.position = "plot",
+    strip.text.x = element_text(size = 8, face = "bold"),
+    axis.text = element_text(size = 8)
+  )
+```
+
+
+### Breaches of Coalition in Final Votes: Tallies by Political Groups
+```{r}
+#| fig-width: 8
+#| fig-height: 12
+
+#------------------------------------------------------------------------------#
+dt_plot = is_pfe_ecr_esn_byfinal |> 
+  filter(
+    is_final == "Final"
+    & is_pfe_ecr == 1L
+  ) |> 
+  left_join(
+    y = fread(here::here("data_out", "aggregates", "tally_bygroup_byrcv_10.csv")),
+    by = "rcv_id"
+  ) |> 
+  join_polit_labs() |> 
+  select(doc_id, vote_label_en, result_fct, tally, political_group)
+
+dt_plot |> 
+  mutate(
+    tally_div = ifelse(result_fct != "for", tally * -1, tally),
+    result_fct = factor(result_fct, levels = c("against", "abstain", "absent",
+                                               "no_vote", "for"))
+  ) |> 
+  ggplot(aes(x = tally_div, y = forcats::fct_rev(political_group), 
+             fill = result_fct)) +
+  geom_col(linewidth = 0.1, colour = "black") +
+  facet_wrap(~vote_label_en, ncol = 2,
+             labeller = label_wrap_gen(width = 60)) +
+  scale_fill_manual(values = vote_colours)+
+  labs(x = "Count", y = "", fill = "",
+       # title = "Vote Tallies in EPP's Breaches of Coalition (Final Votes Only)",
+       subtitle = "RCVs where EPP voted with ECR+PfE and against Renew+SD"
+  ) +
+  theme(
+    plot.title = element_text(size = 10, face = "bold"),
+    plot.title.position = "plot",
+    strip.text.x = element_text(size = 9, face = "bold"),
+    legend.position = "top",
+    axis.text = element_text(size = 9)
+  )
+# Save excel
+writexl::write_xlsx(
+  x = dt_plot |> 
+    pivot_wider(names_from = result_fct, values_from = tally, values_fill = 0) |> 
+    arrange(vote_label_en, political_group),
+  path = here::here("data_out", "tmp",  "is_pfe_ecr_final.xlsx"))
 ```
 
 
 ```{r}
 #| fig-width: 8
-#| fig-height: 8
+#| fig-height: 12
 
-list_epp_esn_final |>
-  pivot_longer(
-    cols = `number_of_votes_abstention`:`number_of_votes_favor`, 
-    names_to = "Votes",
-    values_to = "value"
-) |>
-  mutate(Votes = factor(Votes, 
-                  levels = c("number_of_votes_abstention", "number_of_votes_against", "number_of_votes_favor"),
-                  labels = c("Abstentions",
-                             "Votes Against", 
-                             "Votes in Favor"))) |>
-  ggplot(aes(x = doc_id, y = value, fill = as.factor(Votes))) +
-  geom_bar(position="fill", stat="identity") +
-  scale_fill_viridis(discrete = T, option = "E") + 
-  labs(x="", y="Proportion of Votes",
-       title = "Vote Tallies for Reports where EPP breached Coalition",
-       fill = NULL)+
+#------------------------------------------------------------------------------#
+dt_plot = is_pfe_ecr_esn_byfinal |> 
+  filter(
+    is_final == "Final"
+    & is_pfe_ecr_esn == 1L
+  ) |> 
+  left_join(
+    y = fread(here::here("data_out", "aggregates", "tally_bygroup_byrcv_10.csv")),
+    by = "rcv_id"
+  ) |> 
+  join_polit_labs() |> 
+  select(doc_id, vote_label_en, result_fct, tally, political_group)
+
+dt_plot |> 
+  mutate(
+    tally_div = ifelse(result_fct != "for", tally * -1, tally),
+    result_fct = factor(result_fct, levels = c("against", "abstain", "absent",
+                                               "no_vote", "for"))
+  ) |> 
+  ggplot(aes(x = tally_div, y = forcats::fct_rev(political_group), 
+             fill = result_fct)) +
+  geom_col(linewidth = 0.1, colour = "black") +
+  facet_wrap(~vote_label_en, ncol = 2,
+             labeller = label_wrap_gen(width = 60)) +
+  scale_fill_manual(values = vote_colours)+
+  labs(x = "Count", y = "", fill = "",
+       # title = "Vote Tallies in EPP's Breaches of Coalition (Final Votes Only)",
+       subtitle = "RCVs where EPP voted with ECR+PfE+ESN and against Renew+SD"
+  ) +
   theme(
-    plot.title = element_text(size = 18, face = "bold"),
+    plot.title = element_text(size = 10, face = "bold"),
     plot.title.position = "plot",
-    strip.text.x = element_text(size = 8),
-    axis.text.x = element_text(size = 6)
+    strip.text.x = element_text(size = 9, face = "bold"),
+    legend.position = "top",
+    axis.text = element_text(size = 9)
   )
-ggsave(filename = here::here("figures", "epp_breaches_docs_tallies.jpeg"),
-       device = "jpeg", dpi = 300, height = 7, width = 15)
+# Save excel
+writexl::write_xlsx(
+  x = dt_plot |> 
+    pivot_wider(names_from = result_fct, values_from = tally, values_fill = 0) |> 
+    arrange(vote_label_en, political_group),
+  path = here::here("data_out", "tmp",  "is_pfe_ecr_esn_final.xlsx"))
 ```
+
 
 
 {{< pagebreak >}}
