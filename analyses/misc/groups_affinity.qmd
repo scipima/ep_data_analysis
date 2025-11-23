@@ -22,6 +22,7 @@ execute:
 * In the case of the *JOINT MOTION FOR A RESOLUTION on renewing the EU-Africa partnership: building common priorities ahead of the Angola Summit*, the overall affinity with extreme right Groups was at or below 20%, and with **PfE** specifically it was 15%.
 * The *overall alignment of EPP with extreme right Groups* is also below 50%, and in the specific case of **PfE** currently stands at 38.3%. For **ESN**, this stands at 32.9%. Additionally, affinity with **ECR** stands at 53.1%.
 * Over time, we observe a decreasing trend for ECR's affinity with EPP, and a very recent small surge in affinity of **ESN** with **EPP**.
+* **DEVE, FEMM, JURI, EMPL, and PETI** committees stand out as the committees where EPP most breaches the coalition agreement and votes with ECR, PfE, and ESN, rather than with Renew and S&D.
 
 
 ## Intro
@@ -35,7 +36,7 @@ script_starts <- Sys.time()
 if ( !require("pacman") ) install.packages("pacman")
 pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggplot2", "here",
                         "lubridate", "janitor", "stringr", "tidyr", "tidyselect",
-                        "tidytext") )
+                        "tidytext", "viridis", "writexl") )
 
 
 # Hard code the start of the mandate ------------------------------------------#
@@ -109,6 +110,9 @@ pl_votes <- data.table::fread(
 
 meps_current = data.table::fread(here::here(
   "data_out", "meps", "meps_current.csv") )
+
+pl_documents<- data.table::fread(here::here(
+  "data_out", "docs_pl", "pl_docs.csv"))
 
 #------------------------------------------------------------------------------#
 # get length objects
@@ -655,6 +659,85 @@ epp_coalitions |>
     axis.text.x = element_text(size = 6)
   )
 ggsave(filename = here::here("figures", "epp_breaches_bycmt.jpeg"),
+       device = "jpeg", dpi = 300, height = 7, width = 15)
+```
+
+```{r}
+list_epp_esn<- pl_votes[which(pl_votes$rcv_id %in% c(epp_coalitions$rcv_id[which(epp_coalitions$is_pfe_ecr_esn == 1)])),]
+list_epp_esn_final<- list_epp_esn[which(list_epp_esn$is_final == 1),]
+
+list_epp_esn_final<- base::merge(list_epp_esn_final,
+                           pl_documents, by = "doc_id")
+
+writexl::write_xlsx(list_epp_esn_final, path = here::here("data_out", "epp_breaches_final_info.xlsx"))
+```
+
+FEMM, JURI, EMPL, and DEVE are the committees where the divergence from the coalition is more proeminent, with the highest share of RCV's where EPP voted together with ECR+PfE (and ESN) and against Renew + S&D (in proportion of the total number of RCV's where the coalition was broken).
+
+
+```{r}
+#| fig-width: 9
+#| fig-height: 9
+epp_coalitions |> 
+  left_join(rcvid_cmts) |> 
+  select(rcv_id, is_sd_renew, is_pfe_ecr_esn, committee_lab) |> 
+  pivot_longer(-c(rcv_id, committee_lab)) |> 
+  filter(!is.na(committee_lab)) |> 
+  summarise(summ = sum(value), .by = c(committee_lab, name)) |> 
+  mutate(
+    is_diverging = ifelse(committee_lab %in% c ("DEVE", "EMPL", "FEMM", "INTA", "JURI", "PETI"), 1, 0 ),
+    name = factor(name, 
+                  levels = c("is_sd_renew", "is_pfe_ecr", "is_pfe_ecr_esn"),
+                  labels = c("RCVs where the Coalition held\n(EPP+SD+Renew)",
+                             "RCVs where EPP voted with ECR+PfE\nand against Renew+SD", 
+                             "RCVs where EPP voted with\nECR+PfE+ESN and against Renew+SD"))
+    ) |> 
+  ggplot(aes(x = committee_lab, y = summ, fill = as.factor(name))) +
+  geom_bar(position="stack", stat="identity") +
+  scale_fill_viridis(discrete = T, option = "E") + 
+  labs(x="", y="Number of RCVs",
+       title = "Where does the EPP tend to break the coalition agreement?",
+       fill = NULL)+
+  theme(
+    plot.title = element_text(size = 18, face = "bold"),
+    plot.title.position = "plot",
+    strip.text.x = element_text(size = 8),
+    axis.text.x = element_text(size = 6)
+  ) 
+ggsave(filename = here::here("figures", "epp_breaches_bycmt_stacked.jpeg"),
+       device = "jpeg", dpi = 300, height = 7, width = 15)
+
+```
+
+
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+
+list_epp_esn_final |>
+  pivot_longer(
+    cols = `number_of_votes_abstention`:`number_of_votes_favor`, 
+    names_to = "Votes",
+    values_to = "value"
+) |>
+  mutate(Votes = factor(Votes, 
+                  levels = c("number_of_votes_abstention", "number_of_votes_against", "number_of_votes_favor"),
+                  labels = c("Abstentions",
+                             "Votes Against", 
+                             "Votes in Favor"))) |>
+  ggplot(aes(x = doc_id, y = value, fill = as.factor(Votes))) +
+  geom_bar(position="fill", stat="identity") +
+  scale_fill_viridis(discrete = T, option = "E") + 
+  labs(x="", y="Proportion of Votes",
+       title = "Vote Tallies for Reports where EPP breached Coalition",
+       fill = NULL)+
+  theme(
+    plot.title = element_text(size = 18, face = "bold"),
+    plot.title.position = "plot",
+    strip.text.x = element_text(size = 8),
+    axis.text.x = element_text(size = 6)
+  )
+ggsave(filename = here::here("figures", "epp_breaches_docs_tallies.jpeg"),
        device = "jpeg", dpi = 300, height = 7, width = 15)
 ```
 
