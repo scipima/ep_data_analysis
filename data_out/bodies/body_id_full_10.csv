@@ -1,5 +1,5 @@
 identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_label_fr,pref_label_fr
-6561,NI,def/ep-entities/EU_POLITICAL_GROUP,time-period/20240716-20240714,2024-07-16,Non-attached Members,Non-attached Members,Non-inscrits,Non-inscrits
+6561,NI,def/ep-entities/EU_POLITICAL_GROUP,time-period/20240716,2024-07-16,Non-attached Members,Non-attached Members,Non-inscrits,Non-inscrits
 6641,IL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,IL,Iniciativa Liberal,IL,Iniciativa Liberal
 6649,JV,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,JV,Jaunā Vienotība,JV,Jaunā Vienotība
 6667,PSOE,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,PSOE,Partido Socialista Obrero Español,PSOE,Partido Socialista Obrero Español
@@ -55,7 +55,7 @@ identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pre
 6663,V,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,V,"Venstre, Danmarks Liberale Parti",V,"Venstre, Danmarks Liberale Parti"
 6664,ER,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,ER,Eesti Reformierakond,ER,Eesti Reformierakond
 6666,PP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,PP,Partido Popular,PP,Partido Popular
-6678,TS-LKD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716-20240716,2024-07-16,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
+6678,TS-LKD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
 6681,LSAP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,LSAP,Parti ouvrier socialiste luxembourgeois,LSAP,Parti ouvrier socialiste luxembourgeois
 6689,PL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,PL,Partit Laburista,PL,Partit Laburista
 6691,VVD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,VVD,Volkspartij voor Vrijheid en Democratie,VVD,Volkspartij voor Vrijheid en Democratie
