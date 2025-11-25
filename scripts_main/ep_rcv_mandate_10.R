@@ -82,11 +82,6 @@ invisible(get_api_data(
   envir = .GlobalEnv
 ))
 
-
-## Process all files ----------------------------------------------------------#
-#' The first 3 functions clean, respectively: the Decisions metadata, RCVs, Intentions.
-#' The `process_decisions_list_longdf.R` cleans the DF-cols in the data.
-
 # Clean Decisions from JSONs ------------------------------------------------#
 source(file = here::here("scripts_r", "clean_decisions.R"),
        echo = TRUE, local = TRUE)

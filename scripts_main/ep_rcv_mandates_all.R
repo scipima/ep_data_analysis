@@ -61,16 +61,14 @@ pl_attendance <- get_api_data(
 ###--------------------------------------------------------------------------###
 ## GET/meetings/{event-id}/decisions -------------------------------------------
 
-tmp <- get_api_data(
+invisible(get_api_data(
   path = here::here("data_out", "votes", "pl_votes_all.csv"),
   script = here::here("scripts_r", "api_meetings_decisions.R"),
   max_days = 1,
   file_type = "csv",
   varname = NULL,
   envir = .GlobalEnv
-)
-pl_votes <- tmp
-pl_rcv <- data.table::fread(here::here("data_out", "rcv", "pl_rcv_all.csv"))
+))
 
 ### Clean Decisions from JSONs ------------------------------------------------#
 # After storing the API dump in a tmp .RDS file, we process it here

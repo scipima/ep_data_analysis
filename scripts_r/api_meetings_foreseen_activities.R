@@ -716,9 +716,34 @@ rm(procedures_cmt_tmp, docid_tmp, procedures_rapporteur_tmp)
 
 
 ## Merge all tables ------------------------------------------------------------
+# Table for starting time of every VOTE
+votes_date_time = foreseen_activities[
+  activity_label_en == "PLENARY SESSION VOTES",
+  list(id, activity_id, activity_date, activity_start_date)
+]
+
+# CHECK IF EXISTING TIME COLS ARE ALL EMPTY - IF SO, KICK THEM OUT
+if (all(is.na(votes_foreseen$activity_start_date))) {
+  votes_foreseen[, c("activity_start_date", "activity_end_date") := NULL]
+}
+
+
+# Merge
 final_dt <- votes_foreseen |>
   tidyr::unnest(cols = inverse_was_scheduled_in, keep_empty = TRUE) |>
   dplyr::distinct() |>
+  # Full JOIN with start time
+  dplyr::full_join(
+    y = votes_date_time,
+    by = c("id", "activity_id", "activity_date")
+  ) |>
+  # Paste timestamp for the entire day
+  dplyr::group_by(activity_date) |>
+  tidyr::fill(activity_start_date, .direction = "updown") |>
+  dplyr::ungroup() |>
+  # Kick out useless rows
+  dplyr::filter(!is.na(activity_order)) |>
+  # Start merge with useful info
   dplyr::left_join(
     y = procedures_process_id,
     by = c("inverse_was_scheduled_in" = "id",
@@ -736,8 +761,8 @@ final_dt <- votes_foreseen |>
     y = procedures_renew_shadow,
     by = c("inverse_was_scheduled_in" = "process_id") ) |>
   dplyr::select(
-    id, activity_date, activity_order, notation_agenda_point,
-    activity_label_en, activity_label_fr,
+    id, activity_id, activity_date, activity_start_date, activity_order,
+    notation_agenda_point, activity_label_en, activity_label_fr,
     agenda_label_en, agenda_label_fr,
     has_locality, procedure_id, legis_procedure, is_urgent,
     doc_id, committee, rapporteur, renew_shadow) |>
@@ -748,10 +773,22 @@ final_dt <- votes_foreseen |>
   dplyr::arrange(activity_date, activity_order_day)
 
 # fixing structure to be like the Python version
-# final_dt$committee<- lapply(
-#   X = final_dt$committee,
-#   FUN = function (x) unlist(cbind(flatten((x))))
-#   )
+
+final_dt$committee<- lapply(
+  X = final_dt$committee,
+  FUN = function (x)
+    if ( is.data.frame(x) ) {unlist(cbind(flatten((x)))) }
+)
+
+# fixing null labels to match with python null
+final_dt$rapporteur[unlist(lapply(
+  X = final_dt$rapporteur,
+  FUN = function (x)
+    is.null(x)))]<-NA
+final_dt$renew_shadow[unlist(lapply(
+  X = final_dt$renew_shadow,
+  FUN = function (x)
+    is.null(x)))]<-NA
 
 # Store as .rds ---------------------------------------------------------------#
 dir.create(path = here::here("data_out", "meetings", "meetings_foreseen_rds"),
