@@ -191,7 +191,9 @@ final_votes <- final_votes |>
         by = "doc_id"
     ) |>
     dplyr::group_by(rcv_id, doc_id) |>
-    dplyr::mutate(committee_lab_nested = paste0( committee_lab, collapse = "-") ) |>
+    dplyr::mutate(
+        committee_lab_nested = paste0( committee_lab, collapse = "-")
+        ) |>
     dplyr::ungroup()
 
 # If there is no `committee_lab` column present, create an empty one
@@ -240,7 +242,7 @@ today_wg <- unique(automated_vote_analysis_send_list$working_group[
 ])
 # If no Committee has been assigned to a file, we give it to WG-B
 if ( any( is.na(final_votes$committee_lab) ) ) {
-    today_wg <- c(today_wg, "WG-B")
+    today_wg <- unique(c(today_wg, "WG-B"))
 }
 
 

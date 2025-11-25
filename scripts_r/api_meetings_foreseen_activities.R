@@ -774,21 +774,21 @@ final_dt <- votes_foreseen |>
 
 # fixing structure to be like the Python version
 
-final_dt$committee<- lapply(
-  X = final_dt$committee,
-  FUN = function (x)
-    if ( is.data.frame(x) ) {unlist(cbind(flatten((x)))) }
-)
-
-# fixing null labels to match with python null
-final_dt$rapporteur[unlist(lapply(
-  X = final_dt$rapporteur,
-  FUN = function (x)
-    is.null(x)))]<-NA
-final_dt$renew_shadow[unlist(lapply(
-  X = final_dt$renew_shadow,
-  FUN = function (x)
-    is.null(x)))]<-NA
+# final_dt$committee<- lapply(
+#   X = final_dt$committee,
+#   FUN = function (x)
+#     if ( is.data.frame(x) ) {unlist(cbind(flatten((x)))) }
+# )
+#
+# # fixing null labels to match with python null
+# final_dt$rapporteur[unlist(lapply(
+#   X = final_dt$rapporteur,
+#   FUN = function (x)
+#     is.null(x)))]<-NA
+# final_dt$renew_shadow[unlist(lapply(
+#   X = final_dt$renew_shadow,
+#   FUN = function (x)
+#     is.null(x)))]<-NA
 
 # Store as .rds ---------------------------------------------------------------#
 dir.create(path = here::here("data_out", "meetings", "meetings_foreseen_rds"),
