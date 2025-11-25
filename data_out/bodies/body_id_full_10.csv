@@ -102,7 +102,7 @@ identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pre
 5320,PSD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20190702-20240715,2019-07-02,PSD,Partidul Social Democrat,PSD,Partidul Social Democrat
 6639,NSC,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,NSC,Nieuw Sociaal Contract,NSC,Nieuw Sociaal Contract
 6645,SOS RO,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,SOS RO,S.O.S. România,SOS RO,S.O.S. România
-6648,Revival,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,Revival,Revival,Revival,Revival
+6648,Revival,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716-20240714,2024-07-16,Revival,Revival,Revival,Revival
 6655,AS,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija",Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija"
 6656,DSVL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,DSVL,Demokratų sąjunga „Vardan Lietuvos“,DSVL,Demokratų sąjunga „Vardan Lietuvos“
 6672,SDP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti
