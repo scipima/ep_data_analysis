@@ -33,25 +33,25 @@ if ( "vote_label_en" %in% names(votes_today) ) {
   data.table::setnames(x = votes_today,
                        old = "vote_label_en", new = "vote_label")
 } else if ( "vote_label_mul" %in% names(votes_today) ) {
-  
+
   # Extract multilingual vector
   vote_label_mul <- votes_today$vote_label_mul
-  
+
   # List of split vectors
   vote_labels_list = stringr::str_split(string = vote_label_mul,
                                         pattern = "\\s-\\s")
-  
+
   # Delimiter counts
   delim_count = stringi::stri_count(str = vote_label_mul,
                                     regex = "\\s-\\s")
   delim_first = delim_count/2
   # idx = 2L
-  
+
   # Empty repository
   vote_labels_en <- vector(mode = "list", length = length(vote_label_mul))
-  
+
   for (i_row in seq_along(vote_label_mul)) {
-    
+
     # Extract string vector
     full_label = vote_labels_list[[ i_row ]]
     if (all(!is.na(full_label))){
@@ -63,10 +63,10 @@ if ( "vote_label_en" %in% names(votes_today) ) {
       vote_labels_en[[i_row]] <- "NA"
     }
   }
-  
+
   # Append vector to original data
   votes_today <- cbind(votes_today, vote_label = unlist(vote_labels_en) )
-  
+
 } else if ( "vote_label_fr" %in% names(votes_today) ) {
   data.table::setnames(x = votes_today,
                        old = "vote_label_fr", new = "vote_label")
@@ -170,10 +170,10 @@ meetings_foreseen <- readr::read_rds(file = here::here(
   paste0("foreseen_activities_", today_date, ".rds") ) ) |>
   dplyr::filter(activity_date == today_ymd)
 
-process_docid_cmt <- full_join(
+process_docid_cmt <- dplyr::full_join(
   x = meetings_foreseen |>
-    dplyr::select(procedure_id, doc_id) |>
-    tidyr::unnest(doc_id),
+    dplyr::select(procedure_id, doc_dict) |>
+    tidyr::unnest(doc_dict),
   y = meetings_foreseen |>
     dplyr::select(procedure_id, committee) |>
     tidyr::unnest(committee),
@@ -184,8 +184,13 @@ process_docid_cmt <- full_join(
 if ( any( is.na(process_docid_cmt$doc_id) ) ) {
   warning("There are missing DOC IDs in today's votes. This could create issues in later joins. Please check!")
 }
+
+#------------------------------------------------------------------------------#
 # Last minute changes/Emergency files might have missing fields - Change accordingly
-# process_docid_cmt[procedure_id == "2025/0085(COD)", doc_id := "C10-0064/2025"]
+process_docid_cmt[procedure_id == "2025/2847(DEA)", committee_lab := "ECON"]
+process_docid_cmt[procedure_id == "2025/2943(DEA)", committee_lab := "AGRI"]
+#------------------------------------------------------------------------------#
+
 
 # Merge vote results with foreseen activities data
 final_votes <- final_votes |>
@@ -209,12 +214,12 @@ if ( file.exists(here::here(
   "data_out", "daily", paste0("epp_coalitions_", today_date, ".csv")
 ) ) ) {
   cat("\nThere were breaches of the Coalition Agreement today.\n")
-  
+
   # Read in data
   epp_coalitions = data.table::fread(file = here::here(
     "data_out", "daily", paste0("epp_coalitions_", today_date, ".csv") ),
     select = c("rcv_id", "is_pfe_ecr", "is_pfe_ecr_esn") )
-  
+
   # Merge
   final_votes = epp_coalitions[
     final_votes,
@@ -263,7 +268,7 @@ for ( i_wg in seq_along( today_wg) ) {
       working_group = today_wg[i_wg]
     )
   )
-  
+
   # Move file from main branch to sub-folder --------------------------------#
   file.rename(
     from = here::here("analyses", "pa_analysis", "pa_analysis_i_wg.docx"),
