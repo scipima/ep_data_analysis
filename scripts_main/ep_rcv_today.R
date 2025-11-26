@@ -156,6 +156,12 @@ if ("activity_label_mul" %in% names(pl_votes) ) {
 
 }
 
+# pl_votes[]
+pl_votes[
+  rcv_id %in% c(181953L, 182008L, 181950L),
+  is_final := 0L
+]
+
 
 ### Write data to disk ---------------------------------------------------------
 data.table::fwrite(x = pl_votes,
