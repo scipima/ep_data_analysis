@@ -40,7 +40,7 @@ org/7005,Organization,7005,DROI,def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB,,,Hu
 org/6979,Organization,6979,CJ24,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585,JURI,Joint IMCO - JURI,Joint committee procedure - IMCO and JURI,time-period/20240716,,2024-07-16
 org/6979,Organization,6979,CJ24,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6579,IMCO,Joint IMCO - JURI,Joint committee procedure - IMCO and JURI,time-period/20240716,,2024-07-16
 org/3956,Organization,3956,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/20140701-20170118,2017-01-18,2014-07-01
-org/3965,Organization,3965,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20140701-20170118,2017-01-18,2014-07-01
+org/3965,Organization,3965,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20240716-20170118,2017-01-18,2024-07-16
 org/5063,Organization,5063,CJ36,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4962,ECON,Joint ECON - ENVI,Joint committee procedure - ECON and ENVI,time-period/20181108-20190701,2019-07-01,2018-11-08
 org/5063,Organization,5063,CJ36,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4964,ENVI,Joint ECON - ENVI,Joint committee procedure - ECON and ENVI,time-period/20181108-20190701,2019-07-01,2018-11-08
 org/7932,Organization,7932,CJ43,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586,LIBE,Joint ENVI - LIBE,Joint committee procedure - ENVI and LIBE,time-period/20250120,,2025-01-20
@@ -58,12 +58,12 @@ org/5545,Organization,5545,CJ11,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/128,Organization,128,DEVE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development and Cooperation,Committee on Development and Cooperation,time-period/19970116-19990719,1999-07-19,1997-01-16
 org/6416,Organization,6416,PEGA,def/ep-entities/COMMITTEE_PARLIAMENTARY_SPECIAL,,,Use of Pegasus and equivalent surveillance spyware,Committee of Inquiry to investigate the use of Pegasus and equivalent surveillance spyware,time-period/20220324-20230718,2023-07-18,2022-03-24
 org/6582,Organization,6582,AGRI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Agriculture and Rural Development,Committee on Agriculture and Rural Development,time-period/20240716,,2024-07-16
-org/6591,Organization,6591,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20240716,,2024-07-16
+org/6591,Organization,6591,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/19840726-19840725,1984-07-25,1984-07-26
 org/6364,Organization,6364,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/972,Organization,972,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/19990720-20020114,2002-01-14,1999-07-20
 org/1084,Organization,1084,DEVE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development and Cooperation,Committee on Development and Cooperation,time-period/20020115-20040719,2004-07-19,2002-01-15
 org/6361,Organization,6361,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/20220120-20240715,2024-07-15,2022-01-20
-org/19,Organization,19,POLI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Foreign Affairs and Security,Committee on Foreign Affairs and Security,time-period/19920115-19940718,1994-07-18,1992-01-15
+org/19,Organization,19,POLI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Foreign Affairs and Security,Committee on Foreign Affairs and Security,time-period/19920715-19940718,1994-07-18,1992-07-15
 org/976,Organization,976,RETT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Regional Policy, Transport, Tourism","Committee on Regional Policy, Transport and Tourism",time-period/19990720-20020114,2002-01-14,1999-07-20
 org/6408,Organization,6408,CJ37,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6358,ENVI,Joint DEVE - ENVI,Joint committee procedure - DEVE and ENVI,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6408,Organization,6408,CJ37,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6350,DEVE,Joint DEVE - ENVI,Joint committee procedure - DEVE and ENVI,time-period/20220120-20240715,2024-07-15,2022-01-20
@@ -105,7 +105,7 @@ org/6963,Organization,6963,CJ08,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/6963,Organization,6963,CJ08,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6587,AFCO,Joint JURI - LIBE - AFCO,Joint committee procedure - JURI - LIBE - AFCO,time-period/20240716,,2024-07-16
 org/ITRE,Organization,ITRE,ITRE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Industry, Research and Energy","Committee on Industry, Research and Energy",,,
 org/3748,Organization,3748,CONT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgetary Control,Committee on Budgetary Control,time-period/20120119-20140630,2014-06-30,2012-01-19
-org/6587,Organization,6587,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20240716,,2024-07-16
+org/6587,Organization,6587,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20040720-20070114,2007-01-14,2004-07-20
 org/1077,Organization,1077,ITRE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Industry, External Trade, Research, Energy","Committee on Industry, External Trade, Research and Energy",time-period/20020115-20040719,2004-07-19,2002-01-15
 org/3752,Organization,3752,ITRE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Industry, Research and Energy","Committee on Industry, Research and Energy",time-period/20120119-20140630,2014-06-30,2012-01-19
 org/4965,Organization,4965,ITRE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Industry, Research and Energy","Committee on Industry, Research and Energy",time-period/20170119-20190701,2019-07-01,2017-01-19
@@ -231,7 +231,7 @@ org/6990,Organization,6990,CJ35,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/6990,Organization,6990,CJ35,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6587,AFCO,Joint AFCO - PETI,Joint committee procedure - AFCO and PETI,time-period/20240716,,2024-07-16
 org/7970,Organization,7970,CJ67,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6564,INTA,Joint INTA - ENVI,Joint committee procedure - INTA and ENVI,time-period/20250728,,2025-07-28
 org/7970,Organization,7970,CJ67,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/7913,ENVI,Joint INTA - ENVI,Joint committee procedure - INTA and ENVI,time-period/20250728,,2025-07-28
-org/111,Organization,111,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/19940721-19970115,1997-01-15,1994-07-21
+org/111,Organization,111,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/19970116-19970719,1997-07-19,1997-01-16
 org/3949,Organization,3949,BUDG,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgets,Committee on Budgets,time-period/20140701-20170118,2017-01-18,2014-07-01
 org/6387,Organization,6387,CJ16,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6353,BUDG,Joint BUDG - ECON,Joint committee procedure - BUDG and ECON,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6387,Organization,6387,CJ16,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6366,ECON,Joint BUDG - ECON,Joint committee procedure - BUDG and ECON,time-period/20220120-20240715,2024-07-15,2022-01-20
@@ -296,7 +296,7 @@ org/2429,Organization,2429,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/2865,Organization,2865,ENVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Environment, Public Health and Food Safety","Committee on the Environment, Public Health and Food Safety",time-period/20090714-20120118,2012-01-18,2009-07-14
 org/6381,Organization,6381,CJ10,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6358,ENVI,Joint ENVI - ITRE,Joint committee procedure - ENVI and ITRE,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6381,Organization,6381,CJ10,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6359,ITRE,Joint ENVI - ITRE,Joint committee procedure - ENVI and ITRE,time-period/20220120-20240715,2024-07-15,2022-01-20
-org/2359,Organization,2359,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Fisheries,Committee on Fisheries,time-period/20070131-20090713,2009-07-13,2007-01-31
+org/2359,Organization,2359,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Fisheries,Committee on Fisheries,time-period/20180131-20090713,2009-07-13,2018-01-31
 org/4970,Organization,4970,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Fisheries,Committee on Fisheries,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/4996,Organization,4996,CJ13,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4960,BUDG,Joint BUDG - CONT,Procedure with joint meetings - BUDG and CONT,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/4996,Organization,4996,CJ13,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4961,CONT,Joint BUDG - CONT,Procedure with joint meetings - BUDG and CONT,time-period/20170119-20190701,2019-07-01,2017-01-19
@@ -321,7 +321,7 @@ org/6415,Organization,6415,COVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORAR
 org/99,Organization,99,ASOC,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Social Affairs and Employment,Committee on Social Affairs and Employment,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/65,Organization,65,C10,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transports,Committee on Transports,time-period/19840726-19870120,1987-01-20,1984-07-26
 org/45,Organization,45,C08,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Social Affairs and Employment,Committee on Social Affairs and Employment,time-period/19870121-19890724,1989-07-24,1987-01-21
-org/50,Organization,50,C13,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development and Cooperation,Committee on Development and Cooperation,time-period/20210121-19890724,1989-07-24,2021-01-21
+org/50,Organization,50,C13,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development and Cooperation,Committee on Development and Cooperation,time-period/19870121-19890724,1989-07-24,1987-01-21
 org/51,Organization,51,C14,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgetary Control,Committee on Budgetary Control,time-period/19870121-19890724,1989-07-24,1987-01-21
 org/54,Organization,54,C17,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights,Committee on Women's Rights,time-period/19870121-19890724,1989-07-24,1987-01-21
 org/CJ03,Organization,CJ03,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,,,
@@ -424,7 +424,7 @@ org/CJ10,Organization,CJ10,CJ10,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,
 org/6396,Organization,6396,CJ25,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6351,AGRI,Joint AGRI - FEMM,Joint committee procedure - AGRI and FEMM,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6396,Organization,6396,CJ25,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6363,FEMM,Joint AGRI - FEMM,Joint committee procedure - AGRI and FEMM,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/CJ15,Organization,CJ15,CJ15,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint AFET - BUDG,Joint committee procedure - AFET and BUDG,,,
-org/71,Organization,71,C16,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Institutional Affairs,Committee on Institutional Affairs,time-period/19840726-19870120,1987-01-20,1984-07-26
+org/71,Organization,71,C16,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Institutional Affairs,Committee on Institutional Affairs,time-period/20210726-19870120,1987-01-20,2021-07-26
 org/73,Organization,73,C18,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Verification of Credentials,Committee on the Verification of Credentials,time-period/19840726-19870120,1987-01-20,1984-07-26
 org/CJ17,Organization,CJ17,CJ17,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint LIBE - PETI,Joint committee procedure - LIBE and PETI,,,
 org/4928,Organization,4928,CJ20,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3963,AFCO,Joint AFET - AFCO,Procedure with joint meetings - AFET and AFCO,time-period/20151216-20170118,2017-01-18,2015-12-16
@@ -432,7 +432,7 @@ org/4928,Organization,4928,CJ20,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/5536,Organization,5536,CJ02,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/5099,FEMM,Joint JURI - FEMM,Joint committee procedure - JURI and FEMM,time-period/20190702-20220119,2022-01-19,2019-07-02
 org/5536,Organization,5536,CJ02,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/5096,JURI,Joint JURI - FEMM,Joint committee procedure - JURI and FEMM,time-period/20190702-20220119,2022-01-19,2019-07-02
 org/CJ19,Organization,CJ19,CJ19,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint AFET - DEVE,Joint committee procedure - AFET and DEVE,,,
-org/7911,Organization,7911,SEDE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Security and Defence,Committee on Security and Defence,time-period/20250120,,2025-01-20
+org/7911,Organization,7911,SEDE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Security and Defence,Committee on Security and Defence,time-period/20250108,,2025-01-08
 org/5047,Organization,5047,TAX3,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,"Financial crimes, tax evasion and tax avoidance","Special committee on financial crimes, tax evasion and tax avoidance",time-period/20180301-20190328,2019-03-28,2018-03-01
 org/5535,Organization,5535,CJ01,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/5099,FEMM,Joint LIBE - FEMM,Joint committee procedure - LIBE and FEMM,time-period/20190702-20220119,2022-01-19,2019-07-02
 org/5535,Organization,5535,CJ01,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/5097,LIBE,Joint LIBE - FEMM,Joint committee procedure - LIBE and FEMM,time-period/20190702-20220119,2022-01-19,2019-07-02
@@ -491,14 +491,12 @@ org/BSE2,Organization,BSE2,BSE2,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORAR
 org/1250,Organization,1250,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights and Gender Equality,Committee on Women's Rights and Gender Equality,time-period/20040720-20070114,2007-01-14,2004-07-20
 org/2856,Organization,2856,AFET,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Foreign Affairs,Committee on Foreign Affairs,time-period/20090714-20120118,2012-01-18,2009-07-14
 org/6362,Organization,6362,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20220120-20240715,2024-07-15,2022-01-20
-org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585,JURI,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
-org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586,LIBE,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
 org/3963,Organization,3963,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20140701-20170118,2017-01-18,2014-07-01
 org/6579,Organization,6579,IMCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Internal Market and Consumer Protection,Committee on the Internal Market and Consumer Protection,time-period/20240716,,2024-07-16
 org/18,Organization,18,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights,Committee on Women's Rights,time-period/19890726-19920114,1992-01-14,1989-07-26
 org/1086,Organization,1086,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Women's Rights, Equal Opportunities",Committee on Women's Rights and Equal Opportunities,time-period/20020115-20040719,2004-07-19,2002-01-15
 org/103,Organization,103,JEUN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Culture, Youth, Education and the Media","Committee on Culture, Youth, Education and the Media",time-period/19940721-19970115,1997-01-15,1994-07-21
-org/108,Organization,108,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Fisheries,Committee on Fisheries,time-period/19940721-19970115,1997-01-15,1994-07-21
+org/108,Organization,108,PECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Fisheries,Committee on Fisheries,time-period/19940721-19990115,1999-01-15,1994-07-21
 org/1248,Organization,1248,LIBE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Civil Liberties, Justice and Home Affairs","Committee on Civil Liberties, Justice and Home Affairs",time-period/20040720-20070114,2007-01-14,2004-07-20
 org/4955,Organization,4955,CJ29,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3951,ECON,Joint ECON - JURI,Procedure with joint meetings - ECON and JURI,time-period/20161214-20170118,2017-01-18,2016-12-14
 org/4955,Organization,4955,CJ29,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3961,JURI,Joint ECON - JURI,Procedure with joint meetings - ECON and JURI,time-period/20161214-20170118,2017-01-18,2016-12-14
@@ -513,7 +511,7 @@ org/REGL,Organization,REGL,REGL,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/123,Organization,123,EMPL,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Employment and Social Affairs,Committee on Employment and Social Affairs,time-period/19970116-19990719,1999-07-19,1997-01-16
 org/30,Organization,30,JEUN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Culture, Youth, Education and the Media","Committee on Culture, Youth, Education and the Media",time-period/19920115-19940718,1994-07-18,1992-01-15
 org/40,Organization,40,C03,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgets,Committee on Budgets,time-period/19870121-19890724,1989-07-24,1987-01-21
-org/135,Organization,135,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/19970116-19990719,1999-07-19,1997-01-16
+org/135,Organization,135,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20120119-20140630,2014-06-30,2012-01-19
 org/43,Organization,43,C06,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,External Economic Relations,Committee on External Economic Relations,time-period/19870121-19890724,1989-07-24,1987-01-21
 org/4961,Organization,4961,CONT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgetary Control,Committee on Budgetary Control,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/979,Organization,979,ENVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Environment, Public Health, Consumer Policy","Committee on the Environment, Public Health and Consumer Policy",time-period/19990720-20020114,2002-01-14,1999-07-20
@@ -549,6 +547,8 @@ org/7927,Organization,7927,CJ37,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/6956,Organization,6956,CJ01,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586,LIBE,Joint LIBE - FEMM,Joint committee procedure - LIBE and FEMM,time-period/20240716,,2024-07-16
 org/6956,Organization,6956,CJ01,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6588,FEMM,Joint LIBE - FEMM,Joint committee procedure - LIBE and FEMM,time-period/20240716,,2024-07-16
 org/ANIT,Organization,ANIT,ANIT,def/ep-entities/COMMITTEE_PARLIAMENTARY_SPECIAL,,,Protection of Animals during Transport,Committee of Inquiry on the Protection of Animals during Transport,,,
+org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586,LIBE,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
+org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585,JURI,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
 org/118,Organization,118,BUDG,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgets,Committee on Budgets,time-period/19970116-19990719,1999-07-19,1997-01-16
 org/97,Organization,97,RELA,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,External Economic Relations,Committee on External Economic Relations,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/6961,Organization,6961,CJ06,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6579,IMCO,Joint IMCO - TRAN,Joint committee procedure - IMCO and TRAN,time-period/20240716,,2024-07-16
@@ -564,6 +564,7 @@ org/6402,Organization,6402,CJ31,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/6402,Organization,6402,CJ31,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6350,DEVE,Joint AFET - DEVE - BUDG,Joint committee procedure - AFET - DEVE - BUDG,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/CJ71,Organization,CJ71,CJ71,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint BUDG - REGI - AGRI,Joint committee procedure - BUDG - REGI - AGRI,,,
 org/4978,Organization,4978,SEDE,def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB,,,Security and Defence,Subcommittee on Security and Defence,time-period/20170119-20190701,2019-07-01,2017-01-19
+org/CJ73,Organization,CJ73,CJ73,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint AGRI - JURI,Joint committee procedure - AGRI and JURI,,,
 org/4940,Organization,4940,CJ24,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3961,JURI,Joint IMCO - JURI,Procedure with joint meetings - IMCO and JURI,time-period/20160414-20170118,2017-01-18,2016-04-14
 org/4940,Organization,4940,CJ24,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3955,IMCO,Joint IMCO - JURI,Procedure with joint meetings - IMCO and JURI,time-period/20160414-20170118,2017-01-18,2016-04-14
 org/6983,Organization,6983,CJ28,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6572,EMPL,Joint EMPL - CULT,Joint committee procedure - EMPL and CULT,time-period/20240716,,2024-07-16
@@ -721,7 +722,7 @@ org/6495,Organization,6495,CJ48,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/1083,Organization,1083,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Culture, Youth, Education, Media, Sport","Committee on Culture, Youth, Education, the Media and Sport",time-period/20020115-20040719,2004-07-19,2002-01-15
 org/CULT,Organization,CULT,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Culture and Education,Committee on Culture and Education,,,
 org/1242,Organization,1242,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/20040720-20070114,2007-01-14,2004-07-20
-org/1251,Organization,1251,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20040720-20070114,2007-01-14,2004-07-20
+org/1251,Organization,1251,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/1087,Organization,1087,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20020115-20040719,2004-07-19,2002-01-15
 org/6350,Organization,6350,DEVE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development,Committee on Development,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6997,Organization,6997,CJ42,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6562,AFET,Joint AFET - ITRE,Joint committee procedure - AFET and ITRE,time-period/20240716,,2024-07-16
@@ -757,7 +758,7 @@ org/2352,Organization,2352,EMPL,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/7874,Organization,7874,CJ51,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6581,REGI,Joint EMPL - REGI,Joint committee procedure - EMPL and REGI,time-period/20241022,,2024-10-22
 org/7874,Organization,7874,CJ51,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6572,EMPL,Joint EMPL - REGI,Joint committee procedure - EMPL and REGI,time-period/20241022,,2024-10-22
 org/6568,Organization,6568,CONT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgetary Control,Committee on Budgetary Control,time-period/20240716,,2024-07-16
-org/3,Organization,3,JEUN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Youth, Culture, Education, the Media and Sport","Committee on Youth, Culture, Education, the Media and Sport",time-period/19890726-19920114,1992-01-14,1989-07-26
+org/3,Organization,3,JEUN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Youth, Culture, Education, the Media and Sport","Committee on Youth, Culture, Education, the Media and Sport",time-period/19890726-20210507,2021-05-07,1989-07-26
 org/4987,Organization,4987,CJ04,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4966,IMCO,Joint ECON - IMCO,Procedure with joint meetings - ECON and IMCO,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/4987,Organization,4987,CJ04,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4962,ECON,Joint ECON - IMCO,Procedure with joint meetings - ECON and IMCO,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/1091,Organization,1091,FIAP,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,Foot and mouth disease,Temporary committee on foot and mouth disease,time-period/20020115-20021217,2002-12-17,2002-01-15
@@ -812,7 +813,7 @@ org/1241,Organization,1241,IMCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/98,Organization,98,JURI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Legal Affairs and Citizens' Rights,Committee on Legal Affairs and Citizens' Rights,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/7873,Organization,7873,CJ50,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586,LIBE,Joint TRAN - LIBE,Joint committee procedure - TRAN and LIBE,time-period/20241022,,2024-10-22
 org/7873,Organization,7873,CJ50,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6580,TRAN,Joint TRAN - LIBE,Joint committee procedure - TRAN and LIBE,time-period/20241022,,2024-10-22
-org/23,Organization,23,ENER,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Energy, Research and Technology","Committee on Energy, Research and Technology",time-period/19920115-19940718,1994-07-18,1992-01-15
+org/23,Organization,23,ENER,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Energy, Research and Technology","Committee on Energy, Research and Technology",time-period/19920507-19940718,1994-07-18,1992-05-07
 org/2418,Organization,2418,INTA,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,International Trade,Committee on International Trade,time-period/20070115-20070130,2007-01-30,2007-01-15
 org/4905,Organization,4905,CJ17,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3965,PETI,Joint LIBE - PETI,Procedure with  joint meetings - LIBE and PETI,time-period/20150305-20170118,2017-01-18,2015-03-05
 org/4905,Organization,4905,CJ17,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3962,LIBE,Joint LIBE - PETI,Procedure with  joint meetings - LIBE and PETI,time-period/20150305-20170118,2017-01-18,2015-03-05
@@ -848,6 +849,8 @@ org/6470,Organization,6470,CJ44,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/6470,Organization,6470,CJ44,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6359,ITRE,Joint BUDG - ITRE,Joint committee procedure - BUDG and ITRE,time-period/20230711-20240715,2024-07-15,2023-07-11
 org/3758,Organization,3758,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Culture and Education,Committee on Culture and Education,time-period/20120119-20140630,2014-06-30,2012-01-19
 org/6581,Organization,6581,REGI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Regional Development,Committee on Regional Development,time-period/20240716,,2024-07-16
+org/7981,Organization,7981,CJ73,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585,JURI,Joint AGRI - JURI,Joint committee procedure - AGRI and JURI,time-period/20251125,,2025-11-25
+org/7981,Organization,7981,CJ73,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6582,AGRI,Joint AGRI - JURI,Joint committee procedure - AGRI and JURI,time-period/20251125,,2025-11-25
 org/7954,Organization,7954,CJ55,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6576,ITRE,Joint SEDE - ITRE,Joint committee procedure - SEDE and ITRE,time-period/20250305,,2025-03-05
 org/7954,Organization,7954,CJ55,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/7911,SEDE,Joint SEDE - ITRE,Joint committee procedure - SEDE and ITRE,time-period/20250305,,2025-03-05
 org/6374,Organization,6374,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6368,JURI,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20220120-20240715,2024-07-15,2022-01-20
@@ -938,7 +941,7 @@ org/4995,Organization,4995,CJ12,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/4995,Organization,4995,CJ12,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4962,ECON,Joint ECON - LIBE,Procedure with joint meetings - ECON and LIBE,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/4958,Organization,4958,DEVE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development,Committee on Development,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/90,Organization,90,C17,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Institutional Affairs,Committee on Institutional Affairs,time-period/19820121-19840723,1984-07-23,1982-01-21
-org/91,Organization,91,C18,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Inquiry into the situation of women in Europe,Committee of inquiry into the situation of women in Europe,time-period/19820121-19840723,1984-07-23,1982-01-21
+org/91,Organization,91,C18,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Inquiry into the situation of women in Europe,Committee of inquiry into the situation of women in Europe,time-period/19840726-19840723,1984-07-23,1984-07-26
 org/3833,Organization,3833,CJ11,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3757,PECH,Joint PECH - FEMM,Procedure with joint meetings - PECH and FEMM,time-period/20130704-20140630,2014-06-30,2013-07-04
 org/3833,Organization,3833,CJ11,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/3762,FEMM,Joint PECH - FEMM,Procedure with joint meetings - PECH and FEMM,time-period/20130704-20140630,2014-06-30,2013-07-04
 org/6501,Organization,6501,CJ49,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6352,INTA,Joint INTA - ITRE,Joint committee procedure - INTA and ITRE,time-period/20240311-20240715,2024-07-15,2024-03-11
@@ -974,7 +977,7 @@ org/1085,Organization,1085,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/2427,Organization,2427,REGI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Regional Development,Committee on Regional Development,time-period/20070115-20070130,2007-01-30,2007-01-15
 org/3756,Organization,3756,AGRI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Agriculture and Rural Development,Committee on Agriculture and Rural Development,time-period/20120119-20140630,2014-06-30,2012-01-19
 org/1079,Organization,1079,ENVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Environment, Public Health, Consumer Policy","Committee on the Environment, Public Health and Consumer Policy",time-period/20020115-20040719,2004-07-19,2002-01-15
-org/2358,Organization,2358,AGRI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Agriculture and Rural Development,Committee on Agriculture and Rural Development,time-period/20070131-20090713,2009-07-13,2007-01-31
+org/2358,Organization,2358,AGRI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Agriculture and Rural Development,Committee on Agriculture and Rural Development,time-period/20220131-20090713,2009-07-13,2022-01-31
 org/6363,Organization,6363,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women’s Rights and Gender Equality,Committee on Women’s Rights and Gender Equality,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/2366,Organization,2366,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20070131-20090713,2009-07-13,2007-01-31
 org/1239,Organization,1239,ENVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Environment, Public Health and Food Safety","Committee on the Environment, Public Health and Food Safety",time-period/20040720-20070114,2007-01-14,2004-07-20

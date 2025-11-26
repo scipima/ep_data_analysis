@@ -4,6 +4,7 @@ library(data.table)
 
 #------------------------------------------------------------------------------#
 source(file = here::here("scripts_r", "join_functions.R"))
+source(file = here::here("scripts_r", "cohesionrate_function.R"))
 
 # vote colours --------------------------------------------------------------###
 vote_colours <- c(For = '#00AEEF',
@@ -16,8 +17,52 @@ vote_colours <- c(For = '#00AEEF',
 ## Data ------------------------------------------------------------------------
 meps_rcv_mandate <- data.table::fread(here::here(
   "data_out", "meps_rcv_mandate_10.csv") )
+pl_votes <- fread(here::here("data_out", "votes", "pl_votes_10.csv"))
 votes_labels <- data.table::fread(here::here(
   "data_out", "votes", "votes_labels_10.csv") )
+
+
+target_rcvid = pl_votes |>
+  filter(
+    grepl("962687", inverse_consists_of)
+    & decision_method == "VOTE_ELECTRONIC_ROLLCALL") |>
+  pull(rcv_id)
+
+meps_rcv_mandate[, result_fct := factor(result,
+                                        levels = -3L : 1L,
+                                        labels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+# Check
+# table(meps_rcv_mandate$result, meps_rcv_mandate$result_fct, exclude = NULL)
+
+# Calculate Cohesion
+cohesion_dt <- meps_rcv_mandate[
+  rcv_id %in% target_rcvid
+  & result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct)
+    ),
+  keyby = list(rcv_id, polgroup_id) ] |>
+  join_polit_labs() |>
+  select(rcv_id, cohesion, political_group, polgroup_id) |>
+  left_join(
+    y = fread(here::here("data_out", "aggregates", "tally_bygroup_byrcv_10.csv")) |>
+      pivot_wider(id_cols = c(rcv_id, polgroup_id),
+                  names_from = result_fct,
+                  values_from = tally,
+                  values_fill = 0L),
+    by = c("rcv_id", "polgroup_id")
+  ) |>
+  select(-c(polgroup_id)) |>
+  left_join(
+    y = pl_votes |>
+      select(inverse_consists_of, rcv_id, is_final, headingLabel_en,
+             activity_label_en, referenceText_en,
+             responsible_organization_label_en),
+    by = "rcv_id"
+  )
+fwrite(x = cohesion_dt, file = here::here("data_out", "budget_cohesion.csv"))
+
 
 
 # Extract RCV -----------------------------------------------------------------#

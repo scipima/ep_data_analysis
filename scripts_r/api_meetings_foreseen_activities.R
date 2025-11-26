@@ -706,8 +706,12 @@ procedures_doc_id[, nchar_doc := nchar(doc_id)]
 procedures_doc_id = procedures_doc_id[order(process_id, -nchar_doc)]
 procedures_doc_id[, nchar_doc := NULL]
 # Nest the results back into a list-column, grouped by procedure.
-procedures_doc_id <- procedures_doc_id|>
-  tidyr::nest(doc_id = doc_id)
+procedures_doc_id <- procedures_doc_id |>
+  tidyr::nest(
+    doc_dict = c(
+      doc_id, identifier
+      ),
+    .by = process_id)
 
 
 
@@ -765,7 +769,7 @@ final_dt <- votes_foreseen |>
     notation_agenda_point, activity_label_en, activity_label_fr,
     agenda_label_en, agenda_label_fr,
     has_locality, procedure_id, legis_procedure, is_urgent,
-    doc_id, committee, rapporteur, renew_shadow) |>
+    doc_dict, committee, rapporteur, renew_shadow) |>
   dplyr::mutate(
     activity_order_day =
       as.integer(activity_order) - min(as.integer(activity_order)) + 1L,
