@@ -35,7 +35,7 @@ if ( !exists("pl_session_docs_rcv") ) {
 # Identify whether vote is final based on guess of what VoteWatch did ---------#
 # c("single vote", "vote:.*", "as a whole", "Procedural vote", "Election", "joint text")
 pl_session_docs_rcv[
-  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de reglement|.lection de la Commission|Projet commun|Recommandation de d.cision",
+  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de r.glement du Conseil|.lection de la Commission|Projet commun|Recommandation de d.cision|D.cision du maintien du recours",
         x = title_dcterms_fr, ignore.case = T, perl = T),
   is_final := 1L]
 pl_session_docs_rcv[is.na(is_final), is_final := 0L]
@@ -81,13 +81,13 @@ if ( !exists("today_date") && mandate_starts == "2019-07-01" ) {
 }
 
 pl_votes[
-  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de reglement|.lection de la Commission|Projet commun|Recommandation de d.cision",
+  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de r.glement du Conseil|.lection de la Commission|Projet commun|Recommandation de d.cision|D.cision du maintien du recours",
         x = activity_label_fr, ignore.case = TRUE, perl = TRUE),
   `:=`( is_final = 1L ) ]
 pl_votes[, .N, by = is_final]
 
 pl_votes[
-  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de reglement|.lection de la Commission|Projet commun|Recommandation de d.cision|Nomination de ",
+  grepl(pattern = "vote unique|vote final|vote\\:.*|ensembl*e du texte|Election|Proposition de la Commission|Proc.dure d.approbation|proc.dure d.urgence|Demande de d.cision d.urgence|Approbation|Demande de vote|Projet de d.cision du Conseil|Projet du Conseil|D.cision d.engager des n.gociations interinstitutionnelles|Proposition de r.solution|Accord\\s?provisoire|Proposition.? de d.cision|Projet de recommandation|Proposition de recommandation|Demande de procéder au vote sur les amendements|Demande de mettre aux voix les amendements|Projet de d.cision|Projet de directive du Conseil|Projet de r.glement du Conseil|.lection de la Commission|Projet commun|Recommandation de d.cision|D.cision du maintien du recours|Nomination de ",
         x = referenceText_fr, ignore.case = TRUE, perl = TRUE),
   `:=`( is_final = 1L ) ]
 pl_votes[, .N, by = is_final]
