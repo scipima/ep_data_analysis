@@ -1,13 +1,13 @@
 identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_label_fr,pref_label_fr
-6641,IL,time-period/20240716,2024-07-16,IL,Iniciativa Liberal,IL,Iniciativa Liberal
+6641,IL,time-period/20231206-20231206,2023-12-06,IL,Iniciativa Liberal,IL,Iniciativa Liberal
 6649,JV,time-period/20240716,2024-07-16,JV,Jaunā Vienotība,JV,Jaunā Vienotība
 6667,PSOE,time-period/20240716,2024-07-16,PSOE,Partido Socialista Obrero Español,PSOE,Partido Socialista Obrero Español
-6671,VIHR,time-period/20240716,2024-07-16,VIHR,Vihreä liitto,VIHR,Vihreä liitto
+6671,VIHR,time-period/20240716-20220701,2024-07-16,VIHR,Vihreä liitto,VIHR,Vihreä liitto
 6674,M5S,time-period/20240716,2024-07-16,M5S,Movimento 5 Stelle,M5S,Movimento 5 Stelle
 6675,PD,time-period/20240716,2024-07-16,PD,Partito Democratico,PD,Partito Democratico
 6693,D66,time-period/20240716,2024-07-16,D66,Democraten 66,D66,Democraten 66
 6696,PVV,time-period/20240716,2024-07-16,PVV,Partij voor de Vrijheid,PVV,Partij voor de Vrijheid
-6702,PiS,time-period/20240716,2024-07-16,PiS,Prawo i Sprawiedliwość,PiS,Prawo i Sprawiedliwość
+6702,PiS,time-period/20240716-19731219,2024-07-16,PiS,Prawo i Sprawiedliwość,PiS,Prawo i Sprawiedliwość
 6706,PS,time-period/20240716,2024-07-16,PS,Partido Socialista,PS,Partido Socialista
 6709,PNL,time-period/20240716,2024-07-16,PNL,Partidul Naţional Liberal,PNL,Partidul Naţional Liberal
 6718,V,time-period/20240716,2024-07-16,V,Vänsterpartiet,V,Vänsterpartiet
@@ -41,9 +41,9 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6931,ITN,time-period/20240716,2024-07-16,ITN,There Is Such a People,ITN,There Is Such a People
 7962,ACT,time-period/20250621,2025-06-21,ACT,Partidul Acțiunea Conservatoare,ACT,Partidul Acțiunea Conservatoare
 6637,Æ,time-period/20240716,2024-07-16,Æ,Danmarksdemokraterne,Æ,Danmarksdemokraterne
-6638,Volt,time-period/20240716,2024-07-16,Volt,Volt,Volt,Volt
+6638,Volt,time-period/20240716-20220816,2024-07-16,Volt,Volt,Volt,Volt
 6644,DP,time-period/20240716,2024-07-16,DP,Domovinski pokret,DP,Domovinski pokret
-6663,V,time-period/20240716,2024-07-16,V,"Venstre, Danmarks Liberale Parti",V,"Venstre, Danmarks Liberale Parti"
+6663,V,time-period/20240706-20240505,2024-07-06,V,"Venstre, Danmarks Liberale Parti",V,"Venstre, Danmarks Liberale Parti"
 6664,ER,time-period/20240716,2024-07-16,ER,Eesti Reformierakond,ER,Eesti Reformierakond
 6666,PP,time-period/20240716,2024-07-16,PP,Partido Popular,PP,Partido Popular
 6678,TS-LKD,time-period/20240716,2024-07-16,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
@@ -91,11 +91,11 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 7872,DOMiNO,time-period/20240928,2024-09-28,DOMiNO,Dom i nacionalno okupljanje,DOMiNO,Dom i nacionalno okupljanje
 7952,GL-PvdA,time-period/20250213,2025-02-13,GL-PvdA,GroenLinks-PvdA,GL-PvdA,GroenLinks-PvdA
 5320,PSD,time-period/20190702-20240715,2019-07-02,PSD,Partidul Social Democrat,PSD,Partidul Social Democrat
-6639,NSC,time-period/20240716,2024-07-16,NSC,Nieuw Sociaal Contract,NSC,Nieuw Sociaal Contract
+6639,NSC,time-period/20240716-20230118,2024-07-16,NSC,Nieuw Sociaal Contract,NSC,Nieuw Sociaal Contract
 6645,SOS RO,time-period/20240716,2024-07-16,SOS RO,S.O.S. România,SOS RO,S.O.S. România
-6648,Revival,time-period/20240716-20240714,2024-07-16,Revival,Revival,Revival,Revival
-6655,AS,time-period/20240716,2024-07-16,Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija",Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija"
-6656,DSVL,time-period/20240716,2024-07-16,DSVL,Demokratų sąjunga „Vardan Lietuvos“,DSVL,Demokratų sąjunga „Vardan Lietuvos“
+6648,Revival,time-period/20240716,2024-07-16,Revival,Revival,Revival,Revival
+6655,AS,time-period/20241231,2024-12-31,Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija",Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija"
+6656,DSVL,time-period/20241231,2024-12-31,DSVL,Demokratų sąjunga „Vardan Lietuvos“,DSVL,Demokratų sąjunga „Vardan Lietuvos“
 6672,SDP,time-period/20240716,2024-07-16,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti,SDP,Suomen Sosialidemokraattinen Puolue/Finlands Socialdemokratiska Parti
 6673,SFP,time-period/20240716,2024-07-16,SFP,Svenska folkpartiet,SFP,Svenska folkpartiet
 6694,GroenLinks,time-period/20240716,2024-07-16,GroenLinks,GroenLinks,GroenLinks,GroenLinks
@@ -146,7 +146,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6658,Vesna,time-period/20240716,2024-07-16,Vesna,Vesna – zelena stranka,Vesna,Vesna – zelena stranka
 6661,F,time-period/20240716,2024-07-16,F,Socialistisk Folkeparti,F,Socialistisk Folkeparti
 6669,ERC,time-period/20240716,2024-07-16,ERC,Esquerra Republicana de Catalunya,ERC,Esquerra Republicana de Catalunya
-6676,SVP,time-period/20240716,2024-07-16,SVP,Südtiroler Volkspartei,SVP,Südtiroler Volkspartei
+6676,SVP,time-period/20220521-20220520,2022-05-21,SVP,Südtiroler Volkspartei,SVP,Südtiroler Volkspartei
 6679,LLRA,time-period/20240716,2024-07-16,LLRA,Lietuvos lenkų rinkimų akcija – Krikščioniškų šeimų sąjunga,LLRA,Lietuvos lenkų rinkimų akcija – Krikščioniškų šeimų sąjunga
 6682,DP,time-period/20240716,2024-07-16,DP,Parti démocratique,DP,Parti démocratique
 6683,CSV,time-period/20240716,2024-07-16,CSV,Parti chrétien social luxembourgeois,CSV,Parti chrétien social luxembourgeois
