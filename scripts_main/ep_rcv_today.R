@@ -170,6 +170,28 @@ if ("activity_label_mul" %in% names(pl_votes) ) {
 # ]
 #------------------------------------------------------------------------------#
 
+# Making sure only the true final votes are considered final, in case there is
+# more than 1 rcv with proposition de r[eé]solution flag ---------------------#
+pl_votes_by_id<- split(pl_votes, by = "vot_id")
+
+pl_votes_by_id<- lapply(pl_votes_by_id, 
+                        function (x) {
+                  matches_ensemble <- grepl(pattern = 
+                                  "proposition de r[eé]solution \\(ensemble du texte\\)",
+                                      x$activity_label_mul, ignore.case = TRUE)
+                  matches_no_ensemble <- grepl(pattern = 
+                                  "proposition de r[eé]solution", 
+                                      x$activity_label_mul, ignore.case = TRUE)
+                          if (any(matches_ensemble)) {
+                            x$is_final[matches_ensemble] <- 1
+                            x$is_final[matches_no_ensemble & 
+                                         !matches_ensemble] <- 0 }; return(x)
+                        })
+
+pl_votes<- do.call(rbind, pl_votes_by_id)
+rm(pl_votes_by_id)
+
+
 ### Write data to disk ---------------------------------------------------------
 data.table::fwrite(x = pl_votes,
                    file = here::here("data_out", "daily",
