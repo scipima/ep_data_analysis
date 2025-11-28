@@ -40,7 +40,7 @@ cohesion_dt <- meps_rcv_mandate[
   rcv_id %in% target_rcvid
   & result >= -1L, # only official votes
   list(
-    cohesion = cohesion_hn(result_fct)
+    cohesion = round(cohesion_hn(result_fct), digits = 1)
     ),
   keyby = list(rcv_id, polgroup_id) ] |>
   join_polit_labs() |>

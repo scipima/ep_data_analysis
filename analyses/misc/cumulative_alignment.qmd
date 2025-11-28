@@ -230,8 +230,7 @@ plot_test |>
 #   by = list(rcv_id)
 # ][order(N)]
 
-
-rcvid_date$rcv_id[!rcvid_date$rcv_id %in% unique(plot_test$rcv_id)]
+# rcvid_date$rcv_id[!rcvid_date$rcv_id %in% unique(plot_test$rcv_id)]
 ```
 
 

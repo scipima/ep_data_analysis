@@ -240,6 +240,7 @@ data.table::fwrite(x = vl_dt, file = here::here(
 vl_rcv <- vl_dt |>
   dplyr::filter(
     grepl(pattern = "RCV", x = rcv_etc)
+    # ALWAYS CHECK AFTER PLENARY ----------------------------------------------#
     & !grepl(pattern = "[WITHDRAWN]", x = remarks, fixed = TRUE)
     & !grepl(pattern = "[INADMISSIBLE]", x = remarks, fixed = TRUE)
   ) |>
