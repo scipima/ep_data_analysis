@@ -3,7 +3,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6649,JV,time-period/20240716,2024-07-16,JV,Jaunā Vienotība,JV,Jaunā Vienotība
 6667,PSOE,time-period/20240716,2024-07-16,PSOE,Partido Socialista Obrero Español,PSOE,Partido Socialista Obrero Español
 6671,VIHR,time-period/20240716,2024-07-16,VIHR,Vihreä liitto,VIHR,Vihreä liitto
-6674,M5S,time-period/20240716,2024-07-16,M5S,Movimento 5 Stelle,M5S,Movimento 5 Stelle
+6674,M5S,time-period/20240716-20240714,2024-07-16,M5S,Movimento 5 Stelle,M5S,Movimento 5 Stelle
 6675,PD,time-period/20240716,2024-07-16,PD,Partito Democratico,PD,Partito Democratico
 6693,D66,time-period/20240716,2024-07-16,D66,Democraten 66,D66,Democraten 66
 6696,PVV,time-period/20240716,2024-07-16,PVV,Partij voor de Vrijheid,PVV,Partij voor de Vrijheid
@@ -32,7 +32,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6798,Independent,time-period/20240716,2024-07-16,Independent,Independent,Independent,Independent
 6802,AfD,time-period/20240716,2024-07-16,AfD,Alternative für Deutschland,AfD,Alternative für Deutschland
 6817,PCP,time-period/20240716,2024-07-16,PCP,Partido Comunista Português,PCP,Partido Comunista Português
-6827,Les Républicains,time-period/20240716-20240715,2024-07-16,Les Républicains,Les Républicains,Les Républicains,Les Républicains
+6827,Les Républicains,time-period/20240716,2024-07-16,Les Républicains,Les Républicains,Les Républicains,Les Républicains
 6831,FdL,time-period/20240716,2024-07-16,Fratelli d'Italia,FRATELLI D' ITALIA,Fratelli d'Italia,FRATELLI D' ITALIA
 6848,RN,time-period/20240716,2024-07-16,Rassemblement,Rassemblement national,Rassemblement,Rassemblement national
 6878,LFI,time-period/20240716,2024-07-16,La France Insoumise,La France Insoumise,La France Insoumise,La France Insoumise
@@ -46,7 +46,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6663,V,time-period/20240716,2024-07-16,V,"Venstre, Danmarks Liberale Parti",V,"Venstre, Danmarks Liberale Parti"
 6664,ER,time-period/20240716,2024-07-16,ER,Eesti Reformierakond,ER,Eesti Reformierakond
 6666,PP,time-period/20240716,2024-07-16,PP,Partido Popular,PP,Partido Popular
-6678,TS-LKD,time-period/20240716,2024-07-16,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
+6678,TS-LKD,time-period/20240716-20240505,2024-07-16,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai,TS-LKD,Tėvynės sąjunga-Lietuvos krikščionys demokratai
 6681,LSAP,time-period/20240716,2024-07-16,LSAP,Parti ouvrier socialiste luxembourgeois,LSAP,Parti ouvrier socialiste luxembourgeois
 6689,PL,time-period/20240716,2024-07-16,PL,Partit Laburista,PL,Partit Laburista
 6691,VVD,time-period/20240716,2024-07-16,VVD,Volkspartij voor Vrijheid en Democratie,VVD,Volkspartij voor Vrijheid en Democratie
@@ -73,8 +73,8 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6810,SD,time-period/20240716,2024-07-16,SD,Sverigedemokraterna,SD,Sverigedemokraterna
 6820,PNV,time-period/20240716,2024-07-16,PNV,Partido Nacionalista Vasco,PNV,Partido Nacionalista Vasco
 6847,TISZA,time-period/20240716,2024-07-16,TISZA,Tisztelet és Szabadság Párt,TISZA,Tisztelet és Szabadság Párt
-6850,BSW,time-period/20240716,2024-07-16,BSW,Bündnis Sahra Wagenknecht – Vernunft und Gerechtigkeit,BSW,Bündnis Sahra Wagenknecht – Vernunft und Gerechtigkeit
-6851,BBB,time-period/20240716,2024-07-16,BBB,BoerBurgerBeweging,BBB,BoerBurgerBeweging
+6850,BSW,time-period/20240715,2024-07-15,BSW,Bündnis Sahra Wagenknecht – Vernunft und Gerechtigkeit,BSW,Bündnis Sahra Wagenknecht – Vernunft und Gerechtigkeit
+6851,BBB,time-period/20240603,2024-06-03,BBB,BoerBurgerBeweging,BBB,BoerBurgerBeweging
 6856,Konfederacja,time-period/20240716,2024-07-16,Konfederacja,Konfederacja Wolność i Niepodległość,Konfederacja,Konfederacja Wolność i Niepodległość
 6859,V,time-period/20240716,2024-07-16,Volt,Volt,Volt,Volt
 6874,PS,time-period/20240716,2024-07-16,Progresívne Slovensko,Progresívne Slovensko,Progresívne Slovensko,Progresívne Slovensko
@@ -86,12 +86,12 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6953,Les Écologistes,time-period/20240716,2024-07-16,Les Écologistes,Les Écologistes,Les Écologistes,Les Écologistes
 7010,Hlas–SD,time-period/20240716,2024-07-16,Hlas–SD,Hlas – sociálna demokracia,Hlas–SD,Hlas – sociálna demokracia
 7023,Sans parti,time-period/20240716,2024-07-16,Sans parti,Sans parti,Sans parti,Sans parti
-7029,KKP,time-period/20240716-20240714,2024-07-16,KKP,Konfederacja Korony Polskiej,KKP,Konfederacja Korony Polskiej
+7029,KKP,time-period/20240716,2024-07-16,KKP,Konfederacja Korony Polskiej,KKP,Konfederacja Korony Polskiej
 7033,PSH,time-period/20240716,2024-07-16,PSH,Přísaha,PSH,Přísaha
 7872,DOMiNO,time-period/20240928,2024-09-28,DOMiNO,Dom i nacionalno okupljanje,DOMiNO,Dom i nacionalno okupljanje
 7952,GL-PvdA,time-period/20250213,2025-02-13,GL-PvdA,GroenLinks-PvdA,GL-PvdA,GroenLinks-PvdA
 5320,PSD,time-period/20190702-20240715,2019-07-02,PSD,Partidul Social Democrat,PSD,Partidul Social Democrat
-6639,NSC,time-period/20240716,2024-07-16,NSC,Nieuw Sociaal Contract,NSC,Nieuw Sociaal Contract
+6639,NSC,time-period/20240716-20240711,2024-07-16,NSC,Nieuw Sociaal Contract,NSC,Nieuw Sociaal Contract
 6645,SOS RO,time-period/20240716,2024-07-16,SOS RO,S.O.S. România,SOS RO,S.O.S. România
 6648,Revival,time-period/20240716,2024-07-16,Revival,Revival,Revival,Revival
 6655,AS,time-period/20240716,2024-07-16,Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija",Apvienotais saraksts,"Apvienotais saraksts — Latvijas Zaļā partija, Latvijas Reģionu Apvienība, Liepājas partija"
@@ -140,10 +140,10 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 7012,Plefsi Eleftherias,time-period/20240716,2024-07-16,Plefsi Eleftherias,Plefsi Eleftherias,Plefsi Eleftherias,Plefsi Eleftherias
 7019,Independent,time-period/20240716,2024-07-16,Independent,Independent,Independent,Independent
 7026,PdF,time-period/20240716,2024-07-16,PdF,Partei des Fortschritts,PdF,Partei des Fortschritts
-6640,AD,time-period/20240716,2024-07-16,AD,Aliança Democrática,AD,Aliança Democrática
+6640,AD,time-period/20240716-20240118,2024-07-16,AD,Aliança Democrática,AD,Aliança Democrática
 6652,LS,time-period/20240716,2024-07-16,LS,Liberalų sąjūdis,LS,Liberalų sąjūdis
 6653,LP,time-period/20240716,2024-07-16,LP,Laisvės partija,LP,Laisvės partija
-6658,Vesna,time-period/20220917-20220916,2022-09-17,Vesna,Vesna – zelena stranka,Vesna,Vesna – zelena stranka
+6658,Vesna,time-period/20240716,2024-07-16,Vesna,Vesna – zelena stranka,Vesna,Vesna – zelena stranka
 6661,F,time-period/20240716,2024-07-16,F,Socialistisk Folkeparti,F,Socialistisk Folkeparti
 6669,ERC,time-period/20240716,2024-07-16,ERC,Esquerra Republicana de Catalunya,ERC,Esquerra Republicana de Catalunya
 6676,SVP,time-period/20240716,2024-07-16,SVP,Südtiroler Volkspartei,SVP,Südtiroler Volkspartei
@@ -172,7 +172,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6812,EH BILDU,time-period/20240716,2024-07-16,EH BILDU,EH BILDU,EH BILDU,EH BILDU
 6860,PVDA-PTB,time-period/20240716,2024-07-16,PVDA-PTB,PVDA-PTB,PVDA-PTB,PVDA-PTB
 6863,Enhedslisten,time-period/20240716,2024-07-16,Enhedslisten,Enhedslisten,Enhedslisten,Enhedslisten
-6893,PL2050,time-period/20240716,2024-07-16,Polska 2050,Polska 2050,Polska 2050,Polska 2050
+6893,PL2050,time-period/20240731,2024-07-31,Polska 2050,Polska 2050,Polska 2050,Polska 2050
 6895,HREP,time-period/20240716,2024-07-16,Hnutie Republika,Hnutie Republika,Hnutie Republika,Hnutie Republika
 6902,R,time-period/20240716,2024-07-16,Reconquête!,Reconquête!,Reconquête!,Reconquête!
 6903,LesEng,time-period/20240716,2024-07-16,Les Engagés,Les Engagés,Les Engagés,Les Engagés
@@ -193,7 +193,7 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6647,Možemo!,time-period/20240716,2024-07-16,Možemo!,Možemo!,Možemo!,Možemo!
 6662,O,time-period/20240716,2024-07-16,O,Dansk Folkeparti,O,Dansk Folkeparti
 6665,SDE,time-period/20240716,2024-07-16,SDE,Sotsiaaldemokraatlik Erakond,SDE,Sotsiaaldemokraatlik Erakond
-6670,Perus,time-period/20240716,2024-07-16,Perus,Perussuomalaiset,Perus,Perussuomalaiset
+6670,Perus,time-period/20240716-20240603,2024-07-16,Perus,Perussuomalaiset,Perus,Perussuomalaiset
 6680,LVZS,time-period/20240716,2024-07-16,LVZS,Lietuvos valstiečių ir žaliųjų sąjunga,LVZS,Lietuvos valstiečių ir žaliųjų sąjunga
 6684,Déi Gréng,time-period/20240716,2024-07-16,Déi Gréng,Déi Gréng - Les Verts,Déi Gréng,Déi Gréng - Les Verts
 6686,Saskaņa SDP,time-period/20240716,2024-07-16,Ssaskaņa SDP,"""Saskaņa"" sociāldemokrātiskā partija",Ssaskaņa SDP,"""Saskaņa"" sociāldemokrātiskā partija"
@@ -224,6 +224,6 @@ identifier,label,temporal_id,temporal_start_date,alt_label_en,pref_label_en,alt_
 6950,Independent,time-period/20240716,2024-07-16,Independent,Independent,Independent,Independent
 7013,Phoní Loyikís,time-period/20240716,2024-07-16,Foníí Loyikís,Foní Loyikís,Foní Loyikís,Foní Loyikís
 7024,Independent,time-period/20240716,2024-07-16,Independent,Independent,Independent,Independent
-7034,AUTO,time-period/20240716-20211201,2024-07-16,AUTO,Motoristé sobě,AUTO,Motoristé sobě
+7034,AUTO,time-period/20240716,2024-07-16,AUTO,Motoristé sobě,AUTO,Motoristé sobě
 7921,UDR,time-period/20240831,2024-08-31,UDR,Union des droites pour la République,UDR,Union des droites pour la République
 7978,DsF,time-period/20251019,2025-10-19,Dreptate și Frăție,Dreptate și Frăție,Dreptate și Frăție,Dreptate și Frăție
