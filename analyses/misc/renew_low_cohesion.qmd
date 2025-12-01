@@ -317,12 +317,13 @@ cohesion_dt[, .(avg = round( mean(cohesion, na.rm = TRUE), digits = 1)),
 #| fig-height: 5
 
 #------------------------------------------------------------------------------#
-# Final Votes data ------------------------------------------------------------#
-votes_final_all <- data.table::fread( here::here(
-  "data_out", "votes", "votes_final_10.csv") )
-
 # Merge RCV with Finals -------------------------------------------------------#
-meps_rcv_mandate <- votes_final_all[meps_rcv_mandate, on = "rcv_id"]
+meps_rcv_mandate <- pl_votes[, list(
+  is_final, rcv_id)
+  ][
+  meps_rcv_mandate, 
+  on = "rcv_id"
+  ]
 
 # Colours ---------------------------------------------------------------------#
 cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
@@ -331,10 +332,9 @@ cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
 cohesion_final_dt <- meps_rcv_mandate[
   result >= -1L, # only official votes
   list(
-    cohesion = cohesion_hn(result_fct),
-    max_mode = max(tabulate(result_fct)),
-    tot_votes = sum(tabulate(result_fct) ) ),
-  keyby = list(rcv_id, polgroup_id, is_final) ] |> 
+    cohesion = cohesion_hn(result_fct)),
+  keyby = list(rcv_id, polgroup_id, is_final) 
+  ] |> 
   join_polit_labs()
 
 # Plot -------------------------------------------------------------------------
