@@ -1,5 +1,5 @@
 country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id,national_party,national_party_long
-24,ROU,Romania,6561,NI,,,
+,,,,,,,
 24,ROU,Romania,6561,NI,6645,SOS RO,S.O.S. România
 25,SVK,Slovakia,6561,NI,6723,SMER-SD,SMER-Sociálna demokracia
 12,GRC,Greece,6561,NI,6733,KKE,Communist Party of Greece
@@ -21,6 +21,7 @@ country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id
 6,DEU,Germany,6561,NI,7026,PdF,Partei des Fortschritts
 22,POL,Poland,6561,NI,7029,KKP,Konfederacja Korony Polskiej
 18,LUX,Luxembourg,6561,NI,7031,ADR,Alternativ Demokratesch Reformpartei
+24,ROU,Romania,6561,NI,7978,DsF,Dreptate și Frăție
 22,POL,Poland,7018,PPE,,,
 21,NLD,Netherlands,7018,PPE,6639,NSC,Nieuw Sociaal Contract
 23,PRT,Portugal,7018,PPE,6640,AD,Aliança Democrática

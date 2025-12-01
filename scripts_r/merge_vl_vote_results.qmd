@@ -337,7 +337,7 @@ if ( any(
   warning("Renew Votes have not been inserted correctly - Check!")
 }
 
-if ( any(vl_vote_rcv$vote == "–") ){
+if ( any(vl_vote_rcv$vote == "–") ) {
   vl_vote_rcv[
     vote == "–", 
     `:=`(
