@@ -1,5 +1,4 @@
 country_id,country_iso3c,country_name_en,polgroup_id,political_group,natparty_id,national_party,national_party_long
-,,,,,,,
 24,ROU,Romania,6561,NI,6645,SOS RO,S.O.S. România
 25,SVK,Slovakia,6561,NI,6723,SMER-SD,SMER-Sociálna demokracia
 12,GRC,Greece,6561,NI,6733,KKE,Communist Party of Greece

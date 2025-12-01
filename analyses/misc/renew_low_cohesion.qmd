@@ -204,11 +204,11 @@ meps_rcv_mandate[, result_fct := factor(result,
 #------------------------------------------------------------------------------#
 # Merge RCV with Finals -------------------------------------------------------#
 meps_rcv_mandate <- pl_votes[, list(
-  is_final, rcv_id, activity_date = as.character(activity_date))
-  ][
+  is_final, rcv_id
+)][
   meps_rcv_mandate, 
   on = "rcv_id"
-  ]
+]
 
 # meps_rcv_mandate[,
 #   .N,
@@ -221,87 +221,17 @@ cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
 
 # Calculate final votes -------------------------------------------------------#
 cohesion_final_dt <- meps_rcv_mandate[
-  result >= -1L,] # only official votes
+  result >= -1L, # only official votes
   list(
-    cohesion = cohesion_hn(result_fct)
-    ),
+    cohesion = cohesion_hn(result_fct),
+    max_mode = max( tabulate(result_fct) ),
+    tot_votes = sum( tabulate(result_fct) ) 
+  ),
   by = list(rcv_id, polgroup_id, is_final) 
-  ] |> 
+] |> 
   join_polit_labs()
-
-# Plot -------------------------------------------------------------------------
-# REF: https://stackoverflow.com/questions/40211451/geom-text-how-to-position-the-text-on-bar-as-i-want
-cohesion_final_avg <- cohesion_final_dt[, list(
-  avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
-  by = list(political_group, is_final)][order(avg)]
-
-# Extract rank vector for plot
-plot_rank <- cohesion_final_avg$political_group[
-  cohesion_final_avg$is_final == 1L]
-
-cohesion_final_avg |> 
-  dplyr::mutate(
-    is_final = ifelse(test = is_final == 1L,
-                      yes = "Final", no = "Not Final"), 
-    is_final = factor(is_final, levels = c("Final", "Not Final") ) ) |> 
-  ggplot(aes(x = factor(political_group, levels = plot_rank), y = avg) ) +
-  geom_col(aes(fill = is_final, group = is_final),
-           colour = "black", linewidth = 0.1, position = "dodge") +
-  geom_text(aes(label = avg, group = is_final), size = 3,
-            hjust = -0.1, position = position_dodge(width = 1), inherit.aes = TRUE) +
-  scale_fill_manual(values = cols_final) +
-  coord_flip() +
-  labs(x="", y="Average Cohesion Rates (%)", fill="",
-       title = "Cohesion Rates by EP Political Groups",
-       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
-  guides(fill = guide_legend(nrow = 1)) +
-  theme_minimal() +
-  theme(plot.title.position = "plot",
-        plot.title = element_text(face = "bold"),
-        legend.position = "top",
-        # strip.text.y.right = element_text(angle = 0, face = "bold"),
-        axis.text.y = element_text(face = "bold") )
-# ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg.pdf"), 
-#        device = "pdf", dpi = 300, height = 8, width = 12)
 ```
 
-
-### Cohesion Rates by Committee
-```{r}
-#| fig-width: 8
-#| fig-height: 13
-
-#------------------------------------------------------------------------------#
-cohesion_bycommittee <- rcvid_cmts[
-  cohesion_dt,
-  on = "rcv_id", nomatch = NULL
-] 
-
-cohesion_bycommittee[
-  !is.na(committee_lab),
-  list(avg_cohesion = mean(cohesion) ),
-  by = list(political_group, committee_lab)] |> 
-  dplyr::mutate(political_group_rw = reorder_within(
-    political_group, avg_cohesion, committee_lab) ) |>
-  ggplot(aes(x=political_group_rw, y = avg_cohesion, fill = political_group)) +
-  geom_col(colour = "black", linewidth = 0.1) +
-  facet_wrap(~committee_lab, scales = "free_y", ncol = 2) +
-  coord_flip() +
-  labs(x="", y="Average Cohesion Rates (%)", fill="",
-       title = "Cohesion Rates by Committees",
-       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
-  scale_x_reordered() +
-  scale_fill_manual(values = polgroup_cols) +
-  guides(fill = guide_legend(nrow = 1)) +
-  theme_minimal() +
-  theme(plot.title.position = "plot",
-        plot.title = element_text(face = "bold"),
-        legend.position = "none",
-        # strip.text.y.right = element_text(angle = 0, face = "bold"),
-        axis.text.y = element_text(face = "bold"))
-# ggsave(filename = here::here("figures", "cohesion_bycommittee.pdf"),
-#        device = "pdf", dpi = 300, height = 8, width = 12)
-```
 
 
 ## Final RCVs with Lowest Cohesion
@@ -321,14 +251,14 @@ renew_lowest_final_rcvs = cohesion_final_dt[
   & political_group == "Renew",
   # head(.SD, 100L)
 ] |> 
-    dplyr::left_join(
+  dplyr::left_join(
     y = cohesion_final_dt[
       !is.na(cohesion)
       & political_group == "S&D",
       list(`S&D Cohesion` = cohesion, rcv_id)],
     by = "rcv_id"
   ) |> 
-dplyr::left_join(
+  dplyr::left_join(
     y = cohesion_final_dt[
       !is.na(cohesion)
       & political_group == "PPE",
@@ -362,7 +292,7 @@ dplyr::left_join(
     by = "rcv_id"
   ) |> 
   dplyr::mutate(
-        is_freevote = ifelse(
+    is_freevote = ifelse(
       test = grepl(pattern = "free vote", x = vote, ignore.case = TRUE),
       yes = 1L, no = 0L),
     is_keyvote = ifelse(
@@ -398,7 +328,7 @@ renew_lowest_nofinal_rcvs = cohesion_final_dt[
       list(`S&D Cohesion` = cohesion, rcv_id)],
     by = "rcv_id"
   ) |> 
-dplyr::left_join(
+  dplyr::left_join(
     y = cohesion_final_dt[
       !is.na(cohesion)
       & political_group == "PPE",
@@ -431,7 +361,7 @@ dplyr::left_join(
     by = "rcv_id"
   ) |> 
   dplyr::mutate(
-        is_freevote = ifelse(
+    is_freevote = ifelse(
       test = grepl(pattern = "free vote", x = vote, ignore.case = TRUE),
       yes = 1L, no = 0L),
     is_keyvote = ifelse(
