@@ -114,7 +114,7 @@ meetings_voteresults_titles_10 <- get_api_data(
 meps_dates_ids <- get_api_data(
   path = here::here("data_out", "meps", "meps_dates_ids_10.csv"),
   script = here::here("scripts_r", "api_meps.R"),
-  max_days = 7,
+  max_days = 1,
   varname = "meps_dates_ids",
   envir = .GlobalEnv
 )
@@ -132,7 +132,7 @@ meps_dates_ids <- get_api_data(
 invisible(get_api_data(
   path = here::here("data_out", "bodies", "national_parties_10.csv"),
   script = here::here("scripts_r", "api_bodies.R"),
-  max_days = 7,
+  max_days = 1,
   varname = NULL,
   envir = .GlobalEnv
 ))
@@ -148,7 +148,7 @@ political_groups <- data.table::fread(here::here("data_out", "bodies", "politica
 pl_documents <- get_api_data(
   path = here::here("data_out", "docs_pl", "pl_docs.csv"),
   script = here::here("scripts_r", "api_pl_docs.R"),
-  max_days = 7,
+  max_days = 1,
   varname = "pl_documents",
   envir = .GlobalEnv
 )

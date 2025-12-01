@@ -183,89 +183,7 @@ renew_current_meps = unique(meps_current$pers_id[
 renew_current_parties = unique(meps_current$natparty_id[
   meps_current$polgroup_id == renew_polgroup_id
 ])
-```
 
-In this note, we ony consider RCV during the 10th mandate. 
-Further, when we compare official EP results with Renew's Group Line, we have to restrict our sample to the period November 2024 - `r max(pl_votes$activity_date)`, as these are the only Voting Lists I managed to harmonise so far.
-
-The script relies on, inter alia, two main sources of data: the harmonised VLs created by Renew; and the official RCV results as provided by the EP administration.
-Please be aware that the script breaks if these two main sources of data are not aligned, prompting the user to refresh them.
-
-
-## How often does the Group's Majority coincide with the Group's line?
-```{r}
-# Calculate majorities by Group
-polgroups_mjrt <- get_polgroup_majority(
-  data_in = meps_rcv_mandate[
-    result >= -1L
-  ])
-
-# Subset to Renew
-renew_mjrt <- polgroups_mjrt[
-  polgroup_id == renew_polgroup_id
-]
-
-vl_renew_mjrt = vl_vote_rcv[
-  !is.na(re_vote), 
-  list(rcv_id, re_vote) ] |> 
-  left_join(
-    y = renew_mjrt,
-    by = "rcv_id"
-  ) |> 
-  dplyr::mutate(is_same = re_vote == result) 
-
-missing_mjrt = vl_renew_mjrt$rcv_id[
-  is.na(vl_renew_mjrt$polgroup_id)
-]
-
-# Check that we don't miss any vote
-if ( all( unique( pl_votes$decision_outcome[pl_votes$rcv_id %in% missing_mjrt]) %in% 
-          c("WITHDRAWN", "LAPSED") ) ) {
-  vl_renew_mjrt = vl_renew_mjrt[ 
-    !is.na(polgroup_id)]
-} else {
-  warning("Check the data, you might be missing some votes!")
-}
-
-avg_same = vl_renew_mjrt |> 
-  dplyr::summarise(avg_same = round(100*mean(is_same, na.rm = TRUE), digits = 2)) |> 
-  dplyr::pull(avg_same)
-```
-
-The percentage of votes where the Group's majority coincided with the Group's line was: **`r avg_same`%**.
-
-
-## Cohesion Rates
-The formula for cohesion is taken from [Is there a selection bias in roll call votes?](http://link.springer.com/10.1007/s11127-018-0529-1)
-
-$COHESION_{ij} = \frac{max[Y_{ij}, N_{ij}, A_{ij}] - 0.5[(Y_{ij} + N_{ij} + A_{ij}) - max[Y_{ij}, N_{ij}, A_{ij}]]}{(Y_{ij} + N_{ij} + A_{ij})}$
-
-To develop an intuition for how this metric works, please consider the 6 simplified scenarios in the table below.
-In each row, a party of different size (namely, 2, 3, and 4 MEPs) has a different distribution of votes internally. 
-The rightmost column provides the cohesion rate for each of these cases.
-```{r}
-knitr::kable(
-  tibble::tibble(
-    `Number of MEPs` = c(2, 2, 3, 3, 4, 4),
-    `Vote: For` = c(2, 1, 2, 1, 2, 3),
-    `Vote: Against` = c("-", 1, 1, 1, 1, 1),
-    `Vote: Abstain` = c("-", "-", "-", 1, 1, "-"), 
-    Cohesion = c(100, 25, 50, 0, 25, 62.5),
-    # `Is split?` = c("No", "Yes", "No", "Yes", "Yes", "No")
-  ), 
-  align = "c")
-```
-
-As a *technical side note*, please be aware that this basically picks the mode of the 3 typologies of vote officially recognised in the EP. 
-However, experts have highlighted other forms of vote are actually at the MEPs' disposal, i.e. being present in the House but not showing up for specific votes (`no_vote`), or being absent on the voting day (`absent`).
-We do not count those in this note, but can be included if needs be.
-Further, and to be clear, here we do not make use of data coming from the Attendance Registers, but these can be included if needs be.
-
-
-### Overall cohesion rates
-```{r}
-#| fig-width: 8
-#| fig-height: 3
 
 ###--------------------------------------------------------------------------###
 # Read in function
@@ -275,39 +193,6 @@ meps_rcv_mandate[, result_fct := factor(result,
                                         levels = -3L : 1L,
                                         labels = c("absent", "no_vote", "against",
                                                    "abstain", "for") ) ]
-# Check
-# table(meps_rcv_mandate$result, meps_rcv_mandate$result_fct, exclude = NULL)
-
-# Calculate Cohesion
-cohesion_dt <- meps_rcv_mandate[
-  result >= -1L, # only official votes
-  list(
-    cohesion = cohesion_hn(result_fct),
-    max_mode = max( tabulate(result_fct) ),
-    tot_votes = sum( tabulate(result_fct) ) ), 
-  keyby = list(rcv_id, polgroup_id) ] |> 
-  join_polit_labs()
-
-cohesion_dt[, .(avg = round( mean(cohesion, na.rm = TRUE), digits = 1)), 
-            by = list(political_group)][order(-avg)] |> 
-  dplyr::mutate(political_group = fct_reorder(.f = political_group, .x = avg)) |> 
-  ggplot(aes(x=political_group, y = avg, fill = political_group)) +
-  geom_col(colour = "black", linewidth = 0.1) +
-  geom_text(aes(label = avg), size = 3, nudge_y = 3) +
-  coord_flip() +
-  labs(x="", y="Average Cohesion Rates (%)", fill="",
-       title = "Cohesion Rates by EP Political Groups",
-       caption = "Source: EP. Notes: data is relative to RCVs in Plenary") +  
-  scale_fill_manual(values = polgroup_cols) +
-  guides(fill = guide_legend(nrow = 1)) +
-  theme_minimal() +
-  theme(plot.title.position = "plot",
-        plot.title = element_text(face = "bold"),
-        legend.position = "none",
-        # strip.text.y.right = element_text(angle = 0, face = "bold"),
-        axis.text.y = element_text(face = "bold"))
-# ggsave(filename = here::here("figures", "cohesion_bypolgroup_avg.pdf"), 
-#        device = "pdf", dpi = 300, height = 8, width = 12)
 ```
 
 
@@ -319,21 +204,28 @@ cohesion_dt[, .(avg = round( mean(cohesion, na.rm = TRUE), digits = 1)),
 #------------------------------------------------------------------------------#
 # Merge RCV with Finals -------------------------------------------------------#
 meps_rcv_mandate <- pl_votes[, list(
-  is_final, rcv_id)
+  is_final, rcv_id, activity_date = as.character(activity_date))
   ][
   meps_rcv_mandate, 
   on = "rcv_id"
   ]
+
+# meps_rcv_mandate[,
+#   .N,
+#   by = list(activity_date, result)
+# ][order(activity_date)]
+
 
 # Colours ---------------------------------------------------------------------#
 cols_final <- c(Final = "#0868ac", `Not Final` = "#d7301f")
 
 # Calculate final votes -------------------------------------------------------#
 cohesion_final_dt <- meps_rcv_mandate[
-  result >= -1L, # only official votes
+  result >= -1L,] # only official votes
   list(
-    cohesion = cohesion_hn(result_fct)),
-  keyby = list(rcv_id, polgroup_id, is_final) 
+    cohesion = cohesion_hn(result_fct)
+    ),
+  by = list(rcv_id, polgroup_id, is_final) 
   ] |> 
   join_polit_labs()
 
