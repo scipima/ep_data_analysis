@@ -17,6 +17,7 @@ org/RECH,Organization,RECH,RECH,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/5006,Organization,5006,CJ21,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4975_org/4963,FEMM_EMPL,Joint EMPL - FEMM,Procedure with joint meetings - EMPL and FEMM,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/15,Organization,15,INST,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Institutional Affairs,Committee on Institutional Affairs,time-period/19890726-19920114,1992-01-14,1989-07-26
 org/6977,Organization,6977,CJ22,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585_org/6587,JURI_AFCO,Joint JURI - AFCO,Joint committee procedure - JURI and AFCO,time-period/20240716,,2024-07-16
+org/6404,Organization,6404,CJ33,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6352_org/6367,INTA_IMCO,Joint INTA - IMCO,Joint committee procedure - INTA and IMCO,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6409,Organization,6409,CJ38,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6352_org/6365,INTA_AFET,Joint AFET - INTA,Joint committee procedure - AFET and INTA,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/2868,Organization,2868,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/20090714-20120118,2012-01-18,2009-07-14
 org/7924,Organization,7924,CJ26,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6562_org/7913,AFET_ENVI,Joint AFET - ENVI,Joint committee procedure - AFET and ENVI,time-period/20250120,,2025-01-20
@@ -628,7 +629,6 @@ org/4959,Organization,4959,INTA,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/4957,Organization,4957,AFET,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Foreign Affairs,Committee on Foreign Affairs,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/20,Organization,20,AGRI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Agriculture, Fisheries and Rural Development","Committee on Agriculture, Fisheries and Rural Development",time-period/19920115-19940718,1994-07-18,1992-01-15
 org/2365,Organization,2365,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights and Gender Equality,Committee on Women's Rights and Gender Equality,time-period/20070131-20090713,2009-07-13,2007-01-31
-org/6404,Organization,6404,CJ33,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6367_org/6352,IMCO_INTA,Joint INTA - IMCO,Joint committee procedure - INTA and IMCO,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/2430,Organization,2430,CULT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Culture and Education,Committee on Culture and Education,time-period/20070115-20070130,2007-01-30,2007-01-15
 org/101,Organization,101,TRAN,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Transport and Tourism,Committee on Transport and Tourism,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/6472,Organization,6472,CJ45,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6358_org/6367,ENVI_IMCO,Joint ENVI - IMCO,Joint committee procedure - ENVI and IMCO,time-period/20230711-20240715,2024-07-15,2023-07-11
