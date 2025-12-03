@@ -166,10 +166,19 @@ Please be aware that the script breaks if these two main sources of data are not
 
 ## How often does the Group's Majority coincide with the Group's line?
 ```{r}
+#| include: false
+
+#------------------------------------------------------------------------------#
+# What are the RCVs we should have in the merge between VL and RCV outcomes based on the dates?
+rcvid_harmonised = pl_votes$rcv_id[
+  pl_votes$activity_date %in% unique(vl_vote_rcv$date)
+]
+
 # Calculate majorities by Group
 polgroups_mjrt <- get_polgroup_majority(
   data_in = meps_rcv_mandate[
     result >= -1L
+    & rcv_id %in% rcvid_harmonised
   ])
 
 # Subset to Renew
@@ -177,6 +186,7 @@ renew_mjrt <- polgroups_mjrt[
   polgroup_id == renew_polgroup_id
 ]
 
+# Merge
 vl_renew_mjrt = vl_vote_rcv[
   !is.na(re_vote), 
   list(rcv_id, re_vote) ] |> 
@@ -186,32 +196,36 @@ vl_renew_mjrt = vl_vote_rcv[
   ) |> 
   dplyr::mutate(is_same = re_vote == result) 
 
+# There are quite a few NAs in the merge - Why?
 missing_mjrt = vl_renew_mjrt$rcv_id[
   is.na(vl_renew_mjrt$polgroup_id)
 ]
 
-# Check that we don't miss any vote
-if ( all( unique( pl_votes$decision_outcome[pl_votes$rcv_id %in% missing_mjrt]) %in% 
-          c("WITHDRAWN", "LAPSED") ) ) {
+# Is it because some of these votes were either WITHDRAWN or LAPSED?
+if ( all(
+  missing_mjrt %in% pl_votes$rcv_id[
+    pl_votes$decision_outcome %in% c("WITHDRAWN", "LAPSED")
+    ]
+  )) {
+  cat("\nAll the missing RCV IDs appearing after the merge are down to WITHDRAWN  or LAPSED legislation.\n")
   vl_renew_mjrt = vl_renew_mjrt[ 
     !is.na(polgroup_id)]
 } else {
   warning("Check the data, you might be missing some votes!")
 }
 
+# Extract average alignment
 avg_same = vl_renew_mjrt |> 
-  dplyr::summarise(avg_same = round(100*mean(is_same, na.rm = TRUE), digits = 2)) |> 
+  dplyr::summarise(
+    avg_same = round(100*mean(is_same, na.rm = TRUE), digits = 2)
+    ) |> 
   dplyr::pull(avg_same)
 ```
 
 The percentage of votes where the Group's majority coincided with the Group's line was: **`r avg_same`%**.
 
-There have been 2 cases where the empirical majority was different from the Group line indicated in the VLs:
+There has been 1 case where the empirical majority was different from the Group line indicated in the VLs:
 
-* *Délibérations de la commission des pétitions en 2023*; A10-0063/2025 - Gheorghe Falcă - Proposition de résolution (ensemble du texte) (2025-05-07). 
-The Group line was to vote `for`, but the Group ended up 
-However, in this case, the `Remariks` column stated the following: "*Key votes: If amendment 15, 23 or 24 is not adopted, then abstain for the final vote*".
-So, in my opinion, this is not controversial.
 * *Décharge 2023: budget général de l'Union - Commission, agences exécutives et Fonds européens de développement*; A10-0074/2025 – Niclas Herbst – After § 143 – Am 27.
 The Group line was to vote `against`, but we ended up voting `for`.
 There is no indication in the `Remarks` column that would make me think that this was intended: "*Parliament has called on the Union and its Member States to put in place a legal framework enabling Russia to be classified as a State sponsor of terrorism; tabled by MEps from SE; FI*".
