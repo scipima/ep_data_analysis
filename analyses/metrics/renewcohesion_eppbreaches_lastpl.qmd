@@ -1,0 +1,230 @@
+---
+title: "Renew's Low Cohesion Votes During Last Plenary and EPP Breaches"
+author:
+  - Marco SCIPIONI
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    number-sections: true
+    colorlinks: true
+editor_options: 
+  chunk_output_type: console
+execute:
+  echo: false
+  warning: false
+---
+
+## Main findings
+```{r}
+#| include: false
+
+###--------------------------------------------------------------------------###
+# Vote Metrics of the Day ------------------------------------------------------
+###--------------------------------------------------------------------------###
+
+#------------------------------------------------------------------------------#
+## Libraries -------------------------------------------------------------------
+if ( !require("pacman") ) install.packages("pacman")
+pacman::p_load(char = c("data.table", "dplyr", "forcats", "ggiraph", "ggplot2",
+                        "here", "lubridate", "janitor", "quarto", "stringr",
+                        "tidyr", "tidyselect", "tidytext") )
+
+
+# Hard code the start of the mandate ------------------------------------------#
+mandate_starts <- as.Date("2024-07-14")
+
+
+#------------------------------------------------------------------------------#
+## Functions -------------------------------------------------------------------
+# Join functions --------------------------------------------------------------#
+source(file = here::here("scripts_r", "join_functions.R") )
+
+# Calculate Majorities --------------------------------------------------------#
+source(file = here::here("scripts_r", "get_majority.R") )
+
+# Mode ------------------------------------------------------------------------#
+# https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+stat_mode <- function(x) {
+  if ( length(x) <= 2 ) return(x[1])
+  if ( anyNA(x) ) x = x[!is.na(x)]
+  ux <- unique(x)
+  ux[ which.max( tabulate( match(x, ux) ) ) ] }
+
+
+# Hard-code parameters --------------------------------------------------------#
+renew_polgroup_id <- 7035L
+
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"),
+  na.strings = c(NA_character_, "") )
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"),
+  na.strings = c(NA_character_, "") )
+votes_labels <- data.table::fread(here::here(
+  "data_out", "votes", "votes_labels_10.csv"))
+
+# Merge between VLs and RCV results
+vl_vote_rcv <- data.table::fread(here::here(
+  "data_out", "vl_vote", "vl_vote_rcv.csv") )
+vl_vote_rcv[, `:=`(
+  rcv_id = as.integer(gsub(pattern = "^.*-DEC-",
+                           replacement = "", 
+                           x = event_dec_itm_id) )
+)]
+
+
+#------------------------------------------------------------------------------#
+# Identify last Plenary
+pl_votes[, `:=`(
+  week = ifelse(
+    test = nchar(data.table::isoweek(activity_date)) == 1,
+    yes = paste0("0", data.table::isoweek(activity_date)), 
+    no = as.character(data.table::isoweek(activity_date))),
+  year = data.table::year(activity_date)
+)][,`:=`(
+  year_week = as.integer(paste0(year, week))
+)]
+
+# Extract last Plenary
+pl_votes_lastpl = pl_votes[
+  year_week == max(year_week)
+][, `:=`(
+  inverse_consists_of = gsub(pattern = "eli/dl/event/", replacement = "", 
+                             x = inverse_consists_of, fixed = TRUE)
+)]
+rcvid_lastpl = pl_votes_lastpl$rcv_id
+
+# Merge with vote labels
+pl_votes_lastpl = votes_labels[, list(activity_id, vote_label_en)][
+  pl_votes_lastpl,
+  on = c("activity_id" = "inverse_consists_of")
+]
+```
+
+
+## Where were we less cohesive?
+In the table below we isolate the RCVs with the lowest cohesion rate (provided that they were below 90%)
+```{r}
+#------------------------------------------------------------------------------#
+# Read in function
+source(file = here::here("scripts_r", "cohesionrate_function.R") )
+
+# convert to factor - essential for tabulate
+meps_rcv_mandate[, result_fct := factor(result,
+                                        levels = -3:1,
+                                        labels = c("absent", "no_vote", "against",
+                                                   "abstain", "for") ) ]
+
+
+#------------------------------------------------------------------------------#
+## Cohesion Rates --------------------------------------------------------------
+### Overall cohesion rates -----------------------------------------------------
+
+## Calculate Cohesion ---------------------------------------------------------#
+# Full mandate's cohesion rates by RCV
+cohesion_lastpl <- meps_rcv_mandate[
+  rcv_id %in% rcvid_lastpl # get only the last plenary votes
+  & result >= -1L, # only official votes
+  list(
+    cohesion = cohesion_hn(result_fct)
+  ),
+  keyby = list(rcv_id, polgroup_id) ] |>
+  join_polit_labs()
+
+
+#------------------------------------------------------------------------------#
+## Where were we less cohesive? ------------------------------------------------
+worst_cohesion <- cohesion_lastpl |>
+  dplyr::filter(polgroup_id == renew_polgroup_id) |>
+  dplyr::select(-c(political_group, polgroup_id)) |>
+  dplyr::mutate(cohesion = round(cohesion, 1) ) |>
+  dplyr::slice_min(order_by = cohesion, n = 50) |>
+  # Get VOTES metadata
+  dplyr::left_join(
+    y = pl_votes_lastpl[, list(rcv_id, doc_id, vote_label_en, activity_label_mul)],
+    by = "rcv_id") |> 
+  # Get VLs data
+  dplyr::left_join(
+    y = vl_vote_rcv [, list(rcv_id, remarks)],
+    by = "rcv_id")
+
+worst_cohesion |> 
+  dplyr::filter(cohesion < 90) |> 
+  dplyr::select(vote_label_en, activity_label_mul, cohesion, remarks) |> 
+  knitr::kable(align = "c")
+```
+
+
+## EPP breaches of coalition agreements
+The table below lists the votes where the EPP majority voted differently from both S&D and Renew, and together with either (A) ECR and PfE, or (B) ECR, ESN, and PfE.
+```{r}
+#------------------------------------------------------------------------------#
+# Get the Groups' majority by rcv_id ------------------------------------------#
+who_won_bygroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    rcv_id %in% rcvid_lastpl
+    & result >= -1] # exclude absent
+)
+
+epp_mjrt <- who_won_bygroup[
+  polgroup_id == 7018L
+][, c("polgroup_id", "who_won") := NULL]
+
+epp_groups <- epp_mjrt[
+  who_won_bygroup[polgroup_id != 7018L],
+  on = "rcv_id", nomatch = NULL
+][, who_won := NULL] |>
+  join_polit_labs() |>
+  dplyr::select(-polgroup_id)
+
+
+#------------------------------------------------------------------------------#
+epp_coalitions <- epp_groups |>
+  tidyr::pivot_wider(names_from = political_group, values_from = i.result) |>
+  dplyr::mutate(
+    is_pfe_ecr = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR),
+      yes = 1L, no = 0L),
+    is_pfe_ecr_esn = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR & result == ESN),
+      yes = 1L, no = 0L) ) |>
+  dplyr::rename(PPE = result) |>
+  dplyr::select(rcv_id, is_pfe_ecr, is_pfe_ecr_esn) |> 
+  data.table::as.data.table()
+
+# Merge
+pl_votes_lastpl = epp_coalitions[
+  pl_votes_lastpl,
+  on = "rcv_id"
+]
+
+# Process and print table
+epp_breaches = pl_votes_lastpl |> 
+  dplyr::filter(
+    decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+    & (is_pfe_ecr == 1 | is_pfe_ecr_esn == 1)
+  ) |>
+  dplyr::mutate(
+    `(A) EPP + ECR + PfE` = ifelse(is_pfe_ecr == 1L, "Yes", "No"),
+    `(B) EPP + ECR + ESN + PfE` = ifelse(is_pfe_ecr_esn == 1L, "Yes", "No"),
+  ) |> 
+  # Get VLs data
+  dplyr::left_join(
+    y = vl_vote_rcv [, list(rcv_id, remarks)],
+    by = "rcv_id") |> 
+  dplyr::select(
+    Dossier = vote_label_en, `RCV Label` = activity_label_mul, remarks,
+    `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`) 
+
+epp_breaches |> 
+  knitr::kable(align = "c")
+```
