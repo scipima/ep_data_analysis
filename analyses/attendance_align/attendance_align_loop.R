@@ -52,16 +52,16 @@ meps_rcv_mandate[, `:=`(
     yes = 1L, no = 0L) ) ]
 
 ### Votes ----------------------------------------------------------------------
-votes_dt <- data.table::fread(
-  file = here::here("data_out", "votes", "votes_dt_10.csv"),
+pl_votes <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"),
   select = c("activity_date", "rcv_id", "mandate", "number_of_attendees",
              "number_of_votes_abstention", "number_of_votes_against",
              "number_of_votes_favor"),
   na.strings = c(NA_character_, "") )
 
 ### Attendance -----------------------------------------------------------------
-attendance_dt <- data.table::fread(
-  file = here::here("data_out", "attendance", "attendance_dt_10.csv"),
+pl_attendance <- data.table::fread(
+  file = here::here("data_out", "attendance", "pl_attendance_10.csv"),
   verbose = TRUE, key = c("activity_date", "pers_id"),
   na.strings = c(NA_character_, "") )
 
@@ -71,7 +71,7 @@ attendance_dt <- data.table::fread(
 has_voted = meps_rcv_mandate |>
   # Get activity date from VOTES
   dplyr::left_join(
-    y = votes_dt[, list(rcv_id, activity_date = as.Date(activity_date))],
+    y = pl_votes[, list(rcv_id, activity_date = as.Date(activity_date))],
     by = "rcv_id"
   ) |>
   dplyr::mutate(
@@ -91,7 +91,7 @@ has_voted = meps_rcv_mandate |>
 
 
 # Calculate presence from Attendance Registers --------------------------------#
-is_present = attendance_dt[, `:=`(
+is_present = pl_attendance[, `:=`(
   tot_attendance_days = length( unique(activity_date) ) )
 ][, list(
   N = .N,
