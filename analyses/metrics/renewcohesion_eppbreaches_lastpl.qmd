@@ -17,7 +17,7 @@ execute:
   warning: false
 ---
 
-## Main findings
+## Introduction
 ```{r}
 #| include: false
 
@@ -108,6 +108,11 @@ pl_votes_lastpl = votes_labels[, list(activity_id, vote_label_en)][
 ]
 ```
 
+This note includes two tables:
+
+* `Where were we less cohesive` ranks the RCVs where we performed the worst during the last Plenary, and associates to such votes the `Remarks` column coming from our internal Voting Lists.
+* `EPP breaches of coalition agreements` lists all cases of EPP's breaches of the coalition agreements, again including the `Remarks` column from our internal Voting Lists.
+
 
 ## Where were we less cohesive?
 In the table below we isolate the RCVs with the lowest cohesion rate (provided that they were below 90%)
@@ -157,13 +162,25 @@ worst_cohesion <- cohesion_lastpl |>
 
 worst_cohesion |> 
   dplyr::filter(cohesion < 90) |> 
-  dplyr::select(vote_label_en, activity_label_mul, cohesion, remarks) |> 
+  # sanitizes text content before rendering the table (prevents line breaks)
+  dplyr::mutate(
+    dplyr::across(where(is.character), ~gsub("[\r\n]+", " ", .x)),
+    Rank = dplyr::row_number()
+    ) |> 
+  dplyr::select(
+    Rank,
+    Dossier = vote_label_en, 
+    `RCV Label` = activity_label_mul, 
+    Remarks = remarks,
+    `Cohesion rate` = cohesion
+    ) |> 
   knitr::kable(align = "c")
 ```
 
 
 ## EPP breaches of coalition agreements
 The table below lists the votes where the EPP majority voted differently from both S&D and Renew, and together with either (A) ECR and PfE, or (B) ECR, ESN, and PfE.
+Please note that if one of the Groups did not express a majority for a particular vote, the coalition columns (namely, *(A)* and/or *(B)*) will be labelled as *NA*.
 ```{r}
 #------------------------------------------------------------------------------#
 # Get the Groups' majority by rcv_id ------------------------------------------#
@@ -222,9 +239,14 @@ epp_breaches = pl_votes_lastpl |>
     y = vl_vote_rcv [, list(rcv_id, remarks)],
     by = "rcv_id") |> 
   dplyr::select(
-    Dossier = vote_label_en, `RCV Label` = activity_label_mul, remarks,
-    `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`) 
+    Dossier = vote_label_en, 
+    `RCV Label` = activity_label_mul, 
+    Remarks = remarks,
+    `(A) EPP + ECR + PfE`, 
+    `(B) EPP + ECR + ESN + PfE`
+    ) 
 
 epp_breaches |> 
+  dplyr::mutate(dplyr::across(where(is.character), ~gsub("[\r\n]+", " ", .x))) |> 
   knitr::kable(align = "c")
 ```
