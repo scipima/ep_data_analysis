@@ -372,7 +372,6 @@ org/BSE2,Organization,BSE2,BSE2,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORAR
 org/1250,Organization,1250,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights and Gender Equality,Committee on Women's Rights and Gender Equality,time-period/20040720-20070114,2007-01-14,2004-07-20
 org/2856,Organization,2856,AFET,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Foreign Affairs,Committee on Foreign Affairs,time-period/20090714-20120118,2012-01-18,2009-07-14
 org/6362,Organization,6362,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20220120-20240715,2024-07-15,2022-01-20
-org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6585_org/6586,JURI_LIBE,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
 org/3963,Organization,3963,AFCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Constitutional Affairs,Committee on Constitutional Affairs,time-period/20140701-20170118,2017-01-18,2014-07-01
 org/6579,Organization,6579,IMCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Internal Market and Consumer Protection,Committee on the Internal Market and Consumer Protection,time-period/20240716,,2024-07-16
 org/18,Organization,18,FEMM,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Women's Rights,Committee on Women's Rights,time-period/19890726-19920114,1992-01-14,1989-07-26
@@ -414,6 +413,7 @@ org/4947,Organization,4947,CJ26,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,or
 org/7927,Organization,7927,CJ37,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6563_org/7913,DEVE_ENVI,Joint DEVE - ENVI,Joint committee procedure - DEVE and ENVI,time-period/20250120,,2025-01-20
 org/6956,Organization,6956,CJ01,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586_org/6588,LIBE_FEMM,Joint LIBE - FEMM,Joint committee procedure - LIBE and FEMM,time-period/20240716,,2024-07-16
 org/ANIT,Organization,ANIT,ANIT,def/ep-entities/COMMITTEE_PARLIAMENTARY_SPECIAL,,,Protection of Animals during Transport,Committee of Inquiry on the Protection of Animals during Transport,,,
+org/6958,Organization,6958,CJ03,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6586_org/6585,LIBE_JURI,Joint JURI - LIBE,Joint committee procedure - JURI and LIBE,time-period/20240716,,2024-07-16
 org/118,Organization,118,BUDG,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgets,Committee on Budgets,time-period/19970116-19990719,1999-07-19,1997-01-16
 org/97,Organization,97,RELA,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,External Economic Relations,Committee on External Economic Relations,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/6961,Organization,6961,CJ06,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6579_org/6580,IMCO_TRAN,Joint IMCO - TRAN,Joint committee procedure - IMCO and TRAN,time-period/20240716,,2024-07-16
