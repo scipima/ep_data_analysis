@@ -392,6 +392,123 @@ writexl::write_xlsx(
 )
 ```
 
+```{r}
+# Hard-code parameters --------------------------------------------------------#
+renew_polgroup_id <- 7035L
+
+
+###--------------------------------------------------------------------------###
+## Read data -------------------------------------------------------------------
+meps_rcv_mandate <- data.table::fread(
+  file = here::here("data_out", "meps_rcv_mandate_10.csv"),
+  verbose = TRUE, key = c("rcv_id", "pers_id"),
+  na.strings = c(NA_character_, "") )
+pl_votes2 <- data.table::fread(
+  file = here::here("data_out", "votes", "pl_votes_10.csv"),
+  na.strings = c(NA_character_, "") )
+votes_labels <- data.table::fread(here::here(
+  "data_out", "votes", "votes_labels_10.csv"))
+
+# Merge between VLs and RCV results
+vl_vote_rcv <- data.table::fread(here::here(
+  "data_out", "vl_vote", "vl_vote_rcv.csv") )
+vl_vote_rcv[, `:=`(
+  rcv_id = as.integer(gsub(pattern = "^.*-DEC-",
+                           replacement = "", 
+                           x = event_dec_itm_id) )
+)]
+
+
+#------------------------------------------------------------------------------#
+# Identify last Plenary
+pl_votes2[, `:=`(
+  week = ifelse(
+    test = nchar(data.table::isoweek(activity_date)) == 1,
+    yes = paste0("0", data.table::isoweek(activity_date)), 
+    no = as.character(data.table::isoweek(activity_date))),
+  year = data.table::year(activity_date)
+)][,`:=`(
+  year_week = as.integer(paste0(year, week))
+)]
+
+# Extract last Plenary
+pl_votes2 = pl_votes2[, `:=`(
+  inverse_consists_of = gsub(pattern = "eli/dl/event/", replacement = "", 
+                             x = inverse_consists_of, fixed = TRUE)
+)]
+rcvid_lastpl = pl_votes$rcv_id
+
+# Merge with vote labels
+pl_votes2 = votes_labels[, list(activity_id, vote_label_en)][
+  pl_votes2,
+  on = c("activity_id" = "inverse_consists_of")
+]
+```
+
+
+```{r}
+#------------------------------------------------------------------------------#
+# Get the Groups' majority by rcv_id ------------------------------------------#
+who_won_bygroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    rcv_id %in% rcvid_lastpl
+    & result >= -1] # exclude absent
+)
+
+epp_mjrt <- who_won_bygroup[
+  polgroup_id == 7018L
+][, c("polgroup_id", "who_won") := NULL]
+
+epp_groups <- epp_mjrt[
+  who_won_bygroup[polgroup_id != 7018L],
+  on = "rcv_id", nomatch = NULL
+][, who_won := NULL] |>
+  join_polit_labs() |>
+  dplyr::select(-polgroup_id)
+
+epp_coalitions <- epp_groups |>
+  tidyr::pivot_wider(names_from = political_group, values_from = i.result) |>
+  dplyr::mutate(
+    is_pfe_ecr = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR),
+      yes = 1L, no = 0L),
+    is_pfe_ecr_esn = ifelse(
+      test = (result != Renew) & (result != `S&D`)
+      & (result == PfE & result == ECR & result == ESN),
+      yes = 1L, no = 0L) ) |>
+  dplyr::rename(PPE = result) |>
+  dplyr::select(rcv_id, is_pfe_ecr, is_pfe_ecr_esn) |> 
+  data.table::as.data.table()
+
+# Merge
+pl_votes2 = epp_coalitions[
+  pl_votes2,
+  on = "rcv_id"
+]
+
+# Process and print table
+epp_breaches = pl_votes2 |> 
+  dplyr::filter(
+    decision_method == "VOTE_ELECTRONIC_ROLLCALL"
+    & (is_pfe_ecr == 1 | is_pfe_ecr_esn == 1)
+  ) |>
+  dplyr::mutate(
+    `(A) EPP + ECR + PfE` = ifelse(is_pfe_ecr == 1L, "Yes", "No"),
+    `(B) EPP + ECR + ESN + PfE` = ifelse(is_pfe_ecr_esn == 1L, "Yes", "No"),
+  ) |> 
+  # Get VLs data
+  dplyr::left_join(
+    y = vl_vote_rcv [, list(rcv_id, remarks)],
+    by = "rcv_id") |>
+  dplyr::select(
+    rcv_id, `(A) EPP + ECR + PfE`, `(B) EPP + ECR + ESN + PfE`
+  )
+
+
+```
+
+
 ## All Groups
 ```{r}
 groups_cohesion = cohesion_final_dt[
@@ -435,11 +552,20 @@ groups_cohesion = cohesion_final_dt[
                   .fns = ~tidyr::replace_na(data = ., replace = 0L))
   ) |> 
   dplyr::select(
-    rank, activity_date, title_dcterms_fr, committee_lab, doc_id, 
+    rank, activity_date, title_dcterms_fr, committee_lab, rcv_id, doc_id, is_final, 
     responsible_organization_label_fr, remarks, is_freevote, is_keyvote,
     renew_indication, political_group,
-    `for`, against, abstain, no_vote, absent, tot_votes, cohesion)
+    `for`, against, abstain, no_vote, absent, tot_votes, cohesion) |>
+  dplyr::left_join(
+    y = epp_breaches,
+    by = "rcv_id"
+  
+)
 
+groups_cohesion$`(A) EPP + ECR + PfE`[is.na(
+                            groups_cohesion$`(A) EPP + ECR + PfE`)]<- "No"
+groups_cohesion$`(B) EPP + ECR + ESN + PfE`[is.na(
+                            groups_cohesion$`(B) EPP + ECR + ESN + PfE`)]<- "No"
 data.table::fwrite(x = groups_cohesion, here::here(
   "data_out", "tmp", "groups_cohesion.csv"))
 ```
