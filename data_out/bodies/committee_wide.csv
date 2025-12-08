@@ -394,7 +394,6 @@ org/135,Organization,135,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,
 org/43,Organization,43,C06,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,External Economic Relations,Committee on External Economic Relations,time-period/19870121-19890724,1989-07-24,1987-01-21
 org/4961,Organization,4961,CONT,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Budgetary Control,Committee on Budgetary Control,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/979,Organization,979,ENVI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Environment, Public Health, Consumer Policy","Committee on the Environment, Public Health and Consumer Policy",time-period/19990720-20020114,2002-01-14,1999-07-20
-org/7966,Organization,7966,CJ63,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6582_org/6581_org/6572,AGRI_REGI_EMPL,Joint EMPL - REGI - AGRI,Joint committee procedure - EMPL - REGI - AGRI,time-period/20250728,,2025-07-28
 org/95,Organization,95,ECON,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Economic and Monetary Affairs,Committee on Economic and Monetary Affairs and Industrial Policy,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/984,Organization,984,ECON,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Economic and Monetary Affairs,Committee on Economic and Monetary Affairs,time-period/19990720-20020114,2002-01-14,1999-07-20
 org/EMPT,Organization,EMPT,EMPT,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,Temporary committee on employment,Temporary committee on employment,,,
@@ -418,6 +417,7 @@ org/118,Organization,118,BUDG,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,
 org/97,Organization,97,RELA,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,External Economic Relations,Committee on External Economic Relations,time-period/19940721-19970115,1997-01-15,1994-07-21
 org/6961,Organization,6961,CJ06,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6579_org/6580,IMCO_TRAN,Joint IMCO - TRAN,Joint committee procedure - IMCO and TRAN,time-period/20240716,,2024-07-16
 org/2436,Organization,2436,SEDE,def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB,,,Security and Defence,Subcommittee on Security and Defence,time-period/20070115-20070130,2007-01-30,2007-01-15
+org/CJ74,Organization,CJ74,CJ74,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint SEDE - INTA - BUDG,Joint committee procedure SEDE - INTA - BUDG,,,
 org/CJ70,Organization,CJ70,CJ70,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint SEDE - AFCO,Joint committee procedure - SEDE and AFCO,,,
 org/CLIM,Organization,CLIM,CLIM,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,Climate Change,Temporary committee on climate change,,,
 org/CJ72,Organization,CJ72,CJ72,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,,,Joint ITRE - LIBE,Joint committee procedure - ITRE and LIBE,,,
@@ -560,6 +560,7 @@ org/1251,Organization,1251,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING
 org/1087,Organization,1087,PETI,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Petitions,Committee on Petitions,time-period/20020115-20040719,2004-07-19,2002-01-15
 org/6350,Organization,6350,DEVE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Development,Committee on Development,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/6997,Organization,6997,CJ42,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6562_org/6576,AFET_ITRE,Joint AFET - ITRE,Joint committee procedure - AFET and ITRE,time-period/20240716,,2024-07-16
+org/7966,Organization,7966,CJ63,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6581_org/6572_org/6582,REGI_EMPL_AGRI,Joint EMPL - REGI - AGRI,Joint committee procedure - EMPL - REGI - AGRI,time-period/20250728,,2025-07-28
 org/6359,Organization,6359,ITRE,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,"Industry, Research and Energy","Committee on Industry, Research and Energy",time-period/20220120-20240715,2024-07-15,2022-01-20
 org/3753,Organization,3753,IMCO,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Internal Market and Consumer Protection,Committee on the Internal Market and Consumer Protection,time-period/20120119-20140630,2014-06-30,2012-01-19
 org/5569,Organization,5569,CJ34,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/5099_org/5086,FEMM_ECON,Joint ECON - FEMM,Joint committee procedure - ECON and FEMM,time-period/20190702-20220119,2022-01-19,2019-07-02
@@ -819,6 +820,7 @@ org/5037,Organization,5037,PEST,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORAR
 org/6388,Organization,6388,CJ17,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6360_org/6364,LIBE_PETI,Joint LIBE - PETI,Joint committee procedure - LIBE and PETI,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/22,Organization,22,ECON,def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING,,,Economic and Monetary Affairs,Committee on Economic and Monetary Affairs and Industrial Policy,time-period/19920115-19940718,1994-07-18,1992-01-15
 org/7963,Organization,7963,CJ60,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6579_org/7911,IMCO_SEDE,Joint SEDE - IMCO,Joint committee procedure - SEDE and IMCO,time-period/20250625,,2025-06-25
+org/7983,Organization,7983,CJ74,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6564_org/6567_org/7911,INTA_BUDG_SEDE,Joint SEDE - INTA - BUDG,Joint committee procedure SEDE - INTA - BUDG,time-period/20251205,,2025-12-05
 org/6378,Organization,6378,CJ07,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/6363_org/6350,FEMM_DEVE,Joint DEVE - FEMM,Joint committee procedure - DEVE and FEMM,time-period/20220120-20240715,2024-07-15,2022-01-20
 org/5003,Organization,5003,CJ27,def/ep-entities/COMMITTEE_PARLIAMENTARY_JOINT,org/4957_org/4971,AFET_CULT,Joint AFET – CULT,Procedure with joint meetings - AFET and CULT,time-period/20170119-20190701,2019-07-01,2017-01-19
 org/ING2,Organization,ING2,ING2,def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY,,,"Special Committee on foreign interference and disinformation, and on strengthening integrity in the EP","Special Committee on foreign interference in all democratic processes in the European Union, including disinformation, and the strengthening of integrity, transparency and accountability in the European Parliament",,,
