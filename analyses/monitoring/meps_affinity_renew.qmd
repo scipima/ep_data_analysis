@@ -38,5 +38,24 @@ meps_eucldist |>
                 `Distance difference` = dist_diff) |> 
   dplyr::slice_head(n = 50) |> 
   knitr::kable(align = "c")
-
 ```
+
+```{r}
+#| eval: false
+
+# meps_eucldist |>
+#   dplyr::filter( !pers_id %in% c(197842, 257256) ) |> 
+#   dplyr::arrange(desc(dist_diff)) |> 
+#   dplyr::mutate(
+#     party_wgt = 1/n_meps,
+#     group_dist_avg_norm_wgt = group_dist_avg_norm * party_wgt,
+#     dist_diff_wgt = group_dist_avg_norm_wgt - renew_dist_avg_norm) |> 
+#   dplyr::select(
+#     mep_name, political_group, country_party,
+#     group_dist_avg_norm, group_dist_avg_norm_wgt,
+#     renew_dist_avg_norm, 
+#     n_meps, party_wgt,
+#     dist_diff, dist_diff_wgt) |> 
+#   dplyr::slice_max(dist_diff_wgt, n = 50)
+```
+
