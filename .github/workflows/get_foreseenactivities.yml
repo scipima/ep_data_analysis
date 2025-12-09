@@ -3,11 +3,11 @@ name: get_meetings_foreseen_activities
 
 # Event - What starts this workflow?
 # on: [push, workflow_dispatch]
-# on: [workflow_dispatch]
-on:
-  schedule:
+on: workflow_dispatch
+# on:
+  # schedule:
     # At 00:01
-    - cron: "1 0 * * *" # every day, at 00:01
+    # - cron: "1 0 * * *" # every day, at 00:01
     # - cron: "1 */1 * * *" # every hour, at minute 1
     # - cron: "1 */4 * * *" # every 4 hours, at minute 1
 
