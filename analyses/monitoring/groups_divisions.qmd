@@ -227,9 +227,10 @@ group_party_plot <- function(i_polgroup = "PPE") {
     theme(plot.title.position = "plot",
           plot.title = element_text(face = "bold"),
           legend.text = element_text(face="bold"),
-          panel.grid.major.x = element_blank(),
-          panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
-          panel.grid.minor.y = element_line(colour = "grey70"),
+          panel.grid.major.x = element_line(colour = "grey30", linewidth = 0.2),
+          panel.grid.minor.x = element_line(colour = "grey70", linewidth = 0.1),
+          # panel.grid.major.y = element_line(colour = "grey30", linewidth = 0.1),
+          # panel.grid.minor.y = element_line(colour = "grey30", linewidth = 0.1),
           axis.text = element_text(face="bold"),
           legend.position = "right") 
 }
