@@ -2,7 +2,7 @@
 name: get_MEPs
 
 # Event - What starts this workflow?
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 # on:
 #   schedule:
 #   # At 00:05AM, from MON to FRI
