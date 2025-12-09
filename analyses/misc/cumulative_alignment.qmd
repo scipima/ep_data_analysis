@@ -1,21 +1,17 @@
 ---
-title: "Cumulative Alignment"
-date: "`r Sys.Date()`"
+title: "MEPs' Cumulative Alignment"
 format: 
-  #     - top=5mm
-  #     - right=5mm
-  #     - bottom=20mm
-  #     - left=5mm
-  #     - heightrounded
-  html: 
+  pdf:
     number-sections: true
     number-depth: 2
-  # pdf:
-  #   number-sections: true
-  #   number-depth: 2
-  #   shift-heading-level-by: -1
-  #   colorlinks: true
-  #   geometry:
+    shift-heading-level-by: -1
+    colorlinks: true
+    geometry:
+      - top=5mm
+      - right=10mm
+      - bottom=20mm
+      - left=10mm
+      - heightrounded
 editor_options: 
   chunk_output_type: console
 execute:
@@ -23,6 +19,7 @@ execute:
   warning: false
 ---
 
+## Introduction
 ```{r}
 #| include: false
 
@@ -135,6 +132,10 @@ renew_partyids_current = unique(meps_current$natparty_id[
 ])
 ```
 
+The objective of this note is to test a quick analysis to investigate patterns of similarity for one MEP not belonging to Renew.
+We unpack similarity both *over time* and across *Committees*.
+For testing purposes, we pick Manuela Ripa.
+
 
 ## Alignment
 ```{r}
@@ -177,7 +178,8 @@ month_year = paste(last_pl_month, last_pl_year, sep = "/")
 # dim(mjrt_polgroup)
 mjrt_polgroup_meps = mjrt_polgroup[
   meps_rcv_mandate[
-    pers_id %in% meps_current$pers_id,
+    pers_id %in% meps_current$pers_id
+    & result >= -2L, # Exclude absent
     list(
       pers_id, rcv_id, result, polgroup_id
     )],
@@ -200,56 +202,171 @@ cumulative_affinity = mjrt_polgroup_meps[, `:=`(
 data.table::fwrite(x = cumulative_affinity[, list(rcv_id, mjrt_polgroup_id, 
                                                   pers_id, polgroup_id, cum_same)], 
                    file = here::here(
-  "data_out", "meps", "cumulative_affinity.csv") )
+                     "data_out", "meps", "cumulative_affinity.csv") )
 ```
 
 
 ### Cumulative affinity (multiple MEPs)
+We benchmark Manuela Ripa against Manfred Weber, to gain a better appreciation of the patterns within EPP.
+In the plot below, every dot is a step in the cumulative metric.
+We overlay a trend line on the dots to facilitate an understanding of the overall direction.
+The x-axis covers the entire 10th Mandate thus far.
 ```{r}
+#| fig-width: 8
+#| fig-height: 5
+
+# Subset data
 plot_test = cumulative_affinity[
-  mjrt_polgroup_id == 7035
-  & pers_id %in% c(197400, 23788, 202073) # Abir AL-SAHLANI; Adam BIELAN; Marc ANGEL 
-] 
+  mjrt_polgroup_id == 7018
+  & pers_id %in% c(206158, 28229) # MANUELA_RIPA; MANFRED_WEBER 
+] |> 
+  join_meps_names()
+
+# Plot
 plot_test |> 
   ggplot(aes(x = rcv_id_int, y = cum_same, 
-             colour = factor(pers_id), group = factor(pers_id))) +
-  geom_point() +
-  scale_y_continuous(labels = scales::percent) +
+             colour = mep_name, group = mep_name)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(aes(fill = mep_name), se = TRUE) +
+  labs(fill="MEP", colour="MEP",
+       y = "Cumulative Similarity", x="Time") +
+  scale_y_continuous(limits = c(0.5, 1),
+                     labels = scales::percent) +
+  scale_x_continuous(breaks = c(min(plot_test$rcv_id_int), 
+                                max(plot_test$rcv_id_int)),
+                     labels = c(min(plot_test$date), 
+                                max(plot_test$date))) +
   # scale_fill_manual(values = polgroup_cols) +
   theme_minimal() +
   theme(plot.title.position = "plot",
         plot.title = element_text(face = "bold"),
-        legend.position = "none",
+        legend.position = "top",
         # strip.text.y.right = element_text(angle = 0, face = "bold"),
         axis.text.y = element_text(face = "bold"))
-
-# cumulative_affinity[
-#   mjrt_polgroup_id == 7035
-#   & pers_id %in% c(23788), # Abir AL-SAHLANI; Adam BIELAN 
-#   .N,
-#   by = list(rcv_id)
-# ][order(N)]
-
-# rcvid_date$rcv_id[!rcvid_date$rcv_id %in% unique(plot_test$rcv_id)]
 ```
 
 
 ### Cumulative affinity (multiple Groups)
+We can then focus on Manuela Ripa's patterns of alignment with both EPP and Renew.
+The plot has the same structure as above.
 ```{r}
-cumulative_affinity[
+#| fig-width: 8
+#| fig-height: 5
+
+# Subset data
+plot_test = cumulative_affinity[
   mjrt_polgroup_id %in% c(7035, 7018)
-  & pers_id %in% c(197400) # Abir AL-SAHLANI
+  & pers_id %in% c(206158), # MANUELA_RIPA
+  list(rcv_id, polgroup_id = mjrt_polgroup_id, pers_id, is_same, date, date_id,
+       rcv_id_int, cum_same)
 ] |> 
+  join_polit_labs()
+
+# Plot
+plot_test |> 
   ggplot(aes(x = rcv_id_int, y = cum_same, 
-             colour = factor(mjrt_polgroup_id), group = factor(mjrt_polgroup_id))) +
-  geom_point() +
-  scale_y_continuous(labels = scales::percent) +
-  # scale_fill_manual(values = polgroup_cols) +
+             colour = political_group, 
+             group = political_group)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(aes(fill = political_group), se = TRUE) +
+  labs(fill="Political Group", colour="Political Group",
+       y = "Cumulative Similarity", x="Time") +
+  scale_y_continuous(limits = c(0.5, 1),
+                     labels = scales::percent) +
+  scale_x_continuous(breaks = c(min(plot_test$rcv_id_int), 
+                                max(plot_test$rcv_id_int)),
+                     labels = c(min(plot_test$date), 
+                                max(plot_test$date))) +
   theme_minimal() +
   theme(plot.title.position = "plot",
         plot.title = element_text(face = "bold"),
-        legend.position = "none",
+        legend.position = "top",
         # strip.text.y.right = element_text(angle = 0, face = "bold"),
         axis.text.y = element_text(face = "bold"))
 ```
 
+
+### Focus on Committees
+We can dig deeper into trends by Committees.
+Here we drop the time perspective, because in several Committees we would have only a handful of votes. 
+Thus, we show the paired similarity by Committee.
+This visualisation helps identify the areas where we have a greater similarity with the MEP compared to EPP, as the Committees are ranked by the difference between the similarity with Renew and EPP.
+```{r}
+#| fig-width: 8
+#| fig-height: 7
+
+#------------------------------------------------------------------------------#
+rcvid_cmts <- data.table::fread(file = here::here(
+  "data_out", "rcv", "rcvid_cmts_10.csv"))
+
+plot_test = mjrt_polgroup_meps[mjrt_polgroup_id %in% c(7035, 7018)
+                               & pers_id %in% c(206158), # MANUELA_RIPA
+                               list(rcv_id, polgroup_id = mjrt_polgroup_id, pers_id, is_same)
+] |> 
+  # This results in many-to-many - it's OK!
+  dplyr::inner_join(
+    y = rcvid_cmts, #[committee_lab %in% c("AGRI", "ENVI", "FEMM", "LIBE")]
+    by = "rcv_id"
+  ) |> 
+  dplyr::summarise(
+    avg_similarity = mean(is_same, na.rm = TRUE), 
+    .by = c(polgroup_id,committee_lab)
+  )|> 
+  join_polit_labs()
+
+plot_rank = plot_test |> 
+  tidyr::pivot_wider(id_cols = committee_lab,
+                     names_from = political_group, values_from = avg_similarity) |> 
+  dplyr::mutate(diff = PPE - Renew) |> 
+  dplyr::arrange(diff) |> 
+  pull(committee_lab)
+
+plot_test |> 
+  dplyr::mutate(committee_lab = factor(committee_lab, levels = plot_rank)) |> 
+  ggplot(aes(x = political_group, y = avg_similarity, 
+             group = committee_lab)) +
+  geom_vline(xintercept = c(1, 2), colour="grey40") +
+  geom_line(colour="grey70", alpha=0.8, linewidth = 2) +
+  geom_point(aes(colour = political_group), size=4) +
+  # ggrepel::geom_text_repel(aes(label = committee_lab)) +
+  facet_wrap(~committee_lab, nrow=3) +
+  labs(fill="Political Group", colour="Political Group",
+       y = "Cumulative Similarity", x="") +
+  scale_y_continuous(limits = c(min(plot_test$avg_similarity), 1.01),
+                     labels = scales::percent) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(face = "bold"),
+        legend.position = "top",
+        axis.text.x = element_blank(),
+        strip.text.x = element_text(angle = 0, face = "bold"),
+        axis.text.y = element_text(face = "bold"))
+
+#------------------------------------------------------------------------------#
+# plot_test |> 
+#   # This results in many-to-many - it's OK!
+#   dplyr::inner_join(
+#     y = rcvid_cmts[committee_lab %in% c("AGRI", "ENVI", "LIBE")],
+#     by = "rcv_id"
+#   ) |> 
+#   ggplot(aes(x = rcv_id_int, y = cum_same, 
+#              colour = political_group, 
+#              group = political_group)) +
+#   geom_point(alpha = 0.1) +
+#   geom_smooth(aes(fill = political_group), se = TRUE) +
+#   facet_grid(cols = vars(committee_lab), space = "free", scales = "free_x") +
+#   labs(fill="Political Group", colour="Political Group",
+#        y = "Cumulative Similarity", x="Time") +
+#   scale_y_continuous(limits = c(0.5, 1),
+#                      labels = scales::percent) +
+#   scale_x_continuous(breaks = c(min(plot_test$rcv_id_int), 
+#                                 max(plot_test$rcv_id_int)),
+#                      labels = c(min(plot_test$date), 
+#                                 max(plot_test$date))) +
+#   theme_minimal() +
+#   theme(plot.title.position = "plot",
+#         plot.title = element_text(face = "bold"),
+#         legend.position = "top",
+#         # strip.text.y.right = element_text(angle = 0, face = "bold"),
+#         axis.text.y = element_text(face = "bold"))
+```
