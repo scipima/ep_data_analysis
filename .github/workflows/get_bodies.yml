@@ -2,11 +2,11 @@
 name: get_bodies
 
 # Event - What starts this workflow?
-# on: [push, workflow_dispatch]
-on:
-  schedule:
+on: workflow_dispatch
+# on:
+  # schedule:
   # At 01:00, from MON to FRI
-    - cron: "0 1 * * 1-5"
+    # - cron: "0 1 * * 1-5"
 
 # Jobs - What the Action should do? 
 jobs:
