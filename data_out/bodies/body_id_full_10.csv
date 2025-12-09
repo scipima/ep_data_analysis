@@ -3,7 +3,7 @@ identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pre
 6641,IL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,IL,Iniciativa Liberal,IL,Iniciativa Liberal
 6649,JV,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,JV,Jaunā Vienotība,JV,Jaunā Vienotība
 6667,PSOE,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,PSOE,Partido Socialista Obrero Español,PSOE,Partido Socialista Obrero Español
-6671,VIHR,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,VIHR,Vihreä liitto,VIHR,Vihreä liitto
+6671,VIHR,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240731,2024-07-31,VIHR,Vihreä liitto,VIHR,Vihreä liitto
 6674,M5S,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,M5S,Movimento 5 Stelle,M5S,Movimento 5 Stelle
 6675,PD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,PD,Partito Democratico,PD,Partito Democratico
 6693,D66,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,D66,Democraten 66,D66,Democraten 66
@@ -172,7 +172,7 @@ identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pre
 6763,DPS,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,DPS,Movement for Rights and Freedoms,DPS,Movement for Rights and Freedoms
 6769,KSČM,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,KSČM,Komunistická strana Čech a Moravy,KSČM,Komunistická strana Čech a Moravy
 6770,KDU-ČSL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,KDU-ČSL,Křesťanská a demokratická unie - Československá strana lidová,KDU-ČSL,Křesťanská a demokratická unie - Československá strana lidová
-6774,FDP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,FDP,Freie Demokratische Partei,FDP,Freie Demokratische Partei
+6774,FDP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716-20240715,2024-07-16,FDP,Freie Demokratische Partei,FDP,Freie Demokratische Partei
 6781,EL,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,Elliniki Lusi-Greek Solution,Elliniki Lusi-Greek Solution,Elliniki Lusi-Greek Solution,Elliniki Lusi-Greek Solution
 6783,SDS,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,Union of Democratic Forces,Union of Democratic Forces,Union of Democratic Forces,Union of Democratic Forces
 6793,TOP09/STAN,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,TOP09/STAN,TOP 09 a Starostové,TOP09/STAN,TOP 09 a Starostové
@@ -212,7 +212,7 @@ identifier,label,classification,temporal_id,temporal_start_date,alt_label_en,pre
 6716,C,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,C,Centerpartiet,C,Centerpartiet
 6720,NSi-KD,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,NSi-KD,Nova Slovenija – Krščanski demokrati,NSi-KD,Nova Slovenija – Krščanski demokrati
 6740,SF,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,SF,Sinn Féin,SF,Sinn Féin
-6760,CSP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,CSP,Christlich Soziale Partei,CSP,Christlich Soziale Partei
+6760,CSP,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716-20240715,2024-07-16,CSP,Christlich Soziale Partei,CSP,Christlich Soziale Partei
 6764,DI.SY.,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,DI.SY.,Democratic Rally,DI.SY.,Democratic Rally
 6775,DIE LINKE.,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,DIE LINKE.,DIE LINKE.,DIE LINKE.,DIE LINKE.
 6799,Familien-Partei DE,def/ep-entities/NATIONAL_POLITICAL_GROUP,time-period/20240716,2024-07-16,Familien-Partei Deutschlands,Familien-Partei Deutschlands,Familien-Partei Deutschlands,Familien-Partei Deutschlands
