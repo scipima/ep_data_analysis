@@ -39,7 +39,6 @@ pl_meetings <- get_api_data(
   path = here::here("data_out", "meetings", "pl_meetings_all.csv"),
   script = here::here("scripts_r", "api_meetings.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "pl_meetings",
   envir = .GlobalEnv
 )
@@ -52,7 +51,6 @@ pl_attendance <- get_api_data(
   path = here::here("data_out", "attendance", "pl_attendance_all.csv"),
   script = here::here("scripts_r", "api_meetings_attendance.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "pl_attendance",
   envir = .GlobalEnv
 )
@@ -85,7 +83,6 @@ meetings_voteresults_titles_10 <- get_api_data(
   path = here::here("data_out", "votes", "votes_labels_all.csv"),
   script = here::here("scripts_r", "api_meetings_voteresults.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "meetings_voteresults_titles_10",
   envir = .GlobalEnv
 )
@@ -102,7 +99,6 @@ meps_dates_ids <- get_api_data(
   path = here::here("data_out", "meps", "meps_dates_ids_all.csv"),
   script = here::here("scripts_r", "api_meps.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "meps_dates_ids",
   envir = .GlobalEnv
 )
@@ -116,14 +112,13 @@ meps_dates_ids <- get_api_data(
 #' Get look-up tables for MEPs' memberships
 
 ### Download all these files is very long, make sure we do it rarely ----------#
-get_api_data(
+invisible(get_api_data(
   path = here::here("data_out", "bodies", "national_parties_all.csv"),
   script = here::here("scripts_r", "api_bodies.R"),
   max_days = 1,
-  file_type = "csv",
   varname = NULL,
   envir = .GlobalEnv
-)
+))
 national_parties <- data.table::fread(here::here("data_out", "bodies", "national_parties_all.csv"))
 political_groups <- data.table::fread(here::here("data_out", "bodies", "political_groups_all.csv"))
 
@@ -137,7 +132,6 @@ pl_documents <- get_api_data(
   path = here::here("data_out", "docs_pl", "pl_docs.csv"),
   script = here::here("scripts_r", "api_pl_docs.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "pl_documents",
   envir = .GlobalEnv
 )
@@ -154,7 +148,6 @@ votes_final <- get_api_data(
   path = here::here("data_out", "votes", "votes_final_all.csv"),
   script = here::here("scripts_r", "api_pl_session_docs_ids.R"),
   max_days = 1,
-  file_type = "csv",
   varname = "votes_final",
   envir = .GlobalEnv
 )
@@ -165,8 +158,8 @@ votes_final <- get_api_data(
 
 #' This brings in a set of convenience functions to merge data.
 
-source(file = here::here("scripts_r", "join_functions.R"))
-###--------------------------------------------------------------------------###
+source(file = here::here("scripts_r", "join_functions.R"), echo = TRUE)
+#------------------------------------------------------------------------------#
 
 
 #------------------------------------------------------------------------------#
@@ -206,6 +199,12 @@ if ( !exists("meps_dates_ids") ) {
   meps_dates_ids <- data.table::fread(file = here::here(
     "data_out", "meps", "meps_dates_ids_all.csv") ) }
 
+# Get list of RCV dates
+rcv_dates = unique(pl_rcv$activity_date)
+# Filter MEPs' membership just to the RCV dates
+meps_dates_ids = meps_dates_ids[activity_date %in% rcv_dates]
+
+
 # Create grid with all MEPs who SHOULD have been present, by date and rcv_id --#
 meps_rcv_grid <- meps_dates_ids[
   unique( pl_rcv[,  list(activity_date, rcv_id) ] ),
@@ -232,14 +231,34 @@ if ( nrow(meps_rcv_mandate) > nrow(meps_rcv_grid) ) {
 ### Final cleaning -------------------------------------------------------------
 
 # Fill NAs --------------------------------------------------------------------#
-# There are mismatches for 2 MEPs' political groups - fix it here
-# they are: https://www.europarl.europa.eu/meps/en/226260/KAROLIN_BRAUNSBERGER-REINHOLD/history/9#detailedcardmep; https://www.europarl.europa.eu/meps/en/228604/KAROLIN_BRAUNSBERGER-REINHOLD/history/9#detailedcardmep;
-# sapply(meps_rcv_mandate, function(x) sum(is.na(x)))
-meps_rcv_mandate <- meps_rcv_mandate |>
-  dplyr::group_by(pers_id, mandate) |>
-  tidyr::fill(polgroup_id, .direction = "downup") |>
-  dplyr::ungroup(pers_id) |>
-  data.table::as.data.table()
+#' There are mismatches for 2 MEPs' political groups - fix it here
+#' they are: https://www.europarl.europa.eu/meps/en/226260/KAROLIN_BRAUNSBERGER-REINHOLD/history/9#detailedcardmep; https://www.europarl.europa.eu/meps/en/228604/KAROLIN_BRAUNSBERGER-REINHOLD/history/9#detailedcardmep;
+#' Carry the last observation forward and then carries the next observation backward to fill NA values within each group.
+#' In `data.table`, we can achieve this by chaining two calls to nafill() using
+#' - the locf (Last Observation Carried Forward)
+#' - and nocb (Next Observation Carried Backward) types
+
+# sapply(meps_rcv_mandate, function(x) sum(is.na(x))) # check
+if( any( is.na(meps_rcv_mandate$polgroup_id) ) ) {
+  cat("\n=====\nFilling missing values for polgroup_id...\n=====\n")
+  meps_rcv_mandate[, `:=`(
+    polgroup_id = data.table::nafill(
+      data.table::nafill(
+        polgroup_id, type = "locf"), # Last Observation Carried Forward
+      type = "nocb") # Next Observation Carried Backward
+    ),
+    by = .(pers_id, mandate)
+  ]
+} else {
+  cat("\n=====\nNo missing values for polgroup_id found.\n=====\n")
+}
+# Tidyverse version
+# meps_rcv_mandate <- meps_rcv_mandate |>
+#   dplyr::group_by(pers_id, mandate) |>
+#   tidyr::fill(polgroup_id, .direction = "downup") |>
+#   dplyr::ungroup(pers_id) |>
+#   data.table::as.data.table()
+
 # sapply(meps_rcv_mandate, function(x) sum(is.na(x)))
 
 
@@ -287,23 +306,25 @@ data.table::setkeyv(x = meps_rcv_mandate,
                     cols = c("mandate", "rcv_id", "pers_id"))
 # sapply(meps_rcv_mandate, function(x) sum(is.na(x)))
 
-# write data to disk ----------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+## Save data to disk -----------------------------------------------------------
 data.table::fwrite(x = meps_rcv_mandate,
                    file = here::here("data_out", "meps_rcv_mandate_all.csv"),
                    verbose = TRUE)
 
-# remove objects --------------------------------------------------------------#
+#------------------------------------------------------------------------------#
+# Clean up before exiting -----------------------------------------------------#
 rm( meps_dates_ids, meps_mandate, meps_rcv_grid )
 
-
-#------------------------------------------------------------------------------#
-## Aggregates ------------------------------------------------------------------
+# Run all aggregates
 source(file = here::here("scripts_r", "aggregate_rcv.R") )
 
 
 #------------------------------------------------------------------------------#
-## Reproducibility -------------------------------------------------------------
+## Reproducibility
 sessionInfo()
 master_ends <- Sys.time()
-script_lapsed = master_ends - master_starts
-print(script_lapsed)
+master_lapsed = master_ends - master_starts
+cat("\n=====\nFinished creating All Mandates Data.\n=====\n")
+print(master_lapsed)# Execution time
