@@ -84,11 +84,22 @@ rm(i_process, list_tmp, req, resp, resp_body)
 # get procedures IDs
 process_ids <- sort(unique(procedures_df$process_id))
 
-# Build API URLs for all procedures
-api_urls <- paste0(
-  "https://data.europarl.europa.eu/api/v2/procedures/",
-  process_ids,
-  "?format=application%2Fld%2Bjson"
+# Split the vector in chunks of size 50 each
+chunk_size <- 50L
+process_ids_chunks <- split(
+  x = process_ids, ceiling(seq_along(process_ids) / chunk_size)
+)
+
+# Build API URLs for batched procedure calls
+api_urls <- sapply(
+  X = process_ids_chunks,
+  FUN = function(chunk) {
+    paste0(
+      "https://data.europarl.europa.eu/api/v2/procedures/",
+      paste0(chunk, collapse = ","),
+      "?format=application%2Fld%2Bjson"
+    )
+  }
 )
 
 # Use parallel processing for multiple calls
@@ -96,6 +107,7 @@ use_parallel <- length(api_urls) > 1
 
 if (use_parallel) {
   cat("Multiple procedure API calls detected - using parallel processing\n")
+  cat("Total procedures:", length(process_ids), "| Batched into", length(api_urls), "API calls\n")
   results <- parallel_api_calls(
     urls = api_urls,
     capacity = 220,  # Conservative rate: ~55 calls per minute
