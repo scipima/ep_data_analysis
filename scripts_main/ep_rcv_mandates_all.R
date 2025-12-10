@@ -62,10 +62,9 @@ pl_attendance <- get_api_data(
 ## GET/meetings/{event-id}/decisions -------------------------------------------
 
 invisible(get_api_data(
-  path = here::here("data_out", "votes", "pl_votes_all.csv"),
+  path = here::here("data_out", "rcv", "rcv_tmp_all.RDS"),
   script = here::here("scripts_r", "api_meetings_decisions.R"),
   max_days = 1,
-  file_type = "csv",
   varname = NULL,
   envir = .GlobalEnv
 ))
