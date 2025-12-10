@@ -2,6 +2,7 @@
 title: "Weber in FEMM Analysis"
 author:
   - Filipa TORRAO
+  - Marco SCIPIONI
 date: "`r Sys.Date()`"
 format: 
   pdf:
@@ -100,12 +101,11 @@ polgroup_cols = c(`S&D` = "#EE3652",
 
 The objective of this note is to test how Manfred Weber votes on certain files
 related with FEMM and gender issues. We look at 1) the times he did
-not vote, despite being present; 2) the times we voted against the file
+not vote, despite being present; 2) the times he voted against the file
 on final votes.
 
-
-## Data
 ```{r}
+#| include: false
 #------------------------------------------------------------------------------#
 ## Data -------------------------------------------------------------------
 # Full data
@@ -165,9 +165,8 @@ renew_partyids_current = unique(meps_current$natparty_id[
 ])
 ```
 
-
-## Linking based on Procedure-Doc ID- Decision ID
 ```{r}
+#| include: false
 proc_ids_target = c(
   "eli/dl/proc/2024-2125", "eli/dl/proc/2024-2057","eli/dl/proc/2025-2780",
   "eli/dl/proc/2022-0426", "eli/dl/proc/2022-0400","eli/dl/proc/2022-0066",
@@ -203,19 +202,15 @@ procedures_docid_rcvid = procedures_docid |>
     y = pl_votes[, list(rcv_id, doc_id)],
     by = "doc_id"
   )
-length(unique(procedures_docid_rcvid$rcv_id[
-  !is.na(procedures_docid_rcvid$rcv_id)
-]))
+# length(unique(procedures_docid_rcvid$rcv_id[
+#   !is.na(procedures_docid_rcvid$rcv_id)
+# ]))
 ```
 
-**CHECKED UNTIL HERE**
 
 ```{r}
-relevant_docids_gender<- procedures_docs$doc_id[
-  which(procedures_docs$process_id %in% proc_ids_target)]
-
-rcv_ids_relevant_gender<- pl_votes$rcv_id[which(pl_votes$doc_id.x %in%
-                                                  relevant_docids_gender)]
+#| include: false
+rcv_ids_relevant_gender<- procedures_docid_rcvid$rcv_id[!is.na(procedures_docid_rcvid$rcv_id)]
 
 rcv_ids_relevant_gender_final<- pl_votes$rcv_id[
   which(pl_votes$is_final == 1L & pl_votes$rcv_id %in% rcv_ids_relevant_gender) 
@@ -231,6 +226,9 @@ detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote),
                                  c("activity_date", "number_of_votes_abstention",
                                    "number_of_votes_against", "number_of_votes_favor",
                                    "activity_label_en", "decision_outcome","doc_id")]
+colnames(detailed_info_no_vote)<- c("date", "abstentions", "against",
+                                               "favour", "label_en", "outcome",
+                                    "doc")
 
 rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
   which(meps_rcv_mandate$pers_id == 28229 &
@@ -243,61 +241,9 @@ detailed_info_vote_against_final<- pl_votes[which(pl_votes$rcv_id %in% rcvs_webe
                                                                                                     "number_of_votes_against", "number_of_votes_favor",
                                                                                                     "activity_label_en", "decision_outcome","doc_id")]
 
-```
-
-
-
-LInking based on Procedure-Voting Item-Decision ID
-```{r}
-votes_relevant_gender<- gsub("eli/dl/event/", "" ,votes_inverse_consists_of$event_vot_itm_id[
-  which(votes_inverse_consists_of$process_id %in%
-          c("eli/dl/proc/2024-2125", "eli/dl/proc/2024-2057","eli/dl/proc/2025-2780",
-            "eli/dl/proc/2022-0426", "eli/dl/proc/2022-0400","eli/dl/proc/2022-0066",
-            "eli/dl/proc/2021-0050","eli/dl/proc/2012-0299", "eli/dl/proc/2022-0401",
-            "eli/dl/proc/2016-0062B", "eli/dl/proc/2016-0062R", "eli/dl/proc/2020-0011",
-            "eli/dl/proc/2016-0062A", "eli/dl/proc/2021-2035", "eli/dl/proc/2020-2035",
-            "eli/dl/proc/2023-2115", "eli/dl/proc/2022-2140", "eli/dl/proc/2022-2139",
-            "eli/dl/proc/2022-2138", "eli/dl/proc/2021-2253", "eli/dl/proc/2021-2243",
-            "eli/dl/proc/2021-2170", "eli/dl/proc/2021-2080", "eli/dl/proc/2021-2039",
-            "eli/dl/proc/2021-2020", "eli/dl/proc/2021-2003", "eli/dl/proc/2020-2215",
-            "eli/dl/proc/2020-2121", "eli/dl/proc/2020-2029", "eli/dl/proc/2019-2169",
-            "eli/dl/proc/2019-2168", "eli/dl/proc/2019-2167", "eli/dl/proc/2019-2166",
-            "eli/dl/proc/2019-2164", "eli/dl/proc/2024-2655", "eli/dl/proc/2023-2973",
-            "eli/dl/proc/2022-2839", "eli/dl/proc/2022-2742", "eli/dl/proc/2022-2665", 
-            "eli/dl/proc/2022-2633", "eli/dl/proc/2021-2925", "eli/dl/proc/2021-2910",
-            "eli/dl/proc/2021-2509", "eli/dl/proc/2020-2876", "eli/dl/proc/2019-2855",
-            "eli/dl/proc/2019-2891"))
-])
-
-rcv_ids_relevant_gender<- voteids_rcvs$rcv_id[
-  which(voteids_rcvs$vot_id %in% votes_relevant_gender)
-]
-
-rcv_ids_relevant_gender_final<- pl_votes$rcv_id[
-  which(pl_votes$is_final == 1L & pl_votes$rcv_id %in% rcv_ids_relevant_gender) 
-]
-
-rcvs_weber_no_vote<- meps_rcv_mandate$rcv_id[
-  which(meps_rcv_mandate$pers_id == 28229 &
-          meps_rcv_mandate$rcv_id %in% rcv_ids_relevant_gender &
-          meps_rcv_mandate$result == -2L)
-]
-
-detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote),
-                                 c("activity_date", "number_of_votes_abstention",
-                                   "number_of_votes_against", "number_of_votes_favor",
-                                   "activity_label_en", "decision_outcome","doc_id")]
-
-rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
-  which(meps_rcv_mandate$pers_id == 28229 &
-          meps_rcv_mandate$rcv_id %in% rcv_ids_relevant_gender_final &
-          meps_rcv_mandate$result == -1L)
-]
-
-
-detailed_info_vote_against_final<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_final_against), c("activity_date", "number_of_votes_abstention",
-                                                                                                    "number_of_votes_against", "number_of_votes_favor",
-                                                                                                    "activity_label_en", "decision_outcome","doc_id")]
+colnames(detailed_info_vote_against_final)<- c("date", "abstentions", "against",
+                                               "favour", "label_en","outcome",
+                                               "doc")
 
 ```
 
