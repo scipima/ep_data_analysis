@@ -136,7 +136,6 @@ if (nrow(voteids_number) > 0){
 }
 
 
-
 #------------------------------------------------------------------------------#
 ### consists_of: Extract Vote ID and RCV ID ------------------------------------
 voteids_rcvids = unnest_nested_list(
