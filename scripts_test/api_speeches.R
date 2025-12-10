@@ -327,3 +327,12 @@ renew_voting_meps_share = has_voted_byday |>
 
 renew_voting_meps_share |>
   knitr::kable(align = "c")
+
+
+#------------------------------------------------------------------------------#
+# Print summary statistics -----------------------------------------------------
+cat("\n=====\nPlenary Attendance Summary\n=====\n")
+cat("First attendance date:", as.character(min(pl_attendance$activity_date)), "\n")
+cat("Last attendance date:", as.character(max(pl_attendance$activity_date)), "\n")
+cat("Total number of days:", length(unique(pl_attendance$activity_date)), "\n")
+cat("=====\n")

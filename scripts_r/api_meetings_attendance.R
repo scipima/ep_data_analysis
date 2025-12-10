@@ -201,6 +201,13 @@ if ( exists("pl_attendance") && exists("today_date") ) {
 
 
 #------------------------------------------------------------------------------#
+# Print summary statistics -----------------------------------------------------
+cat("\n=====\nPlenary Attendance Summary\n=====\n")
+cat("First attendance date:", as.character(min(pl_attendance$activity_date)), "\n")
+cat("Last attendance date:", as.character(max(pl_attendance$activity_date)), "\n")
+cat("Total number of days:", length(unique(pl_attendance$activity_date)), "\n")
+cat("=====\n")
+
 # Clean up before exiting -----------------------------------------------------#
 # Remove objects
 rm(pl_attendance, chunk_size, had_excused_person, had_participant_person,
