@@ -95,8 +95,10 @@ polgroup_cols = c(`S&D` = "#EE3652",
                   `The Left` = "#733542",
                   ESN = "#000000",
                   NI = "#979797")
+```
 
 
+```{r}
 #------------------------------------------------------------------------------#
 ## Data -------------------------------------------------------------------
 # Full data
@@ -123,19 +125,23 @@ votes_inverse_consists_of<- data.table::fread(here::here(
 voteids_rcvs<- data.table::fread(here::here(
   "data_out", "votes", "voteids_rcvids_all.csv"))
 
-procedures_docs<- data.table::fread(here::here(
-  "data_out", "procedures", "procedures_docid_all.csv"))
+pl_docs <- data.table::fread(here::here(
+  "data_out", "docs_pl", "pl_docs.csv"))
+
+# procedures_docs<- data.table::fread(here::here(
+#   "data_out", "procedures", "procedures_docid_all.csv"))
+procedures_created_a_realization_of <- data.table::fread(here::here(
+  "data_out", "procedures", "procedures_created_a_realization_of.csv"))
 
 # List of RCV IDs and Committees
-rcvid_cmts_10 <- data.table::fread(here::here(
+rcvid_cmts <- data.table::fread(here::here(
   "data_out", "rcv", "rcvid_cmts_all.csv") )
-# sort(unique(rcvid_cmts_10$committee_lab))
-rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
-rcvid_cmts_10 <- data.table::fread(here::here(
+# sort(unique(rcvid_cmts$committee_lab))
+rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
+rcvid_cmts <- data.table::fread(here::here(
   "data_out", "rcv", "rcvid_cmts_all.csv") )
-# sort(unique(rcvid_cmts_10$committee_lab))
-rcvid_cmts_10[committee_lab == "BUDE", committee_lab := "BUDG"]
-
+# sort(unique(rcvid_cmts$committee_lab))
+rcvid_cmts[committee_lab == "BUDE", committee_lab := "BUDG"]
 
 #------------------------------------------------------------------------------#
 # Hard code Groups
@@ -175,8 +181,32 @@ proc_ids_target = c(
   "eli/dl/proc/2022-2633", "eli/dl/proc/2021-2925", "eli/dl/proc/2021-2910",
   "eli/dl/proc/2021-2509", "eli/dl/proc/2020-2876", "eli/dl/proc/2019-2855",
   "eli/dl/proc/2019-2891"
+)
+
+# How many of these are in the procedure file?
+all(proc_ids_target %in% unique(procedures_created_a_realization_of$id))
+procedures_docid = procedures_created_a_realization_of[
+  id %in% proc_ids_target
+  & doc_type == "plenary_doc",
+  list(id, created_a_realization_of)] |> 
+  dplyr::left_join(
+    y = pl_docs[, list(identifier, doc_id)],
+    by = c("created_a_realization_of" = "identifier")
   )
 
+procedures_docid_rcvid = procedures_docid |> 
+  left_join(
+    y = pl_votes[, list(rcv_id, doc_id)],
+    by = "doc_id"
+  )
+length(unique(procedures_docid_rcvid$rcv_id[
+  !is.na(procedures_docid_rcvid$rcv_id)
+]))
+```
+
+**CHECKED UNTIL HERE**
+
+```{r}
 relevant_docids_gender<- procedures_docs$doc_id[
   which(procedures_docs$process_id %in% proc_ids_target)]
 
