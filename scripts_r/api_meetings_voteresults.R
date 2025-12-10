@@ -114,7 +114,7 @@ if ( !exists("today_date")
 } else if ( !exists("today_date")
             && mandate_starts == as.character("2019-07-01") ) {
   readr::write_rds(x = resp_list, file = here::here(
-    "data_out", "votes", "meetings_voteresults_10.rds") )
+    "data_out", "votes", "meetings_voteresults_all.rds") )
 }
 
 
@@ -349,3 +349,4 @@ if ( nrow(votes_inverse_consists_of) > 0L ) {
 
   source(file = here::here("scripts_r", "voteresults_procedures.R"), echo = TRUE)
 }
+
