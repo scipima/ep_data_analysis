@@ -16,8 +16,10 @@ pacman::p_load(char = c("curl", "data.table", "dplyr", "here", "httr2", "lubrida
                         "janitor", "jsonlite", "readr", "stringi", "tidyr",
                         "tidyselect") )
 
+# Load parallel API function --------------------------------------------------#
+source(file = here::here("scripts_r", "parallel_api_calls.R"))
 
-# Hard code the start of the mandate ----------------------------------------#
+# Hard code the start of the mandate ------------------------------------------#
 if ( !exists("mandate_starts") ) {
   mandate_starts <- as.Date("2024-07-14") }
 
@@ -82,37 +84,37 @@ rm(i_process, list_tmp, req, resp, resp_body)
 # get procedures IDs
 process_ids <- sort(unique(procedures_df$process_id))
 
-# Split the vector in chunks of size 50 each
-chunk_size <- 50L
-process_ids_chunks <- split(
-  x = process_ids, ceiling(seq_along(process_ids) / chunk_size)
+# Build API URLs for all procedures
+api_urls <- paste0(
+  "https://data.europarl.europa.eu/api/v2/procedures/",
+  process_ids,
+  "?format=application%2Fld%2Bjson"
+)
+
+# Use parallel processing for multiple calls
+use_parallel <- length(api_urls) > 1
+
+if (use_parallel) {
+  cat("Multiple procedure API calls detected - using parallel processing\n")
+  results <- parallel_api_calls(
+    urls = api_urls,
+    capacity = 220,  # Conservative rate: ~55 calls per minute
+    fill_time_s = 60,
+    show_progress = TRUE,
+    extract_data = TRUE
   )
-
-# Empty repository
-list_tmp <- vector(mode = "list", length = length(process_ids_chunks))
-
-# Loop
-for (i_chunk in seq_along(process_ids_chunks) ) {
-  print(i_chunk) # check
-
-  # Create an API request
-  req <- httr2::request(base_url = paste0(
-    "https://data.europarl.europa.eu/api/v2/procedures/",
-    paste0(process_ids_chunks[[i_chunk]], collapse = ","),
-    "?format=application%2Fld%2Bjson") )
-
-  # Add time-out and ignore error
-  resp <- req |>
-    httr2::req_headers("User-Agent" = "renew_parlwork-prd-2.0.0") |>
-    httr2::req_error(is_error = ~FALSE) |>
-    httr2::req_throttle(55 / 60) |> # politely, 1 every 2 seconds
-    httr2::req_perform()
-
-  # If not an error, download and make available in ENV
-  if ( httr2::resp_status(resp) == 200L) {
-    resp_body <- resp |>
-      httr2::resp_body_json( simplifyDataFrame = TRUE )
-    list_tmp[[i_chunk]] = resp_body$data }
+  list_tmp <- results$responses
+} else {
+  cat("Single API call detected - using sequential processing\n")
+  results <- parallel_api_calls(
+    urls = api_urls,
+    capacity = 220,
+    fill_time_s = 60,
+    show_progress = FALSE,
+    extract_data = TRUE,
+    force_sequential = TRUE
+  )
+  list_tmp <- results$responses
 }
 
 # store tmp list if code breaks down the line
