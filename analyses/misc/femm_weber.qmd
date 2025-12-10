@@ -222,13 +222,16 @@ rcvs_weber_no_vote<- meps_rcv_mandate$rcv_id[
           meps_rcv_mandate$result == -2L)
 ]
 
-detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote),
-                                 c("activity_date", "number_of_votes_abstention",
-                                   "number_of_votes_against", "number_of_votes_favor",
-                                   "activity_label_en", "decision_outcome","doc_id")]
+detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote), c("activity_date", "number_of_votes_abstention",
+                                                                                                    "number_of_votes_against", "number_of_votes_favor", "decision_outcome","doc_id")]
+
+docs_titles <- pl_docs %>% select(doc_id, title_dcterms_en)
+
+detailed_info_no_vote <- left_join(detailed_info_no_vote, docs_titles, by = c("doc_id" = "doc_id"))
+
 colnames(detailed_info_no_vote)<- c("date", "abstentions", "against",
-                                               "favour", "label_en", "outcome",
-                                    "doc")
+                                               "favour","outcome",
+                                               "doc", "title")
 
 rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
   which(meps_rcv_mandate$pers_id == 28229 &
@@ -238,12 +241,15 @@ rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
 
 
 detailed_info_vote_against_final<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_final_against), c("activity_date", "number_of_votes_abstention",
-                                                                                                    "number_of_votes_against", "number_of_votes_favor",
-                                                                                                    "activity_label_en", "decision_outcome","doc_id")]
+                                                                                                    "number_of_votes_against", "number_of_votes_favor", "decision_outcome","doc_id")]
+
+docs_titles <- pl_docs %>% select(doc_id, title_dcterms_en)
+
+detailed_info_vote_against_final <- left_join(detailed_info_vote_against_final, docs_titles, by = c("doc_id" = "doc_id"))
 
 colnames(detailed_info_vote_against_final)<- c("date", "abstentions", "against",
-                                               "favour", "label_en","outcome",
-                                               "doc")
+                                               "favour","outcome",
+                                               "doc", "title")
 
 ```
 
