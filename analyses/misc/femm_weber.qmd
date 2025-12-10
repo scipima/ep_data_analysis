@@ -98,6 +98,13 @@ polgroup_cols = c(`S&D` = "#EE3652",
 ```
 
 
+The objective of this note is to test how Manfred Weber votes on certain files
+related with FEMM and gender issues. We look at 1) the times he did
+not vote, despite being present; 2) the times we voted against the file
+on final votes.
+
+
+## Data
 ```{r}
 #------------------------------------------------------------------------------#
 ## Data -------------------------------------------------------------------
@@ -130,6 +137,7 @@ pl_docs <- data.table::fread(here::here(
 
 # procedures_docs<- data.table::fread(here::here(
 #   "data_out", "procedures", "procedures_docid_all.csv"))
+# This comes from the `api_procedures.R`
 procedures_created_a_realization_of <- data.table::fread(here::here(
   "data_out", "procedures", "procedures_created_a_realization_of.csv"))
 
@@ -157,12 +165,8 @@ renew_partyids_current = unique(meps_current$natparty_id[
 ])
 ```
 
-The objective of this note is to test how Manfred Weber votes on certain files
-related with FEMM and gender issues. We look at 1) the times he did
-not vote, despite being present; 2) the times we voted against the file
-on final votes.
 
-Linking based on Procedure-Doc ID- Decision ID
+## Linking based on Procedure-Doc ID- Decision ID
 ```{r}
 proc_ids_target = c(
   "eli/dl/proc/2024-2125", "eli/dl/proc/2024-2057","eli/dl/proc/2025-2780",
