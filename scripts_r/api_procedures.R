@@ -218,22 +218,49 @@ procedures_created_a_realization_of[
   doc_type := "commission_response"
 ]
 
-# length(procedures_created_a_realization_of$created_a_realization_of[
-#   procedures_created_a_realization_of$doc_type == "plenary_doc"
-# ])
-
-#
-# p = procedures_created_a_realization_of[
-#   procedures_created_a_realization_of$doc_type == "plenary_doc"
-# ] |>
-#   full_join(
-#     y = plenary_docs,
-#     by = c("created_a_realization_of" = "identifier"))
-
-
-
+# Save data to disk
 data.table::fwrite(x = procedures_created_a_realization_of, here::here(
   "data_out", "procedures", "procedures_created_a_realization_of.csv") )
+
+
+#------------------------------------------------------------------------------#
+### process_title --------------------------------------------------------------
+procedures_title = lapply(
+  X = list_tmp,
+  FUN = function(x){
+    if ("process_title" %in% names(x)) {
+      df_tmp = x[, c("id", "process_title")]
+      if ("en" %in% names(df_tmp$process_title)){
+        df_tmp$process_title_en = df_tmp$process_title$en
+      }
+      # if ("fr" %in% names(df_tmp$process_title)){
+      #   df_tmp$process_title_fr = df_tmp$process_title$fr
+      # }
+      df_tmp$process_title = NULL
+      return( df_tmp )
+    }
+  }) |>
+  data.table::rbindlist(use.names = TRUE, fill = TRUE)
+
+# Checks for buggy data
+procedures_title[
+  which(sapply(procedures_title$process_title_en, length) > 1)
+  ]$process_title_en
+# procedures_title[
+#   which(sapply(procedures_title$process_title_fr, length) > 1)
+#   ]$process_title_fr
+rows_todrop = which(sapply(procedures_title$process_title_en, length) > 1)
+
+procedures_title = procedures_title[, list(
+ process_title_en = unlist(process_title_en)
+ ),
+ by = list(id)
+]
+
+# Save data to disk
+data.table::fwrite(x = procedures_title[-rows_todrop], here::here(
+  "data_out", "procedures", "procedures_title.csv") )
+
 
 # procedures_scheduledIn <- lapply(
 #   X = list_tmp, FUN = function(x) {
