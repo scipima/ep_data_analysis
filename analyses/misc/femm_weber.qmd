@@ -1,5 +1,5 @@
 ---
-title: "Weber in FEMM Analysis"
+title: "Weber in Gender Issues Analysis"
 author:
   - Filipa TORRAO
   - Marco SCIPIONI
@@ -40,6 +40,8 @@ mandate_starts <- "2019-07-01"
 current_month = lubridate::month(x = Sys.Date(), label = TRUE, abbr = FALSE)
 current_year = lubridate::year( x = Sys.Date() )
 
+epp_group_ids <- c(5153, 7018) # EPP
+renew_group_ids <- c(5704L, 7035L) # Renew
 
 #------------------------------------------------------------------------------#
 ## Functions -------------------------------------------------------------------
@@ -135,6 +137,12 @@ voteids_rcvs<- data.table::fread(here::here(
 pl_docs <- data.table::fread(here::here(
   "data_out", "docs_pl", "pl_docs.csv"))
 
+votes_labels<- data.table::fread(here::here(
+  "data_out", "votes", "votes_labels_all.csv"))
+
+procedures_df<- data.table::fread(here::here(
+  "data_out", "procedures", "procedures_title.csv") )
+
 # procedures_docs<- data.table::fread(here::here(
 #   "data_out", "procedures", "procedures_docid_all.csv"))
 # This comes from the `api_procedures.R`
@@ -202,6 +210,10 @@ procedures_docid_rcvid = procedures_docid |>
     y = pl_votes[, list(rcv_id, doc_id)],
     by = "doc_id"
   )
+
+procedures_title<- procedures_df %>% select(id, process_title_en) # moddify this to the right colname
+
+procedures_docid <- left_join(procedures_docid, procedures_title, by = c("id" = "id"))
 # length(unique(procedures_docid_rcvid$rcv_id[
 #   !is.na(procedures_docid_rcvid$rcv_id)
 # ]))
@@ -222,17 +234,62 @@ rcvs_weber_no_vote<- meps_rcv_mandate$rcv_id[
           meps_rcv_mandate$result == -2L)
 ]
 
-detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote), c("activity_date", "number_of_votes_abstention",
+detailed_info_no_vote<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_no_vote), c("rcv_id" ,"activity_date", "number_of_votes_abstention",
                                                                                                     "number_of_votes_against", "number_of_votes_favor", "decision_outcome","doc_id")]
 
 docs_titles <- pl_docs %>% select(doc_id, title_dcterms_en)
 
 detailed_info_no_vote <- left_join(detailed_info_no_vote, docs_titles, by = c("doc_id" = "doc_id"))
 
-colnames(detailed_info_no_vote)<- c("date", "abstentions", "against",
+colnames(detailed_info_no_vote)<- c("rcv_id","date", "abstentions", "against",
                                                "favour","outcome",
-                                               "doc", "title")
+                                               "doc_id", "title")
 
+
+
+# Extracting title from procedure title in case it is not already filled in by pl docs
+procedures_subset <- procedures_docid %>%
+  select(`doc_id`, title_backup = process_title_en)
+
+detailed_info_no_vote$title[which(detailed_info_no_vote$title == "")]<- NA
+detailed_info_no_vote <- detailed_info_no_vote %>%
+  left_join(procedures_subset, by = "doc_id") %>%
+  mutate(title = coalesce(title, title_backup)) %>% 
+  select(-title_backup)
+
+#Adding EPP majority, Renew majority, and Weber Party majority
+who_won_bygroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    rcv_id %in% rcvs_weber_no_vote
+    & result >= -1] # exclude absent
+) %>% select(rcv_id, polgroup_id, result)
+
+
+rcv_epp_result<- who_won_bygroup[which(who_won_bygroup$polgroup_id %in% epp_group_ids), ] %>%
+  select(rcv_id,result)
+rcv_renew_result<- who_won_bygroup[which(who_won_bygroup$polgroup_id %in% renew_group_ids),] %>%
+  select(rcv_id,result)
+
+detailed_info_no_vote <- detailed_info_no_vote %>%
+  left_join(rcv_epp_result, by = "rcv_id") 
+ 
+detailed_info_no_vote <- detailed_info_no_vote %>%
+  left_join(rcv_renew_result, by = "rcv_id")
+
+detailed_info_no_vote<- detailed_info_no_vote %>% select(
+  date, rcv_id, title, result.x, result.y
+)
+
+colnames(detailed_info_no_vote)<- c("date","rcv", "title", "epp vote", "renew vote")
+detailed_info_no_vote <- detailed_info_no_vote |>
+  mutate(rcv = as.character(rcv),
+         across(c(`epp vote`, `renew vote`), 
+                ~ case_match(.x,
+                     1 ~ "+",
+                     -1 ~ "-",
+                     .default = as.character(.x) # Keep other values (like 0) as text
+                )))
+#------------------------------------------------------------------------------#
 rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
   which(meps_rcv_mandate$pers_id == 28229 &
           meps_rcv_mandate$rcv_id %in% rcv_ids_relevant_gender_final &
@@ -240,25 +297,71 @@ rcvs_weber_final_against<- meps_rcv_mandate$rcv_id[
 ]
 
 
-detailed_info_vote_against_final<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_final_against), c("activity_date", "number_of_votes_abstention",
+detailed_info_vote_against_final<- pl_votes[which(pl_votes$rcv_id %in% rcvs_weber_final_against), c("rcv_id" ,"activity_date", "number_of_votes_abstention",
                                                                                                     "number_of_votes_against", "number_of_votes_favor", "decision_outcome","doc_id")]
 
 docs_titles <- pl_docs %>% select(doc_id, title_dcterms_en)
 
 detailed_info_vote_against_final <- left_join(detailed_info_vote_against_final, docs_titles, by = c("doc_id" = "doc_id"))
 
-colnames(detailed_info_vote_against_final)<- c("date", "abstentions", "against",
+colnames(detailed_info_vote_against_final)<- c("rcv_id","date", "abstentions", "against",
                                                "favour","outcome",
-                                               "doc", "title")
+                                               "doc_id", "title")
 
+
+
+# Extracting title from procedure title in case it is not already filled in by pl docs
+procedures_subset <- procedures_docid %>%
+  select(`doc_id`, title_backup = process_title_en)
+
+detailed_info_vote_against_final$title[which(detailed_info_vote_against_final$title == "")]<- NA
+detailed_info_vote_against_final <- detailed_info_vote_against_final %>%
+  left_join(procedures_subset, by = "doc_id") %>%
+  mutate(title = coalesce(title, title_backup)) %>% 
+  select(-title_backup)
+
+#Adding EPP majority, Renew majority, and Weber Party majority
+who_won_bygroup <- get_polgroup_majority(
+  data_in = meps_rcv_mandate[
+    rcv_id %in% rcvs_weber_final_against
+    & result >= -1] # exclude absent
+) %>% select(rcv_id, polgroup_id, result)
+
+
+rcv_epp_result<- who_won_bygroup[which(who_won_bygroup$polgroup_id %in% epp_group_ids), ] %>%
+  select(rcv_id,result)
+rcv_renew_result<- who_won_bygroup[which(who_won_bygroup$polgroup_id %in% renew_group_ids),] %>%
+  select(rcv_id,result)
+
+detailed_info_vote_against_final <- detailed_info_vote_against_final %>%
+  left_join(rcv_epp_result, by = "rcv_id") 
+ 
+detailed_info_vote_against_final <- detailed_info_vote_against_final%>%
+  left_join(rcv_renew_result, by = "rcv_id")
+
+detailed_info_vote_against_final<- detailed_info_vote_against_final %>% select(
+  date, rcv_id, title, result.x, result.y
+)
+
+colnames(detailed_info_vote_against_final)<- c("date","rcv", "title", "epp vote", "renew vote")
+detailed_info_vote_against_final<- detailed_info_vote_against_final |>
+  mutate(rcv = as.character(rcv),
+         across(c(`epp vote`, `renew vote`), 
+                ~ case_match(.x,
+                     1 ~ "+",
+                     -1 ~ "-",
+                     .default = as.character(.x) # Keep other values (like 0) as text
+                )))
 ```
-
 We do two separate tables: one for the RCVs where he was present but did not vote:
 
 ```{r}
 detailed_info_no_vote|> 
   dplyr::mutate(dplyr::across(where(is.character), ~gsub("[\r\n]+", " ", .x))) |> 
-  knitr::kable(align = "c")
+  flextable::flextable(
+    cwidth = c(1,1, 6, 1,1)
+    ) |> flextable::border_inner(part = "all") |> 
+  flextable::align(align = "center", part = "all")
 ```
 
 
@@ -267,7 +370,10 @@ And another table for the RCVs where he was present and voted against on final v
 ```{r}
 detailed_info_vote_against_final|> 
   dplyr::mutate(dplyr::across(where(is.character), ~gsub("[\r\n]+", " ", .x))) |> 
-  knitr::kable(align = "c")
+  flextable::flextable(
+    cwidth = c(1,1, 6, 1, 1)
+    ) |> flextable::border_inner(part = "all") |> 
+  flextable::align(align = "center", part = "all")
 ```
 
 
