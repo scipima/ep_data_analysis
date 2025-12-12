@@ -187,7 +187,7 @@ data.table::fwrite(x = docs_inverse_based_on_a_realization_of, file = here::here
 #     data.table::rbindlist(use.names = TRUE, fill = TRUE)
 
 
-### inverse_created_a_realization_of ------------------------------------------
+### inverse_created_a_realization_of -------------------------------------------
 
 #' Connects the procedural number of Plenary Docs with procedure identifiers.
 #' Unfortunately there are some Plenary Docs that are connected with multiple procedures.
@@ -460,14 +460,16 @@ docs_committee <- data.table::merge.data.table(
   by.x = c("id", "cmt_lab"),
   by.y = c("id", "creator"),
   all = TRUE
-)
+) |>
+  unique()
 
 # Merge with pl_docs to get more metadata
 docs_committee = pl_docs[, c("id", "identifier", "doc_id")
 ][
   docs_committee,
   on = "id"
-]
+] |>
+  unique()
 # Check what you're missing out
 sort(unique(
   pl_docs$id[
